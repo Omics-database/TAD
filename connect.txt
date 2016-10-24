@@ -1,0 +1,11 @@
+#MySQL
+UserName: 
+PassWord:
+DataBaseName: transatlasdb
+
+#FastBit
+PATH:
+FolderName:
+
+#Web:
+PATH:
