@@ -1,0 +1,12 @@
+MySQL   
+  username
+  password
+  databasename transatlasdb
+
+FastBit   
+  path
+  foldername
+
+
+
+

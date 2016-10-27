@@ -2,9 +2,9 @@
 
 Major files include
 
-###1. connect.txt
+###1. connect_details.txt
 
-###2. install.pl
+###2. tad-install.pl
 
 ###3. import.pl
 
