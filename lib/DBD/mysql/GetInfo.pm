@@ -9,20 +9,17 @@ package DBD::mysql::GetInfo;
 # $Date$
 
 use strict;
-use warnings;
-
 use DBD::mysql;
 # Beware: not officially documented interfaces...
 # use DBI::Const::GetInfoType qw(%GetInfoType);
 # use DBI::Const::GetInfoReturn qw(%GetInfoReturnTypes %GetInfoReturnValues);
 
 my $sql_driver = 'mysql';
-
-# SQL_DRIVER_VER should be formatted as dd.dd.dddd
-my $dbdversion = $DBD::mysql::VERSION;
-$dbdversion .= '_00' if $dbdversion =~ /^\d+\.\d+$/;
-my $sql_driver_ver = sprintf("%02d.%02d.%04d", split(/[\._]/,$dbdversion));
-
+my $sql_ver_fmt = '%02d.%02d.%04d';   # ODBC version string: ##.##.#####
+my $sql_driver_ver = do {
+    no warnings;
+    sprintf $sql_ver_fmt, split (/./, $DBD::mysql::VERSION);
+};
 
 my @Keywords = qw(
 
@@ -270,7 +267,7 @@ our %info = (
      44 => 17,                            # SQL_SCROLL_OPTIONS
      14 => '\\',                          # SQL_SEARCH_PATTERN_ESCAPE
      13 => makefunk 13,                   # SQL_SERVER_NAME
-     94 => 'Ã‡Ã¼Ã©Ã¢Ã¤Ã Ã¥Ã§ÃªÃ«Ã¨Ã¯Ã®Ã¬Ã„Ã…Ã‰Ã¦Ã†Ã´Ã¶Ã²Ã»Ã¹Ã¿Ã–ÃœÃ¡Ã­Ã³ÃºÃ±Ã‘', # SQL_SPECIAL_CHARACTERS
+     94 => 'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜáíóúñÑ', # SQL_SPECIAL_CHARACTERS
     155 => 7,                             # SQL_SQL92_DATETIME_FUNCTIONS
     156 => 0,                             # SQL_SQL92_FOREIGN_KEY_DELETE_RULE
     157 => 0,                             # SQL_SQL92_FOREIGN_KEY_UPDATE_RULE

@@ -59,43 +59,43 @@ CREATE TABLE IF NOT EXISTS `VarAnno` (`sampleid` INT(11) NOT NULL DEFAULT '0', `
 -- -----------------------------------------------------
 -- procedure usp_genedgenedtissue
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_genedgenedtissue`;
--- CREATE PROCEDURE `usp_genedgenedtissue`(in gname varchar(45), in tissue varchar(45), in specie varchar(45)) select a.geneshortname `Gene Name`, b.line `Line`, max(a.fpkm) `Maximum Fpkm`, CAST(avg(a.fpkm) AS DECIMAL(20,5)) `Average Fpkm`, min(a.fpkm) `Minimum Fpkm` from GenesFpkm a join Sample b on a.sampleid = b.sampleid where a.geneshortname like CONCAT('%', TRIM(IFNULL(gname, '')), '%') and b.tissue = tissue and b.line is not null and b.tissue is not null and b.species = specie group by a.geneshortname, b.line order by a.geneshortname;
+DROP procedure IF EXISTS `usp_genedgenedtissue`;
+CREATE PROCEDURE `usp_genedgenedtissue`(in gname varchar(45), in tissue varchar(45), in specie varchar(45)) select a.geneshortname `Gene Name`, b.line `Line`, max(a.fpkm) `Maximum Fpkm`, CAST(avg(a.fpkm) AS DECIMAL(20,5)) `Average Fpkm`, min(a.fpkm) `Minimum Fpkm` from GenesFpkm a join Sample b on a.sampleid = b.sampleid where a.geneshortname like CONCAT('%', TRIM(IFNULL(gname, '')), '%') and b.tissue = tissue and b.line is not null and b.tissue is not null and b.species = specie group by a.geneshortname, b.line order by a.geneshortname;
 /* Create a stored procedure to get fpkm details of a gene based on tissue and species */
 /* call usp_genedgenedtissue("ASB6", "liver", "gallus"); */
 -- -----------------------------------------------------
 -- procedure usp_genedgenedtissueless
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_genedgenedtissueless`;
--- CREATE PROCEDURE `usp_genedgenedtissueless`(in gname varchar(45), in tissue varchar(45), in specie varchar(45)) select a.geneshortname `Gene Name`, b.line `Line`, max(a.fpkm) `Maximum Fpkm`, CAST(avg(a.fpkm) AS DECIMAL(20,5)) `Average Fpkm`, min(a.fpkm) `Minimum Fpkm`  from GenesFpkm a join Sample b on a.sampleid = b.sampleid where a.geneshortname like CONCAT('%', TRIM(IFNULL(gname, '')), '%') and  b.tissue = tissue and b.species = specie group by a.geneshortname, b.line order by a.geneshortname;
+DROP procedure IF EXISTS `usp_genedgenedtissueless`;
+CREATE PROCEDURE `usp_genedgenedtissueless`(in gname varchar(45), in tissue varchar(45), in specie varchar(45)) select a.geneshortname `Gene Name`, b.line `Line`, max(a.fpkm) `Maximum Fpkm`, CAST(avg(a.fpkm) AS DECIMAL(20,5)) `Average Fpkm`, min(a.fpkm) `Minimum Fpkm`  from GenesFpkm a join Sample b on a.sampleid = b.sampleid where a.geneshortname like CONCAT('%', TRIM(IFNULL(gname, '')), '%') and  b.tissue = tissue and b.species = specie group by a.geneshortname, b.line order by a.geneshortname;
 /* Create a stored procedure to get fpkm details of a gene based on tissue and species */
 /* call usp_genedgenedtissueless("usp", "lung", "mus_musculus"); */ 
 -- -----------------------------------------------------
 -- procedure usp_varchrom
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_varchrom`;
--- CREATE PROCEDURE `usp_varchrom`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select c.line `Line`, a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position join Sample c on a.sampleid = c.sampleid where c.species = specie  and a.chrom = chrom  and c.line is not null and a.position between vstart and vend group by a.chrom, a.position, c.line order by c.line;
+DROP procedure IF EXISTS `usp_varchrom`;
+CREATE PROCEDURE `usp_varchrom`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select c.line `Line`, a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position join Sample c on a.sampleid = c.sampleid where c.species = specie  and a.chrom = chrom  and c.line is not null and a.position between vstart and vend group by a.chrom, a.position, c.line order by c.line;
 /* Create a stored procedure to get variant info after specifying chromosomal location */
 /* call usp_varchrom("gallus", "chr1", "57800", "60000"); */
 -- -----------------------------------------------------
 -- procedure usp_varchromless
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_varchromless`;
--- CREATE PROCEDURE `usp_varchromless`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`,  group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b  on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position  join Sample c on a.sampleid = c.sampleid where c.species = specie and a.chrom = chrom and a.position between vstart and vend group by a.chrom, a.position, c.line order by c.line;
+DROP procedure IF EXISTS `usp_varchromless`;
+CREATE PROCEDURE `usp_varchromless`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`,  group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b  on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position  join Sample c on a.sampleid = c.sampleid where c.species = specie and a.chrom = chrom and a.position between vstart and vend group by a.chrom, a.position, c.line order by c.line;
 /* Create a stored procedure to get variant info after specifying chromosomal location */
 /* call usp_varchromless("mus_musculus", "NC_000071.6", "3200000", "3300000"); */ 
 -- -----------------------------------------------------
 -- procedure usp_vargene
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_vargene`;
--- CREATE PROCEDURE `usp_vargene`(in specie varchar(45), in gname varchar(45)) select c.line `Line`, a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`,group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position  join Sample c on a.sampleid = c.sampleid where c.species = specie and b.genename like CONCAT('%', TRIM(IFNULL(gname, '')), '%')  and c.line is not null group by a.chrom, a.position, c.line order by c.line;
+DROP procedure IF EXISTS `usp_vargene`;
+CREATE PROCEDURE `usp_vargene`(in specie varchar(45), in gname varchar(45)) select c.line `Line`, a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`,group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position  join Sample c on a.sampleid = c.sampleid where c.species = specie and b.genename like CONCAT('%', TRIM(IFNULL(gname, '')), '%')  and c.line is not null group by a.chrom, a.position, c.line order by c.line;
 /* Create a stored procedure to get variant info after specifying chromosomal location */
 /* call usp_vargene("gallus", "golgb1"); */ 
 -- -----------------------------------------------------
 -- procedure usp_vargeneless
 -- -----------------------------------------------------
--- DROP procedure IF EXISTS `usp_vargeneless`;
--- CREATE PROCEDURE `usp_vargeneless`(in specie varchar(45), in gname varchar(45)) select a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position join Sample c on a.sampleid = c.sampleid where c.species = specie and b.genename like CONCAT('%', TRIM(IFNULL(gname, '')), '%')  group by a.chrom, a.position, c.line order by c.line;
+DROP procedure IF EXISTS `usp_vargeneless`;
+CREATE PROCEDURE `usp_vargeneless`(in specie varchar(45), in gname varchar(45)) select a.chrom `Chrom`, a.position `Position`, a.refallele `Ref`, a.altallele `Alt`, group_concat(distinct a.variantclass) `Class`, group_concat(distinct b.consequence) `Annotation`, group_concat(distinct b.genename) `Gene Name`, group_concat(distinct a.dbsnpvariant) `dbSNP` from VarResult a join VarAnno b on a.sampleid = b.sampleid and a.chrom = b.chrom and a.position = b.position join Sample c on a.sampleid = c.sampleid where c.species = specie and b.genename like CONCAT('%', TRIM(IFNULL(gname, '')), '%')  group by a.chrom, a.position, c.line order by c.line;
 /* Create a stored procedure to get variant info after specifying chromosomal location */
 /* call usp_vargeneless("mus_musculus", "Gm15772"); */ 
 -- -----------------------------------------------------
