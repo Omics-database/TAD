@@ -32,7 +32,7 @@ $dbh = mysql_create($all_details{"MySQL-databasename"}, $all_details{'MySQL-user
 #$sth->execute() or die (qq(Error: Can't create database, make sure user is 'root'));
 $schema = "CREATE SCHEMA IF NOT EXISTS ".$all_details{"MySQL-databasename"};
 $sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user has 'root' priviledges));
+$sth->execute() or die (qq(Error: Can't create database, make sure user is 'root'));
 $dbh->disconnect();
 $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 #Import schema to mysql

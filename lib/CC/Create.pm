@@ -13,11 +13,17 @@ sub clean {
   return $_[0];
 }
 
-sub mysql {
-  my $dsn = 'dbi:mysql:'.$_[0];
+sub mysql_create {
+  my $dsn = 'dbi:mysql:host=localhost;port=3306';
   my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "Connection Error: $DBI::errstr\n";
   return $dbh;
 }
+sub mysql {
+  my $dsn = 'dbi:mysql:database='.$_[0].';host=localhost;port=3306';
+  my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "Connection Error: $DBI::errstr\n";
+  return $dbh;
+}
+
 sub fastbit {
   my $ffastbit = "$_[0]/$_[1]";
   return $ffastbit;
