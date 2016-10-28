@@ -7,7 +7,6 @@ use File::Spec;
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
-use DBI;
 use CC::Create;
 
 our $VERSION = '$Version: 1 $';
@@ -82,7 +81,7 @@ sub processArguments {
   print LOG "TransAtlasDB Command:\n\t $0 @command_line\n";
   print LOG "TransAtlasDB Started:\n\t", scalar(localtime),"\n";
 
-  $sqlfile = "$get/schema/transatlasdb-ddl.sql";
+  $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
   open(CONNECT, ">$get/\.connect.txt"); 
   my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname";
   print CONNECT $connectcontent; close (CONNECT);
