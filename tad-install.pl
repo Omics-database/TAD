@@ -23,17 +23,17 @@ my ($sth,$dbh,$schema); #connect to database;
 #--------------------------------------------------------------------------------
 
 sub printerr; #declare error routine
-my $get = dirname(abs_path $0);
+my $get = dirname(abs_path $0); #get source path
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
-#print $dbname, $username, $password,"\n";
-$dbh = mysql_create($dbname, $username, $password); #connect to mysql
+
+$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
 #$schema ="DROP SCHEMA IF EXISTS ".$all_details{"MySQL-databasename"};
 #$sth = $dbh->prepare($schema);
-#$sth->execute() or die (qq(Error: Can't create database, make sure user is 'root'));
+#$sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema priviledges));
 $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user has 'root' priviledges));
+$sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema  priviledges));
 $dbh->disconnect();
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Import schema to mysql
@@ -46,10 +46,10 @@ while (my $sqlStatement = <SQL>) {
       or die qq(Error: Can't execute $sqlStatement);
    $verbose and printerr "Executed:\t$sqlStatement\n";
 }
+$dbh->disconnect();
 
 #create FastBit path on connection details
-our $ffastbit = fastbit($location, $fbname); 
-`mkdir $ffastbit`;
+our $ffastbit = fastbit($location, $fbname); `mkdir $ffastbit`;
 
 printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
 printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
@@ -57,14 +57,13 @@ printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
 #--------------------------------------------------------------------------------
 
 sub processArguments {
-  my @command_line = @ARGV;
   GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'databasename|d=s'=>\$dbname,
 		'username|u=s'=>\$username, 'password|p=s'=>\$password, 'location|l=s'=>\$location,
 		'fastbitname|n=s'=>\$fbname ) or pod2usage ();
 
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
-  pod2usage("Error: Required argument -p (MySQL password) not provided.", -verbose=>1, -exitval=>1, -output=>\*STDOUT) if (!$password);
+  pod2usage(-msg=>"Error: Required argument -p (MySQL password) not provided.", -verbose=>1, -exitval=>1) if (!$password);
 
   #set defaults
   $verbose ||=0;
@@ -78,7 +77,7 @@ sub processArguments {
   open(LOG, ">$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
   print LOG "TransAtlasDB Version:\n\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\n\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\n\t $0 @command_line\n";
+  print LOG "TransAtlasDB Command:\n\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\n\t", scalar(localtime),"\n";
 
   $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
@@ -105,7 +104,7 @@ sub printerr {
        -v, --verbose                   use verbose output
 
  Arguments to install transatlasdb on MySQL
-       -u, --user <string>             specify MySQL username (default: root)
+       -u, --username <string>         specify MySQL username (default: root)
        -p, --password <string>         specify MySQL password
        -d, --databasename <string>     specify DatabaseName (default: transatlasdb)
 
@@ -141,9 +140,9 @@ print the complete manual of the program.
 use verbose output.
 
 
-=item B<-u| --user>
+=item B<-u| --username>
 
-specify MySQL username if other than 'root' (required). 
+specify MySQL username with 'GRANT ALL' priviledge, if other than 'root' (default: root). 
 
 =item B<-p|--password>
 
@@ -151,15 +150,15 @@ specify MySQL password (required)
 
 =item B<-d|--databasename>
 
-specify MySQL databasename if other than 'transatlasdb' (required)
+specify MySQL databasename if other than 'transatlasdb' (default: transatlasdb)
 
 =item B<-l|--location>
 
-specify FastBit storage path if other than current working directory (required)
+specify FastBit storage path if other than current working directory (default will be the current dirrectory)
 
 =item B<-n|--fastbitname>
 
-specify FastBit storage name if other than 'transatlasfb'(required)
+specify FastBit storage name if other than 'transatlasfb'(default: transatlasfb)
 
 =back
 
