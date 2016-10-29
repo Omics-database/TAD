@@ -1,0 +1,22 @@
+=head2 Sat Oct 29 14:40:27 2016: C<Module> L<DBD::mysql|DBD::mysql>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupe/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 4.038>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
