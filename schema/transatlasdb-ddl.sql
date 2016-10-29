@@ -19,42 +19,34 @@
 -- -----------------------------------------------------
 -- Table structure for table `Sample`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `Sample` ;
 CREATE TABLE IF NOT EXISTS `Sample` (`sampleid` INT(11) NOT NULL,`samplename` VARCHAR(50) NOT NULL,`sampleinfo` VARCHAR(100) NULL DEFAULT NULL,`species` VARCHAR(100) NOT NULL,`line` VARCHAR(100) NULL DEFAULT NULL,`tissue` VARCHAR(100) NULL DEFAULT NULL,`method` VARCHAR(100) NULL DEFAULT NULL,`scientist` VARCHAR(100) NULL DEFAULT NULL,`date` DATETIME NOT NULL,`notes` TEXT NULL DEFAULT NULL,PRIMARY KEY (`sampleid`, `samplename`),INDEX `sample_indx_species` (`species` ASC)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `MapStats`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `MapStats` ;
 CREATE TABLE IF NOT EXISTS `MapStats` (`sampleid` INT(11) NOT NULL DEFAULT '0', `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `unmappedreads` INT(11) NULL DEFAULT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `isoforms` INT(11) NULL DEFAULT NULL, `genes` INT(11) NULL DEFAULT NULL, `infoprepreads` TEXT NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `Metadata` ;
 CREATE TABLE IF NOT EXISTS `Metadata` ( `sampleid` INT(11) NOT NULL DEFAULT '0', `refgenome` VARCHAR(50) NULL DEFAULT NULL, `annfile` VARCHAR(20) NULL DEFAULT NULL, `annfilever` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(50) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `GenesFpkm`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `GenesFpkm` ;
 CREATE TABLE IF NOT EXISTS `GenesFpkm` (`sampleid` INT(11) NOT NULL DEFAULT '0', `trackingid` VARCHAR(50) NOT NULL DEFAULT '', `classcode` VARCHAR(20) NULL DEFAULT NULL, `nearestrefid` VARCHAR(20) NULL DEFAULT NULL, `geneid` VARCHAR(50) NOT NULL DEFAULT '', `geneshortname` VARCHAR(200) NOT NULL DEFAULT '', `tssid` VARCHAR(50) NOT NULL DEFAULT '', `chromnumber` VARCHAR(50) NOT NULL DEFAULT '', `chromstart` INT(11) NOT NULL DEFAULT '0', `chromstop` INT(11) NOT NULL DEFAULT '0', `length` INT(11) NULL DEFAULT NULL, `coverage` DOUBLE(20,10) NULL DEFAULT NULL, `fpkm` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmconflow` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmconfhigh` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmstatus` VARCHAR(10) NULL DEFAULT NULL, INDEX `genesfpkm_indx_geneshortname` (`geneshortname` ASC), INDEX `genesfpkm_ibfk_1_idx` (`sampleid` ASC), PRIMARY KEY (`sampleid`), CONSTRAINT `genesfpkm_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `IsoformsFpkm`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `IsoformsFpkm` ;
 CREATE TABLE IF NOT EXISTS `IsoformsFpkm` ( `sampleid` INT(11) NOT NULL DEFAULT '0', `trackingid` VARCHAR(50) NOT NULL DEFAULT '', `classcode` VARCHAR(20) NULL DEFAULT NULL, `nearestrefid` VARCHAR(20) NULL DEFAULT NULL, `geneid` VARCHAR(50) NOT NULL DEFAULT '', `geneshortname` VARCHAR(20) NOT NULL DEFAULT '', `tssid` VARCHAR(50) NOT NULL DEFAULT '', `chromnumber` VARCHAR(50) NOT NULL DEFAULT '', `chromstart` INT(11) NOT NULL DEFAULT '0', `chromstop` INT(11) NOT NULL DEFAULT '0', `length` INT(11) NULL DEFAULT NULL, `coverage` DOUBLE(20,10) NULL DEFAULT NULL, `fpkm` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmconflow` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmconfhigh` DOUBLE(20,5) NOT NULL DEFAULT '0.00000', `fpkmstatus` VARCHAR(10) NULL DEFAULT NULL, INDEX `isoformsfpkm_indx_geneshortname` (`geneshortname` ASC), INDEX `isoformsfpkm_ibfk_1_idx` (`sampleid` ASC), PRIMARY KEY (`sampleid`), CONSTRAINT `isoformsfpkm_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarSummary`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `VarSummary` ;
 CREATE TABLE IF NOT EXISTS `VarSummary` (`sampleid` INT(11) NOT NULL DEFAULT '0', `totalvariants` INT(11) NULL DEFAULT NULL, `totalsnps` INT(11) NULL DEFAULT NULL, `totalindels` INT(11) NULL DEFAULT NULL, `annversion` VARCHAR(50) NULL DEFAULT NULL, `varianttool` VARCHAR(50) NULL DEFAULT NULL, `toolversion` VARCHAR(50) NULL DEFAULT NULL, `date` DATE NOT NULL, `status` CHAR(10) NULL DEFAULT NULL, `nosql` CHAR(10) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `varsummary_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarResult`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `VarResult` ;
 CREATE TABLE IF NOT EXISTS `VarResult` ( `sampleid` INT(11) NOT NULL DEFAULT '0', `chrom` VARCHAR(50) NOT NULL DEFAULT '', `position` INT(11) NOT NULL DEFAULT '0', `refallele` VARCHAR(50) NULL DEFAULT NULL, `altallele` VARCHAR(50) NULL DEFAULT NULL, `quality` DOUBLE(20,5) NULL DEFAULT NULL, `variantclass` VARCHAR(50) NULL DEFAULT NULL, `zygosity` VARCHAR(50) NULL DEFAULT NULL, `dbsnpvariant` VARCHAR(50) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`, `chrom`, `position`), CONSTRAINT `varresult_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `VarSummary` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarAnno`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `VarAnno` ;
 CREATE TABLE IF NOT EXISTS `VarAnno` (`sampleid` INT(11) NOT NULL DEFAULT '0', `chrom` VARCHAR(50) NOT NULL DEFAULT '', `position` INT(11) NOT NULL DEFAULT '0', `consequence` VARCHAR(50) NOT NULL DEFAULT '', `geneid` VARCHAR(50) NOT NULL DEFAULT '', `genename` VARCHAR(50) NULL DEFAULT NULL, `transcript` VARCHAR(200) NULL DEFAULT NULL, `feature` VARCHAR(50) NULL DEFAULT NULL, `genetype` VARCHAR(200) NULL DEFAULT NULL, `proteinposition` VARCHAR(50) NOT NULL DEFAULT '', `aachange` VARCHAR(50) NULL DEFAULT NULL, `codonchange` VARCHAR(50) NULL DEFAULT NULL, PRIMARY KEY (`consequence`, `geneid`, `proteinposition`, `sampleid`, `chrom`, `position`), INDEX `varanno_indx_genename` (`genename` ASC), CONSTRAINT `varanno_ibfk_1` FOREIGN KEY (`sampleid` , `chrom` , `position`) REFERENCES `VarResult` (`sampleid` , `chrom` , `position`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- procedure usp_genedgenedtissue
@@ -119,4 +111,3 @@ CREATE TABLE IF NOT EXISTS `vw_variants` (`sampleid` INT, `chrom` INT, `position
 DROP VIEW IF EXISTS `vw_variants` ;
 DROP TABLE IF EXISTS `vw_variants`;
 CREATE VIEW `vw_variants` AS select `a`.`sampleid` AS `sampleid`,`a`.`chrom` AS `chrom`,`a`.`position` AS `position`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`a`.`variantclass` AS `variantclass`,group_concat(distinct ifnull(`b`.`consequence`,'none') separator '; ') AS `annotation`,ifnull(group_concat(distinct `b`.`genename` separator '; '),'none') AS `genename`,group_concat(distinct ifnull(`a`.`dbsnpvariant`,'none') separator '; ') AS `dbsnpvariant` from (`VarResult` `a` join `VarAnno` `b` on(((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) where (`b`.`genename` is not null) group by `a`.`sampleid`,`a`.`chrom`,`a`.`position`;
---

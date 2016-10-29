@@ -9,9 +9,9 @@ use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
 
-our $VERSION = '$Version: 1 $';
-our $DATE = '$Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
-our $AUTHOR= '$Author:Modupe Adetunji <amodupe@udel.edu> $';
+our $VERSION = '$ Version: 1 $';
+our $DATE = '$ Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
+our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
@@ -23,18 +23,15 @@ my ($sth,$dbh,$schema); #connect to database;
 #--------------------------------------------------------------------------------
 
 sub printerr; #declare error routine
-my $get = dirname(abs_path $0); #get source path
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
-#$schema ="DROP SCHEMA IF EXISTS ".$all_details{"MySQL-databasename"};
-#$sth = $dbh->prepare($schema);
-#$sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema priviledges));
+#create schema attributes $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
 $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
 $sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema  priviledges));
 $dbh->disconnect();
+
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Import schema to mysql
 open (SQL, "$sqlfile") or die "Error: Can't open file schema file for reading, contact $AUTHOR\n";
@@ -51,8 +48,10 @@ $dbh->disconnect();
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname); `mkdir $ffastbit`;
 
+#output
 printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
 printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
+print LOG "TransAtlasDB Completed:\n\t", scalar(localtime),"\n";
 
 #--------------------------------------------------------------------------------
 
@@ -63,10 +62,11 @@ sub processArguments {
 
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
-  pod2usage(-msg=>"Error: Required argument -p (MySQL password) not provided.", -verbose=>1, -exitval=>1) if (!$password);
+  pod2usage(-msg=>"Error: Required argument -p (MySQL password) not provided.") if (!$password);
 
   #set defaults
   $verbose ||=0;
+  my $get = dirname(abs_path $0); #get source path
   $dbname = "transatlasdb" if (! $dbname);
   $fbname = "transatlasfb" if (! $fbname);
   $username = "root" if (! $username);
@@ -74,7 +74,7 @@ sub processArguments {
 
   #setup log file
   my $errfile = "transatlasdb_install.log";
-  open(LOG, ">$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
+  open(LOG, ">>$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
   print LOG "TransAtlasDB Version:\n\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\n\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
   print LOG "TransAtlasDB Command:\n\t $0 @ARGV\n";

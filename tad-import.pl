@@ -10,14 +10,15 @@ use lib dirname(abs_path $0) . '/lib';
 use DBI;
 use CC::Create;
 
-our $VERSION = '$Version: 1 $';
-our $DATE = '$Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
-our $AUTHOR= '$Author:Modupe Adetunji <amodupe@udel.edu> $';
+our $VERSION = '$ Version: 1 $';
+our $DATE = '$ Date: 2016-10-28 14:40:00 (Fri, 28 Oct 2016) $';
+our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
 our ($verbose, $help, $man);
-our ($sqlfile,$connect);
+our ($metadata, $datadb, $gene, $variant, $all, $vep, $annovar);
+our ($file2consider,$connect);
 my ($sth,$dbh,$schema); #connect to database;
 
 #--------------------------------------------------------------------------------
@@ -25,65 +26,66 @@ my ($sth,$dbh,$schema); #connect to database;
 sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
-my %all_details = %{connection($connect, $default)}; #get connection details
-$dbh = mysql_create($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-#$schema ="DROP SCHEMA IF EXISTS ".$all_details{"MySQL-databasename"};
-#$sth = $dbh->prepare($schema);
-#$sth->execute() or die (qq(Error: Can't create database, make sure user is 'root'));
-$schema = "CREATE SCHEMA IF NOT EXISTS ".$all_details{"MySQL-databasename"};
-$sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user is 'root'));
-$dbh->disconnect();
-$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-#Import schema to mysql
-open (SQL, $sqlfile) or die "Error: Can't open file \"$sqlfile\" for reading";
-while (my $sqlStatement = <SQL>) {
-   $sth = $dbh->prepare($sqlStatement)
-      or die (qq(Error: Can't prepare $sqlStatement));
 
-   $sth->execute()
-      or die qq(Error: Can't execute $sqlStatement);
-   $verbose and printerr "Executed:\t$sqlStatement\n";
+my %all_details = %{connection($connect, $default)}; #get connection details
+
+$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+
+if ($metadata){
+  my $metafile = $file2consider;
+  open (META, $metafile) or pod2usage("Error: Can not open metadata file \"$metafile\" for reading");
+  
+  close (META);
+} 
+ 
+if ($datadb) {
+  my $datafolder = $file2consider;
+  opendir (DATA, $datafolder); close (DATA);
 }
 
-#create FastBit path on connection details
-our $ffastbit = fastbit($all_details{"FastBit-path"},$all_details{"FastBit-foldername"});
-`rm -rf $ffastbit`;
-`mkdir $ffastbit`;
+#Import schema to mysql
+# open (SQL, $sqlfile) or die "Error: Can't open file \"$sqlfile\" for reading";
+# while (my $sqlStatement = <SQL>) {
+#   $sth = $dbh->prepare($sqlStatement)
+#      or die (qq(Error: Can't prepare $sqlStatement));
 
-printerr ("Success: Creation of MySQL database ==> \"".$all_details{"MySQL-databasename"}."\"\n");
-printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
+#   $sth->execute()
+#      or die qq(Error: Can't execute $sqlStatement);
+#   $verbose and printerr "Executed:\t$sqlStatement\n";
+# }
+
+#create FastBit path on connection details
+# our $ffastbit = fastbit($all_details{"FastBit-path"},$all_details{"FastBit-foldername"});
+
+
+#printerr ("Success: Creation of MySQL database ==> \"".$all_details{"MySQL-databasename"}."\"\n");
+#printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
 
 #--------------------------------------------------------------------------------
 
 sub processArguments {
-  my @command_line = @ARGV;
-  GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man) or pod2usage ();
+  GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'metadata'=>\$metadata,
+	'data2db'=>\$datadb, 'gene'=>\$gene, 'variant'=>\$variant, 'all'=>\$all, 'vep'=>\$vep,
+	'annovar'=>\$annovar ) or pod2usage ();
 
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
-  $verbose ||=0;
-#  pod2usage ();
+  
+  pod2usage(-msg=>"Error: Invalid syntax specified @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
+  
+  @ARGV==1 or pod2usage("Syntax error");
+  $file2consider = $ARGV[0];
 
+  $verbose ||=0;
+  my $get = dirname(abs_path $0); #get source path
+  $connect = $get.'/.connect.txt';
   #setup log file
-  my $errfile = "transatlasdb_install.log";
-  open(LOG, ">$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
+  my $errfile = "transatlasdb_import.log";
+  open(LOG, ">>$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
   print LOG "TransAtlasDB Version:\n\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\n\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\n\t $0 @command_line\n";
+  print LOG "TransAtlasDB Command:\n\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\n\t", scalar(localtime),"\n";
-
-  unless(@ARGV){
-    $sqlfile = "schema/transatlasdb-ddl.sql";
-    printerr "NOTICE: The sqlfile is set as 'transatlasdb-ddl.sql' by default in parent folder\n";
-  
-    $connect = 'connect_details.txt';
-    printerr "NOTICE: The sqlfile is set as 'connect_details.txt' by default in parent folder\n";
-  } else {
-     ($sqlfile, $connect) = @ARGV;
-  }
-  $verbose ||= 0; 	#when it is not specified, it is zero
-  
 }
 
 
@@ -96,22 +98,43 @@ sub printerr {
 
 =head1 SYNOPSIS
 
-  tad-install.pl <schema-file> <connection-details>
+  tad-import.pl [arguments] <metadata-file|sample-location>
 
   Optional arguments:
 	-h, --help		print help message
   	-m, --man		print complete documentation
   	-v, --verbose		use verbose output
 
-  Function: create the TransAtlasDB tables in MySQL and FastBit location on local disk
- 
-  Example: #create TransAtlasDB using default files
- 	   tad-install.pl
- 	   
-  	   #create TransAtlasDB using required ddl.sql and completed connection details
- 	   tad-install.pl transatlasdb-ddl.sql connect_details.txt
 
-  Version: $Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $
+        Arguments to import metadata or sample analysis
+            --metadata          import metadata file provided
+            --data2db		import data files from gene expression profiling and/or variant analysis (default: --gene)
+
+
+        Arguments to control data2db import
+            --gene     		data2db will import only the alignment file [TopHat2] and expression profiling files [Cufflinks] (default)
+            --variant           data2db will import only the alignment file [TopHat2] and variant analysis files [.vcf]
+            --all          	data2db will import all data files specified
+
+
+        Arguments to fine-tune variant import procedure
+            --vep		import ensembl vep variant annotation file [tab-delimited format] [suffix: .vep.txt] (in variant operation)
+	    --annovar		import annovar variant annotation file [suffix: .multianno.txt] (in variant operation)
+
+
+  Function: import data files into the database
+ 
+  Example: #import metadata files
+ 	   tad-import.pl -metadata example/metadata/metadata-01.txt
+	   tad-import.pl -metadata example/metadata/BioSample-01.xls -v
+ 	   
+  	   #import transcriptome analysis data files
+ 	   tad-import.pl -data2db example/MMU_UD_23/
+	   tad-import.pl -data2db -all -vep example/GGA_UD_1000/
+	   tad-import.pl -data2db -variant -annovar example/GGA_UD_1001/
+
+
+  Version: $Date: 2016-10-28 15:50:08 (Fri, 28 Oct 2016) $
 
 =head1 OPTIONS
 
@@ -128,6 +151,38 @@ print the complete manual of the program.
 =item B<--verbose>
 
 use verbose output.
+
+=item B<--metadata>
+
+import metadata file provided in the tab-delimited format 
+using the template provided or the BioSamples.xls template
+
+=item B<--data2db>
+
+import data files from gene expression profiling analysis 
+derived from using TopHat2 and Cufflinks. Optionally 
+import variant file (see: variant file format) and 
+variant annotation file from annovar or vep.
+
+=item B<--gene>
+
+specify only expression files will be imported. (default)
+
+=item B<--variant>
+
+specify only variant files will be imported.
+
+=item B<--all>
+
+specify both expression and variant files will be imported.
+
+=item B<--vep>
+
+specify annotation file provided was generated using Ensembl Variant Effect Predictor (VEP).
+
+=item B<--annovar>
+
+specify annotation file provided was predicted using ANNOVAR.
 
 =back
 
@@ -200,7 +255,7 @@ Users should manually examine this file and identify sources of error.
 
 TransAtlasDB is free for academic, personal and non-profit use.
 
-For questions or comments, please contact $Author: Modupe Adetunji <amodupe@udel.edu> $.
+For questions or comments, please contact $ Author: Modupe Adetunji <amodupe@udel.edu> $.
 
 =cut
 
