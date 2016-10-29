@@ -33,8 +33,7 @@ sub connection {
   our %DBS = ("MySQL", 1,"FastBit", 2,);
   our %interest = ("username", 1, "password", 2, "databasename", 3, "path", 4, "foldername", 5);
   my %ALL;
-  my $get =dirname(abs_path($0))."/$_[0]";
-  open (CONTENT, $get) or die "Error: Can't open \"$_[0]\" for reading\n"; 
+  open (CONTENT, $_[0]) or die "Error: Can't open connection file run 'tad-install.pl' first\n"; 
   my @contents = <CONTENT>; close (CONTENT);
   my $nameofdb; 
   foreach (@contents){
