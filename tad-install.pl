@@ -8,6 +8,7 @@ use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
+use DBD::mysql;
 
 our $VERSION = '$ Version: 1 $';
 our $DATE = '$ Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
