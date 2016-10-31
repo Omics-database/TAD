@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+$/="%%";
+open(IN,"<csfile.csv") or die "cant";
+@content = <IN>; close IN;
+shift @content;
+foreach (@content) {
+#while (<IN>){ 
+@array = split("\n", $_);
+@header = split(",",$array[1]);
+foreach my $no (0..$#header){
+ $columnpos{$array[0]}{$header[$no]}{$no} = $no;
+#{$col_index} = $col_index;
+ $INDEX{$array[0]}{name}{$newres}{1} = 0;
+print $array[0],"\t",$header[$#header],"\n";
+#print "$_ zzz\n\n\n";
+}

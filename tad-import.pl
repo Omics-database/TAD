@@ -72,7 +72,8 @@ sub processArguments {
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   
   pod2usage(-msg=>"Error: Invalid syntax specified @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
-  
+  pod2usage(-msg=>"Select an option.") if (!$metadata || !$datadb);
+
   @ARGV==1 or pod2usage("Syntax error");
   $file2consider = $ARGV[0];
 
