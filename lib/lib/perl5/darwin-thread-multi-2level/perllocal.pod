@@ -64,3 +64,25 @@ C<EXE_FILES: >
 
 =back
 
+=head2 Mon Nov  7 21:37:20 2016: C<Module> L<DBD::mysql|DBD::mysql>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupe/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 4.038>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
