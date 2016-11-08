@@ -7,6 +7,7 @@ use File::Spec;
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
+use lib dirname(abs_path $0) . '/lib/lib/perl5';
 use DBI;
 use CC::Create;
 use CC::Parse;

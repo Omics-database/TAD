@@ -1,0 +1,66 @@
+=head2 Mon Nov  7 21:29:43 2016: C<Module> L<Spreadsheet::Read|Spreadsheet::Read>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupe/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.66>
+
+=item *
+
+C<EXE_FILES: examples/xlscat examples/xlsgrep examples/ss2tk examples/ssdiff examples/xls2csv>
+
+=back
+
+=head2 Mon Nov  7 21:30:19 2016: C<Module> L<Spreadsheet::ParseExcel|Spreadsheet::ParseExcel>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupe/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.65>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Mon Nov  7 21:30:24 2016: C<Module> L<Spreadsheet::XLSX|Spreadsheet::XLSX>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupe/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.15>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
