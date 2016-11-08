@@ -27,7 +27,8 @@ sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-#create schema attributes $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
+#create schema attributes 
+$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
 $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
 $sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema  priviledges));

@@ -9,6 +9,7 @@ use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use DBI;
 use CC::Create;
+use CC::Parse;
 
 our $VERSION = '$ Version: 1 $';
 our $DATE = '$ Date: 2016-10-28 14:40:00 (Fri, 28 Oct 2016) $';
@@ -17,10 +18,10 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 #--------------------------------------------------------------------------------
 
 our ($verbose, $help, $man);
-our ($metadata, $datadb, $gene, $variant, $all, $vep, $annovar);
+our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar);
 our ($file2consider,$connect);
 my ($sth,$dbh,$schema); #connect to database;
-
+our (%filecontent);
 #--------------------------------------------------------------------------------
 
 sub printerr; #declare error routine
@@ -31,16 +32,24 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 
 $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 
+#PROCESSING METADATA
 if ($metadata){
-  my $metafile = $file2consider;
-  open (META, $metafile) or pod2usage("Error: Can not open metadata file \"$metafile\" for reading");
-  
-  close (META);
-} 
+  if ($excel) { %filecontent = %{ content($file2consider) }; }
+  else { %filecontent = %{ content($file2consider) }; }
+
+  foreach $a (keys %filecontent){
+    foreach $b (keys %{$filecontent{$a}}){
+      print "column = $a\tnumber = $b\tresult = $filecontent{$a}{$b}\n";
+    }
+  }
+}
  
+ 
+#PROCESSING DATA IMPORT
 if ($datadb) {
   my $datafolder = $file2consider;
   opendir (DATA, $datafolder); close (DATA);
+  print "TBD\n"; exit;
 }
 
 #Import schema to mysql
@@ -66,14 +75,13 @@ if ($datadb) {
 sub processArguments {
   GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'metadata'=>\$metadata,
 	'data2db'=>\$datadb, 'gene'=>\$gene, 'variant'=>\$variant, 'all'=>\$all, 'vep'=>\$vep,
-	'annovar'=>\$annovar ) or pod2usage ();
+	'annovar'=>\$annovar, 't|tab'=>\$tab, 'x|excel'=>\$excel ) or pod2usage ();
 
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   
   pod2usage(-msg=>"Error: Invalid syntax specified @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
-  pod2usage(-msg=>"Select an option.") if (!$metadata || !$datadb);
-
+  
   @ARGV==1 or pod2usage("Syntax error");
   $file2consider = $ARGV[0];
 
@@ -112,7 +120,12 @@ sub printerr {
             --data2db		import data files from gene expression profiling and/or variant analysis (default: --gene)
 
 
-        Arguments to control data2db import
+        Arguments to control metadata import
+	    -t, --tab         	metadata will import the tab-delimited file provided (default)
+	    -x, --excel         metadata will import the excel file provided.
+
+
+	Arguments to control data2db import
             --gene     		data2db will import only the alignment file [TopHat2] and expression profiling files [Cufflinks] (default)
             --variant           data2db will import only the alignment file [TopHat2] and variant analysis files [.vcf]
             --all          	data2db will import all data files specified
@@ -127,7 +140,7 @@ sub printerr {
  
   Example: #import metadata files
  	   tad-import.pl -metadata example/metadata/metadata-01.txt
-	   tad-import.pl -metadata example/metadata/BioSample-01.xls -v
+	   tad-import.pl -metadata example/metadata/BioSample-01.xls -x
  	   
   	   #import transcriptome analysis data files
  	   tad-import.pl -data2db example/MMU_UD_23/
@@ -155,8 +168,17 @@ use verbose output.
 
 =item B<--metadata>
 
-import metadata file provided in the tab-delimited format 
-using the template provided or the BioSamples.xls template
+import metadata file provided.
+Metadata files accepted is either a tab-delmited (suffix: '.txt') file 
+or FAANG biosamples excel (suffix: '.xls') file
+
+=item B<--tab>
+
+specify the file provided is in tab-delimited format (suffix: '.txt'). (default)
+
+=item B<--excel>
+
+specify the file provided is an excel spreadsheet (suffix: '.xls'/'.xlsx')
 
 =item B<--data2db>
 
