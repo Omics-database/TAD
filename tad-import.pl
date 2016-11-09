@@ -37,15 +37,15 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 if ($metadata){
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   if ($excel) {
+    $verbose and printerr "Job: Importing Sample Information from excel file => $file2consider\n"; #status    
     %filecontent = %{ excelcontent($file2consider) }; #get excel content
     #get name information
-    if (exists $filecontent{0}{'person%person first name'}){
-      $scientist = "$filecontent{0}{'person%person first name'} $filecontent{0}{'person%person initials'} $filecontent{0}{'person%person last name'}";
+    if (exists $filecontent{2}{'person%person first name'}){
+      $scientist = "$filecontent{2}{'person%person first name'} $filecontent{2}{'person%person initials'} $filecontent{2}{'person%person last name'}";
     } else {$scientist = undef;} #end if for scientist
-    if (exists $filecontent{0}{'organization%organization name'}){
-      $organization = $filecontent{0}{'organization%organization name'};
+    if (exists $filecontent{2}{'organization%organization name'}){
+      $organization = $filecontent{2}{'organization%organization name'};
     } else {$organization = undef;} #end if for organization name
-		
     #get specimen information
     foreach my $row (sort keys %filecontent){
       foreach my $column (keys %{$filecontent{$row}}){
@@ -105,17 +105,20 @@ if ($metadata){
 	$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization);
 	$verbose and printerr "Inserted:\t$name\n"; #import to database
         $sth-> finish; #end of query
-      }
-    }
-  }
+      } else {
+        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
+      } #end unless in the database
+    } #end foreach specimen; attribute of interest
+  } #end if excel
   else { #unix tab delimited file
+    $verbose and printerr "Job: Importing Sample Information from tab-delimited file => $file2consider\n"; #status
     %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
     foreach my $row (sort keys %filecontent){
       SampleCheck();  #check to avoid duplicate entry
       if (exists $filecontent{$row}{'sample name'}) { #sample name
 	$name = $filecontent{$row}{'sample name'};
       } else {
-	die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"\n";
+	pod2usage("Warning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
       } #end if for getting sample information 
       unless (exists $Sampleresults{$name}) { #if sample isn't in the database
 	$scientist = $filecontent{$row}{'scientist'};  #scientist
@@ -151,11 +154,13 @@ if ($metadata){
 	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization);
 	$verbose and printerr "Inserted:\t$name\n"; #import to database
 	$sth-> finish; #end of query
-      }
-    }
-  }
+      } else {
+        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
+      } #end unless in the database
+    } #end foreach filecontent
+  } #end else (tab-delimited)
   $dbh-> disconnect;
-}
+} #end if metadata
 
 #PROCESSING DATA IMPORT
 if ($datadb) {
@@ -164,14 +169,14 @@ if ($datadb) {
   opendir (DATA, $datafolder); close (DATA);
   print "TBD\n"; exit;
 }
-#output
+#output: the end
 if ($metadata){
   printerr ("Success: Import of Sample Information in \"$file2consider\"\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 }
 if ($datadb){
   printerr ("Success: Import of RNA Seq analysis information in \"$file2consider\"\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 }
 #Import schema to mysql
 # open (SQL, $sqlfile) or die "Error: Can't open file \"$sqlfile\" for reading";
@@ -190,7 +195,7 @@ if ($datadb){
 
 #printerr ("Success: Creation of MySQL database ==> \"".$all_details{"MySQL-databasename"}."\"\n");
 #printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
-
+close (LOG);
 #--------------------------------------------------------------------------------
 
 sub processArguments {
@@ -210,8 +215,8 @@ sub processArguments {
   my $get = dirname(abs_path $0); #get source path
   $connect = $get.'/.connect.txt';
   #setup log file
-  my $errfile = "db.tad_import.log";
-  open(LOG, ">>$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
+  my $errfile = open_unique("db.tad_status.log"); 
+  open(LOG, ">>", @$errfile[1]) or die "Error: cannot write LOG information to log file @$errfile[1] $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";

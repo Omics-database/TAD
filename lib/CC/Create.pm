@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use DBI;
+use IO::File;
 
 sub DEFAULTS {
   my $default = "https://github.com/modupeore/TAD";
@@ -20,7 +21,7 @@ sub mysql_create {
 }
 sub mysql {
   my $dsn = 'dbi:mysql:database='.$_[0].';host=localhost;port=3306';
-  my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "Connection Error: $DBI::errstr\n";
+  my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "\nConnection Error: Database $_[0] doesn't exist. Run 'tad-install.pl' first\n";
   return $dbh;
 }
 
@@ -33,7 +34,7 @@ sub connection {
   our %DBS = ("MySQL", 1,"FastBit", 2,);
   our %interest = ("username", 1, "password", 2, "databasename", 3, "path", 4, "foldername", 5);
   my %ALL;
-  open (CONTENT, $_[0]) or die "Error: Can't open connection file run 'tad-install.pl' first\n"; 
+  open (CONTENT, $_[0]) or die "Error: Can't open connection file. Run 'tad-connect.pl'\n"; 
   my @contents = <CONTENT>; close (CONTENT);
   my $nameofdb; 
   foreach (@contents){
@@ -58,5 +59,23 @@ sub connection {
     }
   } 
   return \%ALL;
+}
+sub open_unique {
+    my $file = shift || '';
+    unless ($file =~ /^(.*?)(\.[^\.]+)$/) {
+        print "Bad file name: '$file'\n";
+        return;
+    }
+    my $io;
+    my $seq = '';
+    my $base = $1;
+    my $ext = $2;
+    until (defined ($io = IO::File->new($base.$seq.$ext
+                                   ,O_WRONLY|O_CREAT|O_EXCL))) {
+        last unless $!{EEXIST};
+        $seq = '_0' if $seq eq '';
+        $seq =~ s/(\d+)/$1 + 1/e;
+    }
+    return [$io,$base.$seq.$ext] if defined $io;
 }
 1;

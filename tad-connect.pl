@@ -19,7 +19,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 our ($verbose, $help, $man);
 our ($sqlfile,$connect);
-my ($dbname,$username,$password,$location,$fbname);
+my ($dbname,$username,$password,$location,$fbname, $ffastbit);
 my ($sth,$dbh,$schema); #connect to database;
 
 #--------------------------------------------------------------------------------
@@ -28,32 +28,9 @@ sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-#create schema attributes 
-$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
-$schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
-$sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema  priviledges));
-$dbh->disconnect();
-
-$dbh = mysql($dbname, $username, $password); #connect to mysql
-#Import schema to mysql
-open (SQL, "$sqlfile") or die "Error: Can't open file schema file for reading, contact $AUTHOR\n";
-while (my $sqlStatement = <SQL>) {
-   $sth = $dbh->prepare($sqlStatement)
-      or die (qq(Error: Can't prepare $sqlStatement));
-
-   $sth->execute()
-      or die qq(Error: Can't execute $sqlStatement);
-   $verbose and printerr "Executed:\t$sqlStatement\n";
-}
-$dbh->disconnect();
-
-#create FastBit path on connection details
-our $ffastbit = fastbit($location, $fbname); `mkdir $ffastbit`;
-
-#output
-printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
-printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
+printerr ("Success: Stored the following connection details.\n");
+printerr ("Connection:\n\tUsername = $username\n\tPassword = $password\n\tMySQL database = $dbname\n");
+printerr ("\tFastBit folder \t $ffastbit\n");
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 
 #--------------------------------------------------------------------------------
@@ -83,9 +60,15 @@ sub processArguments {
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
 
-  $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
+  #make sure connection details are accurate
+  $dbh = mysql($dbname, $username, $password); #connect to mysql
+
+  #find fastbit location on die;
+  $ffastbit = fastbit($location, $fbname);
+  `find $ffastbit` or pod2usage();
+
   open(CONNECT, ">$get/\.connect.txt"); 
-  my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname";
+  my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n";
   print CONNECT $connectcontent; close (CONNECT);
 }
 
@@ -99,7 +82,7 @@ sub printerr {
 
 =head1 SYNOPSIS
 
- tad-install.pl [arguments] -p <MySQLpassword>
+ tad-connect.pl [arguments]
 
  Optional arguments:
        -h, --help                      print help message
@@ -115,13 +98,16 @@ sub printerr {
        -l, --location <directory>	specify FastBit directory (default: current working directory)
        -n, --fastbitname <directory>    specify FastBitName (default: transatlasfb)
 
- Function: create the TransAtlasDB tables in MySQL and FastBit location on local disk
+ Function: store connection details to existing TransAtlasDB if connection details were lost or changed after installation.
  
- Example: #create TransAtlasDB with mysql root password as 'password' and using default options
-          tad-install.pl -p password
+ Example: #to retrieve connection details if exists
+	  tad-connect.pl
+	  
+  	  #store connection details to existing TransAtlasDB with mysql root password as 'password' and using default options
+          tad-connect.pl -p password
         
-          #create TransAtlasDB database with username:root, password:root, databasename:testmysql, fastbitname:testfastbit
-          tad-install.pl -u root -p root -d testmysql -n testfastbit
+          #store connection details to existing TransAtlasDB with username:root, password:root, databasename:testmysql, fastbitname:testfastbit
+          tad-connect.pl -u root -p root -d testmysql -n testfastbit
 
 
  Version: $Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $
@@ -145,7 +131,7 @@ use verbose output.
 
 =item B<-u| --username>
 
-specify MySQL username with 'GRANT ALL' priviledge, if other than 'root' (default: root). 
+specify MySQL username with access to the database, if other than 'root' (default: root). 
 
 =item B<-p|--password>
 
