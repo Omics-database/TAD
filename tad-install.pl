@@ -54,7 +54,7 @@ our $ffastbit = fastbit($location, $fbname); `mkdir $ffastbit`;
 #output
 printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
 printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
-print LOG "TransAtlasDB Completed:\n\t", scalar(localtime),"\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 
 #--------------------------------------------------------------------------------
 
@@ -76,12 +76,12 @@ sub processArguments {
   if (! $location) {$location = `pwd`; chomp $location;}
 
   #setup log file
-  my $errfile = "transatlasdb_install.log";
+  my $errfile = "db.tad_install.log";
   open(LOG, ">>$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
-  print LOG "TransAtlasDB Version:\n\t",$VERSION,"\n";
-  print LOG "TransAtlasDB Information:\n\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\n\t $0 @ARGV\n";
-  print LOG "TransAtlasDB Started:\n\t", scalar(localtime),"\n";
+  print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
+  print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
+  print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
+  print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
 
   $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
   open(CONNECT, ">$get/\.connect.txt"); 

@@ -35,136 +35,144 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 
 #PROCESSING METADATA
 if ($metadata){
-	$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+  $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   if ($excel) {
-		%filecontent = %{ excelcontent($file2consider) }; #get excel content
-		#get name information
-		if (exists $filecontent{0}{'person%person first name'}){
-			$scientist = "$filecontent{0}{'person%person first name'} $filecontent{0}{'person%person initials'} $filecontent{0}{'person%person last name'}";
-		} else {$scientist = undef;} #end if for scientist
-		if (exists $filecontent{0}{'organization%organization name'}){
-			$organization = $filecontent{0}{'organization%organization name'};
-		} else {$organization = undef;} #end if for organization name
+    %filecontent = %{ excelcontent($file2consider) }; #get excel content
+    #get name information
+    if (exists $filecontent{0}{'person%person first name'}){
+      $scientist = "$filecontent{0}{'person%person first name'} $filecontent{0}{'person%person initials'} $filecontent{0}{'person%person last name'}";
+    } else {$scientist = undef;} #end if for scientist
+    if (exists $filecontent{0}{'organization%organization name'}){
+      $organization = $filecontent{0}{'organization%organization name'};
+    } else {$organization = undef;} #end if for organization name
 		
-		#get specimen information
-		foreach my $row (sort keys %filecontent){
-			foreach my $column (keys %{$filecontent{$row}}){
-				if ($column =~ /^specimen.*/){
-					$specimen{$row}{$column} = $filecontent{$row}{$column};
-				} #end if for getting sample information
-			} #end foreach
-		} #end foreach
+    #get specimen information
+    foreach my $row (sort keys %filecontent){
+      foreach my $column (keys %{$filecontent{$row}}){
+	if ($column =~ /^specimen.*/){
+  	  $specimen{$row}{$column} = $filecontent{$row}{$column};
+	} #end if for getting sample information
+      } #end foreach
+    } #end foreach
 		
-		#get animal information
-		foreach my $row (sort keys %filecontent){
-			foreach my $column (keys %{$filecontent{$row}}){
-				if ($column =~ /^animal%sample name/){
-					$description{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%sample description'};
-					if (exists $filecontent{$row}{'animal%organism'}) {
-						$organism{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%organism'};
-					} else {
-						die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: animal, ROW: $row, COLUMN: \"Organism\"\n";
-					}		#end if for animal information
-				} #end if for animal id
-			} #end foreach
-		} #end foreach
+    #get animal information
+    foreach my $row (sort keys %filecontent){
+      foreach my $column (keys %{$filecontent{$row}}){
+        if ($column =~ /^animal%sample name/){
+	  $description{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%sample description'};
+	  if (exists $filecontent{$row}{'animal%organism'}) {
+	    $organism{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%organism'};
+	  } else {
+	    die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: animal, ROW: $row, COLUMN: \"Organism\"\n";
+	  } #end if for animal information
+	} #end if for animal id
+      } #end foreach
+    } #end foreach
 		
-		#attributes of interest
-		foreach my $row  (sort keys %specimen){
-			SampleCheck(); #check to avoid duplicate entry
-			if (exists $filecontent{$row}{'specimen%sample name'}) {
-				$name = $filecontent{$row}{'specimen%sample name'};
-			} else {
-				die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Sample Name\"\n";
-			} #end if to get sampleid
-			unless (exists $Sampleresults{$name}) { #if sample isn't in the database
-				if (exists $filecontent{$row}{'specimen%derived from'}) {
-					$derivedfrom = uc($filecontent{$row}{'specimen%derived from'});
-				} else {
-					die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Derived From\"\n";
-				} #end if for animal id
-				unless (exists $filecontent{$row}{'specimen%organism part'}) {
-					$tissue = $filecontent{$row}{'specimen%organism part'};
-				} else {
-					$tissue = $filecontent{$row}{'specimen%sample description'};
-				} #end if for tissue 
-				if (exists $filecontent{$row}{'specimen%specimen collection date'}){
-					$collection =$filecontent{$row}{'specimen%specimen collection date'};
-					my @date = split('-', $collection);
-					if ($#date == 0) {$collection = $date[0]."0101";}
-					elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
-					elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
-					else {$collection = undef;}
-				} else {
-					$collection = undef;
-				} #end if for specimen collection date
-				$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-				unless (exists $organism{$derivedfrom}) {
-					die "\nWarning: Error in Excel file \"$file2consider\".\n\tAnimal \"$derivedfrom\" information is not provided in SHEET: animal\n";
-				} #check to make sure animal information from specimen sheet is provided
-				$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization);
-				$verbose and printerr "Inserted:\t$name\n"; #import to database
-				$sth-> finish; #end of query
-			}
-		}
-	}
+    #attributes of interest
+    foreach my $row  (sort keys %specimen){
+      SampleCheck(); #check to avoid duplicate entry
+      if (exists $filecontent{$row}{'specimen%sample name'}) {
+	$name = $filecontent{$row}{'specimen%sample name'};
+      } else {
+	die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Sample Name\"\n";
+      } #end if to get sampleid
+      unless (exists $Sampleresults{$name}) { #if sample isn't in the database
+	if (exists $filecontent{$row}{'specimen%derived from'}) {
+  	  $derivedfrom = uc($filecontent{$row}{'specimen%derived from'});
+	} else {
+	  die "\nWarning: Error in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Derived From\"\n";
+	} #end if for animal id
+	unless (exists $filecontent{$row}{'specimen%organism part'}) {
+	  $tissue = $filecontent{$row}{'specimen%organism part'};
+	} else {
+	  $tissue = $filecontent{$row}{'specimen%sample description'};
+	} #end if for tissue 
+	if (exists $filecontent{$row}{'specimen%specimen collection date'}){
+	  $collection =$filecontent{$row}{'specimen%specimen collection date'};
+	  my @date = split('-', $collection);
+	  if ($#date == 0) {$collection = $date[0]."0101";}
+	  elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
+	  elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
+	  else {$collection = undef;}
+	} else {
+	  $collection = undef;
+	} #end if for specimen collection date
+	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
+	unless (exists $organism{$derivedfrom}) {
+	  die "\nWarning: Error in Excel file \"$file2consider\".\n\tAnimal \"$derivedfrom\" information is not provided in SHEET: animal\n";
+	} #check to make sure animal information from specimen sheet is provided
+	$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization);
+	$verbose and printerr "Inserted:\t$name\n"; #import to database
+        $sth-> finish; #end of query
+      }
+    }
+  }
   else { #unix tab delimited file
-		%filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
-		foreach my $row (sort keys %filecontent){
-			SampleCheck();  #check to avoid duplicate entry
-			if (exists $filecontent{$row}{'sample name'}) { #sample name
-				$name = $filecontent{$row}{'sample name'};
-			} else {
-				die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"\n";
-			} #end if for getting sample information 
-			unless (exists $Sampleresults{$name}) { #if sample isn't in the database
-				$scientist = $filecontent{$row}{'scientist'};  #scientist
-				$organization = $filecontent{$row}{'organization name'}; #organization name
+    %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
+    foreach my $row (sort keys %filecontent){
+      SampleCheck();  #check to avoid duplicate entry
+      if (exists $filecontent{$row}{'sample name'}) { #sample name
+	$name = $filecontent{$row}{'sample name'};
+      } else {
+	die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"\n";
+      } #end if for getting sample information 
+      unless (exists $Sampleresults{$name}) { #if sample isn't in the database
+	$scientist = $filecontent{$row}{'scientist'};  #scientist
+	$organization = $filecontent{$row}{'organization name'}; #organization name
 		
-				if (exists $filecontent{$row}{'organism'}) { #organism
-					$organism = $filecontent{$row}{'organism'};
-				} else {
-					die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
-				} #end if for animal info
-				$description = $filecontent{$row}{'sample description'}; #description
-				if (exists $filecontent{$row}{'derived from'}) { #animal
-					$derivedfrom = uc($filecontent{$row}{'derived from'});
-				} else {
-					die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
-				}		 #end if for animal id
-				unless (exists $filecontent{$row}{'organism part'}) { #tissue
-					$tissue = $filecontent{$row}{'organism part'};
-				} else {
-					$tissue = $filecontent{$row}{'sample description'};
-				} #end if for tissue
-				if (exists $filecontent{$row}{'specimen collection date'}){
-					$collection =$filecontent{$row}{'specimen collection date'};
-					my @date = split('-', $collection);
-					if ($#date == 0) {$collection = $date[0]."0101";}
-					elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
-					elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
-					else {$collection = undef;}
-				} else {
-					$collection = undef;
-				} #end id for specimen collection date
-				$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-				$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization);
-				$verbose and printerr "Inserted:\t$name\n"; #import to database
-				$sth-> finish; #end of query
-			}
-		}
-	}
-	$dbh-> disconnect;
+	if (exists $filecontent{$row}{'organism'}) { #organism
+ 	  $organism = $filecontent{$row}{'organism'};
+	} else {
+	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
+	} #end if for animal info
+	$description = $filecontent{$row}{'sample description'}; #description
+	if (exists $filecontent{$row}{'derived from'}) { #animal
+	  $derivedfrom = uc($filecontent{$row}{'derived from'});
+	} else {
+	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
+	} #end if for animal id
+	unless (exists $filecontent{$row}{'organism part'}) { #tissue
+	  $tissue = $filecontent{$row}{'organism part'};
+	} else {
+	  $tissue = $filecontent{$row}{'sample description'};
+	} #end if for tissue
+	if (exists $filecontent{$row}{'specimen collection date'}){
+	  $collection =$filecontent{$row}{'specimen collection date'};
+	my @date = split('-', $collection);
+	if ($#date == 0) {$collection = $date[0]."0101";}
+	elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
+	elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
+	else {$collection = undef;}
+	} else {
+	  $collection = undef;
+	} #end id for specimen collection date
+	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
+	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization);
+	$verbose and printerr "Inserted:\t$name\n"; #import to database
+	$sth-> finish; #end of query
+      }
+    }
+  }
+  $dbh-> disconnect;
 }
- 
+
 #PROCESSING DATA IMPORT
 if ($datadb) {
-	$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+  $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   my $datafolder = $file2consider;
   opendir (DATA, $datafolder); close (DATA);
   print "TBD\n"; exit;
 }
-
+#output
+if ($metadata){
+  printerr ("Success: Import of Sample Information in \"$file2consider\"\n");
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+}
+if ($datadb){
+  printerr ("Success: Import of RNA Seq analysis information in \"$file2consider\"\n");
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+}
 #Import schema to mysql
 # open (SQL, $sqlfile) or die "Error: Can't open file \"$sqlfile\" for reading";
 # while (my $sqlStatement = <SQL>) {
@@ -202,12 +210,12 @@ sub processArguments {
   my $get = dirname(abs_path $0); #get source path
   $connect = $get.'/.connect.txt';
   #setup log file
-  my $errfile = "transatlasdb_import.log";
+  my $errfile = "db.tad_import.log";
   open(LOG, ">>$errfile") or die "Error: cannot write LOG information to log file $errfile $!\n";
-  print LOG "TransAtlasDB Version:\n\t",$VERSION,"\n";
-  print LOG "TransAtlasDB Information:\n\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\n\t $0 @ARGV\n";
-  print LOG "TransAtlasDB Started:\n\t", scalar(localtime),"\n";
+  print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
+  print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
+  print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
+  print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
 }
 
 
@@ -268,8 +276,8 @@ sub SampleCheck {
   Function: import data files into the database
  
   Example: #import metadata files
- 	   tad-import.pl -metadata example/metadata/metadata-01.txt
-	   tad-import.pl -metadata example/metadata/BioSample-01.xls -x
+ 	   tad-import.pl -metadata -v example/metadata/TEMPLATE/metadata_GGA_UD.txt
+	   tad-import.pl -metadata -x -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
  	   
   	   #import transcriptome analysis data files
  	   tad-import.pl -data2db example/MMU_UD_23/

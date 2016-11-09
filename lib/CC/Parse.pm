@@ -3,7 +3,7 @@ use strict;
 use Spreadsheet::Read;
 
 sub excelcontent {
-  my $workbook = ReadData("$_[0]") or die "Error: Could not open excel file $_[0]\n";
+  my $workbook = ReadData("$_[0]") or die "Error: Could not open excel file \"$_[0]\"\n";
   my ($odacontent, $source_cell);
   foreach my $source_sheet_number (1..length($workbook)) {
     my @rows = Spreadsheet::Read::rows($workbook->[$source_sheet_number]);
@@ -44,7 +44,7 @@ sub excelcontent {
 }
 
 sub tabcontent {
-  open (BOOK,"<",$_[0]) or die "Error: Could not open source file $_[0]\n";
+  open (BOOK,"<",$_[0]) or die "Error: Could not open source file \"$_[0]\"\n";
   my @content = <BOOK>; close (BOOK); chomp @content;
   our (%INDEX, %columnpos);
   my @header = split("\t", $content[0]);
