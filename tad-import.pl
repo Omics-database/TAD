@@ -4,7 +4,7 @@ use strict;
 use Pod::Usage;
 use Getopt::Long;
 use File::Spec;
-use File::Basename qw(dirname);
+use File::Basename;
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use DBI;
@@ -36,7 +36,57 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 #PROCESSING METADATA
 if ($metadata){
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-  if ($excel) {
+  if ($tab) { #unix tab delimited file
+    $verbose and printerr "Job: Importing Sample Information from tab-delimited file => $file2consider\n"; #status
+    %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
+    foreach my $row (sort keys %filecontent){
+      SampleCheck();  #check to avoid duplicate entry
+      if (exists $filecontent{$row}{'sample name'}) { #sample name
+	$name = $filecontent{$row}{'sample name'};
+      } else {
+	pod2usage("Warning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
+      } #end if for getting sample information 
+      unless (exists $Sampleresults{$name}) { #if sample isn't in the database
+	$scientist = $filecontent{$row}{'scientist'};  #scientist
+	$organization = $filecontent{$row}{'organization name'}; #organization name
+		
+	if (exists $filecontent{$row}{'organism'}) { #organism
+ 	  $organism = $filecontent{$row}{'organism'};
+	} else {
+	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
+	} #end if for animal info
+	$description = $filecontent{$row}{'sample description'}; #description
+	if (exists $filecontent{$row}{'derived from'}) { #animal
+	  $derivedfrom = uc($filecontent{$row}{'derived from'});
+	} else {
+	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
+	} #end if for animal id
+	unless (exists $filecontent{$row}{'organism part'}) { #tissue
+	  $tissue = $filecontent{$row}{'organism part'};
+	} else {
+	  $tissue = $filecontent{$row}{'sample description'};
+	} #end if for tissue
+	if (exists $filecontent{$row}{'specimen collection date'}){
+	  $collection =$filecontent{$row}{'specimen collection date'};
+	my @date = split('-', $collection);
+	if ($#date == 0) {$collection = $date[0]."0101";}
+	elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
+	elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
+	else {$collection = undef;}
+	} else {
+	  $collection = undef;
+	} #end id for specimen collection date
+	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
+	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization);
+	$verbose and printerr "Inserted:\t$name\n"; #import to database
+	$sth-> finish; #end of query
+      } else {
+        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
+      } #end unless in the database
+    } #end foreach filecontent
+  } #end if (tab-delimited)
+  
+  else { #import faang excel sheet
     $verbose and printerr "Job: Importing Sample Information from excel file => $file2consider\n"; #status    
     %filecontent = %{ excelcontent($file2consider) }; #get excel content
     #get name information
@@ -110,64 +160,126 @@ if ($metadata){
       } #end unless in the database
     } #end foreach specimen; attribute of interest
   } #end if excel
-  else { #unix tab delimited file
-    $verbose and printerr "Job: Importing Sample Information from tab-delimited file => $file2consider\n"; #status
-    %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
-    foreach my $row (sort keys %filecontent){
-      SampleCheck();  #check to avoid duplicate entry
-      if (exists $filecontent{$row}{'sample name'}) { #sample name
-	$name = $filecontent{$row}{'sample name'};
-      } else {
-	pod2usage("Warning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
-      } #end if for getting sample information 
-      unless (exists $Sampleresults{$name}) { #if sample isn't in the database
-	$scientist = $filecontent{$row}{'scientist'};  #scientist
-	$organization = $filecontent{$row}{'organization name'}; #organization name
-		
-	if (exists $filecontent{$row}{'organism'}) { #organism
- 	  $organism = $filecontent{$row}{'organism'};
-	} else {
-	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
-	} #end if for animal info
-	$description = $filecontent{$row}{'sample description'}; #description
-	if (exists $filecontent{$row}{'derived from'}) { #animal
-	  $derivedfrom = uc($filecontent{$row}{'derived from'});
-	} else {
-	  die "\nWarning: Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
-	} #end if for animal id
-	unless (exists $filecontent{$row}{'organism part'}) { #tissue
-	  $tissue = $filecontent{$row}{'organism part'};
-	} else {
-	  $tissue = $filecontent{$row}{'sample description'};
-	} #end if for tissue
-	if (exists $filecontent{$row}{'specimen collection date'}){
-	  $collection =$filecontent{$row}{'specimen collection date'};
-	my @date = split('-', $collection);
-	if ($#date == 0) {$collection = $date[0]."0101";}
-	elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
-	elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
-	else {$collection = undef;}
-	} else {
-	  $collection = undef;
-	} #end id for specimen collection date
-	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization);
-	$verbose and printerr "Inserted:\t$name\n"; #import to database
-	$sth-> finish; #end of query
-      } else {
-        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
-      } #end unless in the database
-    } #end foreach filecontent
-  } #end else (tab-delimited)
   $dbh-> disconnect;
 } #end if metadata
 
 #PROCESSING DATA IMPORT
+our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $prepfile, $logfile);
+our ($total, $mapped, $unmapped, $deletions, $insertions, $junctions, $genes, $isoforms,$prep, $date);
 if ($datadb) {
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-  my $datafolder = $file2consider;
-  opendir (DATA, $datafolder); close (DATA);
-  print "TBD\n"; exit;
+  my $dataid = (split("\/", $file2consider))[-1]; 
+  SampleCheck();
+  if (exists $Sampleresults{$dataid}) { #if sample is in the database
+    unless (exists $Mapresults{$dataid}) { # if mapping information is in the database
+      `find $file2consider` or pod2usage ("Error: Can not locate \"$file2consider\"");
+      my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
+      $acceptedbam = (grep /accepted_hits.bam/, @foldercontent)[0];
+      $alignfile = (grep /align_summary.txt/, @foldercontent)[0];
+      $genesfile = (grep /genes.fpkm/, @foldercontent)[0];
+      $isoformsfile = (grep /isoforms.fpkm/, @foldercontent)[0];
+      $deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
+      $insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
+      $junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
+      $deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
+      $prepfile = (grep /prep_reads.info/,@foldercontent)[0];
+      $logfile = (grep /logs\/run.log/, @foldercontent)[0];
+      
+      # log file check 
+      my $thelogfile = `head -n 1 $logfile`;
+      my @allgeninfo = split('\s',$thelogfile);
+
+      #also getting metadata info
+      my ($str, $ann, $ref, $seq,$allstart, $allend) = 0; #defining calling variables
+      #making sure the arguments are accurately parsed
+      if ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*no-coverage-search$/){$str = 2; $ann = 5; $ref = 10; $seq = 11; $allstart = 4; $allend = 7;}
+      elsif ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*G$/ ){$str = 2; $ann = 4; $ref = 9; $seq = 10; $allstart = 3; $allend = 6;}
+      elsif($allgeninfo[3] =~ /\-o$/){$str=99; $ann=99; $ref = 5; $seq = 6; $allstart = 3; $allend = 6;}
+      else {print "File format doesn't match what was encoded for frnak_metadata\nSyntax error:\n\t@allgeninfo\n";next;}
+      my $refgenome = (split('\/', $allgeninfo[$ref]))[-1]; #reference genome name
+
+      #assuring we are working on available genomes
+      open(ALIGN,"<", $alignfile) or die "Can not open file $alignfile\n";
+      open(GENES, "<", $genesfile) or die "Can not open file $genesfile\n";
+      open(ISOFORMS, "<", $isoformsfile) or die "Can not open file $isoformsfile\n";
+
+      # PARSER FOR MapStats TABLE
+      while (<ALIGN>){
+        chomp;
+        if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
+        if (/Mapped/){my $line = $_; $line =~ /Mapped.*:\s+(\d+).*$/;$mapped = $1;}
+      } close ALIGN;
+      $unmapped = $total-$mapped;
+      $deletions = `cat $deletionsfile | wc -l`; $deletions--;
+      $insertions = `cat $insertionsfile | wc -l`; $insertions--;
+      $junctions = `cat $junctionsfile | wc -l`; $junctions--;
+      $genes = `cat $genesfile | wc -l`; $genes--;
+      $isoforms = `cat $isoformsfile | wc -l`; $isoforms--;
+      $prep = `cat $prepfile`;
+      $date = `date +%Y-%m-%d`;
+      
+      #INSERT INTO DATABASE: #MapStats table
+      $sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, unmappedreads, deletions, insertions, junctions, isoforms, genes, infoprepreads, date ) values (?,?,?,?,?,?,?,?,?,?,?)");
+      #$sth ->execute($dataid, $total, $mapped, $unmapped, $deletions, $insertions, $junctions, $isoforms, $genes, $prep, $date);
+      
+      #GENES_FPKM table
+      $sth = $dbh->prepare("insert into GenesFpkm (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      while (<GENES>){
+        chomp;
+        #my ($chrom_no, $chrom_start, $chrom_stop);
+        my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
+        unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
+          if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
+          if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
+          my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
+          #$chrom_no = $1; $chrom_start = $2; $chrom_stop = $3;
+          print $chrom_no, $chrom_start, $chrom_stop,"\n";
+          #$sth ->execute($lib_id, $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat );
+        }
+      } close GENES;
+      
+      #ISOFORMS_FPKM table
+      $sth = $dbh->prepare("insert into IsoformsFpkm (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      while (<ISOFORMS>){
+        chomp;
+        #my ($chrom_no, $chrom_start, $chrom_stop);
+        my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
+        unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
+          if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
+          if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
+          my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
+          #$chrom_no = $1; $chrom_start = $2; $chrom_stop = $3;
+          print $chrom_no, $chrom_start, $chrom_stop,"\n";
+          #$sth ->execute($lib_id, $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat );
+        }
+      } close ISOFORMS;      
+        
+      #extracting the syntax used for METADATA
+      my ($replace,$stranded, $sequences, $annotation, $annotationfile, $annfileversion);
+      unless ($ann ==99){
+        $annotation = $allgeninfo[$ann];
+        $annotationfile = uc ( (split('\.',((split("\/", $allgeninfo[$ann]))[-1])))[-1] ); #(annotation file)
+        $annfileversion = substr(`head -n 1 $allgeninfo[$ann]`,2,-1); #annotation file version
+      }
+      else { $annotation = undef; $annotationfile = undef; $annfileversion = undef; }
+      if ($str == 99){ $stranded = undef; } else { $stranded = $allgeninfo[$str]; } # (stranded or not)	
+      my $otherseq = $seq++;
+      unless(length($allgeninfo[$otherseq])<1){ #sequences 
+        $sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]).",". ( ( split('\/', $allgeninfo[$otherseq]) ) [-1]);
+      } else {
+        $sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]);
+      }
+      #metadata table
+      $sth = $dbh->prepare("insert into frnak_metadata (sampleid,refgenome, annfile, annfilever, stranded, sequencename ) values (?,?,?,?,?,?,?)");
+      #$sth ->execute($dataid, $refgenome, $annotationfile, $annfileversion, $stranded,$sequences,$_[2] );
+
+        
+    } else {
+      $verbose and printerr "Duplicate (Already exists):\t$dataid\n"; 
+    } #end unless data is not in mapstats table
+  } else {
+      pod2usage("Error: \"$dataid\" sample information is not in the database. Make sure the metadata has be previously inserted using '-metadata'");
+  } #end if data in sample table
 }
 #output: the end
 if ($metadata){
@@ -206,6 +318,7 @@ sub processArguments {
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   
+  pod2usage(-msg=>"Error: Invalid syntax specified @ARGV.") if (! $metadata || ! $datadb);
   pod2usage(-msg=>"Error: Invalid syntax specified @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
   
   @ARGV==1 or pod2usage("Syntax error");
@@ -263,8 +376,9 @@ sub SampleCheck {
 
 
         Arguments to control metadata import
-	    -t, --tab         	metadata will import the tab-delimited file provided (default)
-	    -x, --excel         metadata will import the excel file provided.
+	    -x, --excel         metadata will import the faang excel file provided (default)
+      -t, --tab         	metadata will import the tab-delimited file provided
+	     
 
 
 	Arguments to control data2db import
@@ -281,7 +395,7 @@ sub SampleCheck {
   Function: import data files into the database
  
   Example: #import metadata files
- 	   tad-import.pl -metadata -v example/metadata/TEMPLATE/metadata_GGA_UD.txt
+ 	   tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
 	   tad-import.pl -metadata -x -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
  	   
   	   #import transcriptome analysis data files
