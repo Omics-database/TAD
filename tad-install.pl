@@ -7,7 +7,6 @@ use File::Spec;
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
-use lib dirname(abs_path $0) . '/lib/lib/perl5';
 use CC::Create;
 use DBD::mysql;
 
@@ -32,8 +31,9 @@ processArguments(); #Process input
 $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
 $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user has create/drop schema  priviledges));
+$sth->execute() or die (qq(Error: Can't create database, make sure user has create schema  priviledges or use an existing database.));
 $dbh->disconnect();
+$verbose and printerr "Executed:\tUsing SCHEMA $dbname\n";
 
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Import schema to mysql
@@ -49,7 +49,9 @@ while (my $sqlStatement = <SQL>) {
 $dbh->disconnect();
 
 #create FastBit path on connection details
-our $ffastbit = fastbit($location, $fbname); `mkdir $ffastbit`;
+our $ffastbit = fastbit($location, $fbname); 
+`rm -rf $ffastbit`; $verbose and printerr "Executed:\tRemoved Fastbit folder $ffastbit\n\n";
+`mkdir $ffastbit`; $verbose and printerr "Executed:\tCreated Fastbit folder $ffastbit\n\n"; 
 
 #output
 printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
