@@ -267,7 +267,6 @@ if ($datadb) {
         printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
         DBVARIANT($variantfile, $dataid);
         printerr " Done\n";
-        
         #variant annotation specifications
         if ($vep) {
 	  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
@@ -374,35 +373,38 @@ if ($datadb) {
           #variant annotation specifications
           if ($vep) {
             printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             VEPVARIANT($vepfile, $dataid); printerr " Done\n";
           }
           if ($annovar) {
             printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             ANNOVARIANT($annofile, $dataid); printerr " Done\n";
           }
-        } else {
-          if ($vep || $annovar) {
+        } else { #if completed in VarSummary table
+          if ($vep || $annovar) { #checking if vep or annovar was specified
             my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
-            unless ($variantstatus){
+            unless ($variantstatus){ #if annversion is not specified
               $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
               $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
               if ($vep) {
-		printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+                printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
                 printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                 VEPVARIANT($vepfile, $dataid); printerr " Done\n";
               }
               if ($annovar) {
-		printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+                printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
                 printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                 ANNOVARIANT($annofile, $dataid); printerr " Done\n";
               }
-            } #end unless annversion is previously specified
+            } else { #end unless annversion is previously specified
+              $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+              $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
+            }
           } else {
-            $verbose and printerr "NOTICE:\t $dataid already in Variant tables... Moving on ...\n";
-          } #end if annversion is previously specified
-        } #end unless it's already in variants table
+            $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+          }
+        } # end else already in VarSummary table;
       } #end if "variant" option
     } #unless & else exists in Mapstats
   } else {
