@@ -17,7 +17,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 #--------------------------------------------------------------------------------
 
 our ($verbose, $help, $man);
-our ($sqlfile,$connect);
+our ($sqlfile,$connect, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
 
@@ -33,29 +33,49 @@ $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
 $sth->execute() or die (qq(Error: Can't create database, make sure user has create schema  priviledges or use an existing database.));
 $dbh->disconnect();
-$verbose and printerr "Executed:\tUsing SCHEMA $dbname\n";
+$verbose and printerr "Executed:\tUsing SCHEMA $dbname\n\n";
 
 $dbh = mysql($dbname, $username, $password); #connect to mysql
-#Import schema to mysql
-open (SQL, "$sqlfile") or die "Error: Can't open file schema file for reading, contact $AUTHOR\n";
-while (my $sqlStatement = <SQL>) {
-   $sth = $dbh->prepare($sqlStatement)
-      or die (qq(Error: Can't prepare $sqlStatement));
-
-   $sth->execute()
-      or die qq(Error: Can't execute $sqlStatement);
-   $verbose and printerr "Executed:\t$sqlStatement\n";
+#Check if tables already exist in database
+$sth = $dbh-> prepare("show tables"); $sth->execute; $found = $sth->fetch();
+if ($found) { # if tables are in the database
+  print "Warning:\tDatabase has requisite tables with content\n";
+  print "\t\tDo you still want to recreate database? (Y/N): ";
+  chomp ($verdict = lc (<>));
+  print "\n";
+} else { $verdict = "yes"; }
+if ($verdict =~ /^y/) { #Import schema to mysql
+  open (SQL, "$sqlfile") or die "Error: Can't open file schema file for reading, contact $AUTHOR\n\n";
+  while (my $sqlStatement = <SQL>) {
+    unless ($sqlStatement =~ /^-/){
+      $sth = $dbh->prepare($sqlStatement)
+        or die (qq(Error: Can't prepare $sqlStatement));
+      $sth->execute()
+        or die qq(Error: Can't execute $sqlStatement);
+      $verbose and printerr "Executed:\t$sqlStatement\n";
+    }
+  }
 }
+$sth->finish();
 $dbh->disconnect();
 
 #create FastBit path on connection details
-our $ffastbit = fastbit($location, $fbname); 
-`rm -rf $ffastbit`; $verbose and printerr "Executed:\tRemoved Fastbit folder $ffastbit\n\n";
-`mkdir $ffastbit`; $verbose and printerr "Executed:\tCreated Fastbit folder $ffastbit\n\n"; 
+our $ffastbit = fastbit($location, $fbname);
+$verdict = "no"; `find $ffastbit` or $verdict = "yes"; 
+if ($verdict =~ /^n/) { # if data is in ffastbit folder
+  print "Warning:\tFastbit database is present with content\n";
+  print "\t\tDo you still want to recreate fasbit database? (Y/N): ";
+  chomp ($verdict = lc (<>));
+  print "\n";
+}
+if ($verdict =~ /^y/) { #Import schema to mysql
+  `rm -rf $ffastbit`; $verbose and printerr "Executed:\tRemoved Fastbit folder $ffastbit\n\n";
+  `mkdir $ffastbit`; $verbose and printerr "Executed:\tCreated Fastbit folder $ffastbit\n\n"; 
+}
 
 #output
-printerr ("Success: Creation of MySQL database ==> \"$dbname\"\n");
-printerr ("Success: Creation of FastBit folder ==> \"".$ffastbit."\"\n");
+printerr ("Success:\tCreation of MySQL database ==> \"$dbname\"\n\n");
+printerr ("Success:\tCreation of FastBit folder ==> \"".$ffastbit."\"\n\n");
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 
 #--------------------------------------------------------------------------------

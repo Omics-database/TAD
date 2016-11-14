@@ -62,21 +62,4 @@ sub tabcontent {
   return \%INDEX;
 }
 
-sub FPKM { #subroutine for  importing the FPKM values
-  open(FPKM, "<", $_[1]) or die "Can not open file $_[1]\n";
-  my $dbh = $_[3];
-  my $syntax = "insert into $_[0] (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-  my $sth = $dbh->prepare($syntax);
-  while (<FPKM>){
-    chomp;
-    my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
-    unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
-      if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
-      if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
-      my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
-      $sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat );
-    }
-  } close FPKM;
-  $sth->finish();
-}
 1;

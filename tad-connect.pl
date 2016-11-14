@@ -28,7 +28,7 @@ sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-printerr ("Success: Stored the following connection details.\n");
+printerr ("Success:\tStored the following connection details.\n");
 printerr ("Connection:\n\tUsername = $username\n\tPassword = $password\n\tMySQL database = $dbname\n");
 printerr ("\tFastBit folder \t $ffastbit\n");
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
@@ -63,9 +63,9 @@ sub processArguments {
   #make sure connection details are accurate
   $dbh = mysql($dbname, $username, $password); #connect to mysql
 
-  #find fastbit location on die;
+  #find fastbit location or die;
   $ffastbit = fastbit($location, $fbname);
-  `find $ffastbit` or pod2usage();
+  `find $ffastbit` or pod2usage("Error:\tFastbit folder '$ffastbit' can not found");
 
   open(CONNECT, ">$get/\.connect.txt"); 
   my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n";

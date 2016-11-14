@@ -25,12 +25,12 @@ CREATE TABLE `Sample` (`sampleid` VARCHAR(50) NOT NULL,`tissue` VARCHAR(100) NUL
 -- Table structure for table `MapStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `MapStats`;
-CREATE TABLE `MapStats` (`sampleid` VARCHAR(50) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `unmappedreads` INT(11) NULL DEFAULT NULL, `infoprepreads` TEXT NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `MapStats` (`sampleid` VARCHAR(50) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `unmappedreads` INT(11) NULL DEFAULT NULL, `infoprepreads` TEXT NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `GeneStats`;
-CREATE TABLE `GeneStats` (`sampleid` VARCHAR(50) NOT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `isoforms` INT(11) NULL DEFAULT NULL, `genes` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `GeneStats` (`sampleid` VARCHAR(50) NOT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `isoforms` INT(11) NULL DEFAULT NULL, `genes` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL,PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
@@ -50,7 +50,7 @@ CREATE TABLE `IsoformsFpkm` ( `sampleid` VARCHAR(50) NOT NULL, `trackingid` VARC
 -- Table structure for table `VarSummary`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `VarSummary`;
-CREATE TABLE `VarSummary` (`sampleid` VARCHAR(50) NOT NULL, `totalvariants` INT(11) NULL DEFAULT NULL, `totalsnps` INT(11) NULL DEFAULT NULL, `totalindels` INT(11) NULL DEFAULT NULL, `annversion` VARCHAR(50) NULL DEFAULT NULL, `varianttool` VARCHAR(50) NULL DEFAULT NULL, `toolversion` VARCHAR(50) NULL DEFAULT NULL, `date` DATE NOT NULL, `status` CHAR(10) NULL DEFAULT NULL, `nosql` CHAR(10) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `varsummary_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `VarSummary` (`sampleid` VARCHAR(50) NOT NULL, `totalvariants` INT(11) NULL DEFAULT NULL, `totalsnps` INT(11) NULL DEFAULT NULL, `totalindels` INT(11) NULL DEFAULT NULL, `annversion` VARCHAR(50) NULL DEFAULT NULL, `varianttool` VARCHAR(50) NULL DEFAULT NULL, `date` DATE NOT NULL, `status` CHAR(10) NULL DEFAULT NULL, `nosql` CHAR(10) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `varsummary_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarResult`
 -- -----------------------------------------------------
@@ -60,7 +60,7 @@ CREATE TABLE `VarResult` ( `sampleid` VARCHAR(50) NOT NULL, `chrom` VARCHAR(50) 
 -- Table structure for table `VarAnno`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `VarAnno`;
-CREATE TABLE `VarAnno` (`sampleid` VARCHAR(50) NOT NULL, `chrom` VARCHAR(50) NOT NULL DEFAULT '', `position` INT(11) NOT NULL DEFAULT '0', `consequence` VARCHAR(50) NOT NULL DEFAULT '', `geneid` VARCHAR(50) NOT NULL DEFAULT '', `genename` VARCHAR(50) NULL DEFAULT NULL, `transcript` VARCHAR(200) NULL DEFAULT NULL, `feature` VARCHAR(50) NULL DEFAULT NULL, `genetype` VARCHAR(200) NULL DEFAULT NULL, `proteinposition` VARCHAR(50) NOT NULL DEFAULT '', `aachange` VARCHAR(50) NULL DEFAULT NULL, `codonchange` VARCHAR(50) NULL DEFAULT NULL, PRIMARY KEY (`consequence`, `geneid`, `proteinposition`, `sampleid`, `chrom`, `position`), INDEX `varanno_indx_genename` (`genename` ASC), CONSTRAINT `varanno_ibfk_1` FOREIGN KEY (`sampleid` , `chrom` , `position`) REFERENCES `VarResult` (`sampleid` , `chrom` , `position`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `VarAnno` (`sampleid` VARCHAR(50) NOT NULL, `chrom` VARCHAR(50) NOT NULL DEFAULT '', `position` INT(11) NOT NULL DEFAULT '0', `consequence` VARCHAR(50) NOT NULL DEFAULT '', `source` VARCHAR(50) NULL DEFAULT NULL, `geneid` VARCHAR(50) NOT NULL DEFAULT '', `genename` VARCHAR(50) NULL DEFAULT NULL, `transcript` VARCHAR(200) NULL DEFAULT NULL, `feature` VARCHAR(50) NULL DEFAULT NULL, `genetype` VARCHAR(200) NULL DEFAULT NULL, `proteinposition` VARCHAR(50) NOT NULL DEFAULT '', `aachange` VARCHAR(50) NULL DEFAULT NULL, `codonchange` VARCHAR(50) NULL DEFAULT NULL, PRIMARY KEY (`consequence`, `geneid`, `proteinposition`, `sampleid`, `chrom`, `position`), INDEX `varanno_indx_genename` (`genename` ASC), CONSTRAINT `varanno_ibfk_1` FOREIGN KEY (`sampleid` , `chrom` , `position`) REFERENCES `VarResult` (`sampleid` , `chrom` , `position`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- procedure usp_genedgenedtissue
 -- -----------------------------------------------------
