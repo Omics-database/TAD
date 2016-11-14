@@ -17,7 +17,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $help, $man);
+our ($verbose, $efile, $help, $man);
 our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar); #command options
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
@@ -53,14 +53,14 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 if ($metadata){
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   if ($tab) { #unix tab delimited file
-    $verbose and printerr "Job:\tImporting Sample Information from tab-delimited file => $file2consider\n"; #status
+    printerr "JOB:\t Importing Sample Information from tab-delimited file => $file2consider\n"; #status
     %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
     foreach my $row (sort keys %filecontent){
 
       if (exists $filecontent{$row}{'sample name'}) { #sample name
 	$name = $filecontent{$row}{'sample name'};
       } else {
-	pod2usage("Failed:\tError in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
+	pod2usage("\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
       } #end if for getting sample information 
       $sth = $dbh->prepare("select sampleid from Sample where sampleid = '$name'"); $sth->execute(); $found = $sth->fetch();
       unless ($found) { # if sample is not in the database
@@ -70,13 +70,13 @@ if ($metadata){
 	if (exists $filecontent{$row}{'organism'}) { #organism
  	  $organism = $filecontent{$row}{'organism'};
 	} else {
-	  die "Failed:\tError in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n\n";
+	  die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
 	} #end if for animal info
 	$description = $filecontent{$row}{'sample description'}; #description
 	if (exists $filecontent{$row}{'derived from'}) { #animal
 	  $derivedfrom = uc($filecontent{$row}{'derived from'});
 	} else {
-	  die "Failed:\tError in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n\n";
+	  die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
 	} #end if for animal id
 	unless (exists $filecontent{$row}{'organism part'}) { #tissue
 	  $tissue = $filecontent{$row}{'organism part'};
@@ -93,17 +93,17 @@ if ($metadata){
 	} else {
 	  $collection = undef;
 	} #end id for specimen collection date
+	printerr "NOTICE:\t Importing $name to Sample table\n"; #import to database
 	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization) or die "Error:\tComplication in Sample table, contact $AUTHOR\n\n";
-	$verbose and printerr "Imported:\t$name\n\n"; #import to database
+	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization) or die "\nERROR:\t Complication in Sample table, contact $AUTHOR\n";
 	$sth-> finish; #end of query
       } else {
-        $verbose and printerr "Duplicate (Already exists):\t$name\n\n"; #import to database
+        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
       } #end unless in the database
     } #end foreach filecontent
   } #end if (tab-delimited)
   else { #import faang excel sheet
-    $verbose and printerr "Job:\tImporting Sample Information from excel file => $file2consider\n\n"; #status    
+    printerr "JOB:\t Importing Sample Information from excel file => $file2consider\n"; #status    
     %filecontent = %{ excelcontent($file2consider) }; #get excel content
     #get name information
     if (exists $filecontent{2}{'person%person first name'}){
@@ -129,7 +129,7 @@ if ($metadata){
 	  if (exists $filecontent{$row}{'animal%organism'}) {
 	    $organism{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%organism'};
 	  } else {
-	    die "Failed:\tError in Excel file \"$file2consider\".\n\tCheck => SHEET: animal, ROW: $row, COLUMN: \"Organism\"\n\n";
+	    die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: animal, ROW: $row, COLUMN: \"Organism\"\n";
 	  } #end if for animal information
 	} #end if for animal id
       } #end foreach
@@ -140,14 +140,14 @@ if ($metadata){
       if (exists $filecontent{$row}{'specimen%sample name'}) {
 	$name = $filecontent{$row}{'specimen%sample name'};
       } else {
-	die "Failed:\tError in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Sample Name\"\n\n";
+	die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: specimen, ROW: $row, COLUMN: \"Sample Name\"\n";
       } #end if to get sampleid
       $sth = $dbh->prepare("select sampleid from Sample where sampleid = '$name'"); $sth->execute(); $found = $sth->fetch();
       unless ($found) { # if sample is not in the database
 	if (exists $filecontent{$row}{'specimen%derived from'}) {
   	  $derivedfrom = uc($filecontent{$row}{'specimen%derived from'});
 	} else {
-	  die "Failed:\tError in Excel file \"$file2consider\".\n\tCheck => SHEET: specimen, ROW: $row, COLUMN: \"Derived From\"\n\n";
+	  die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: specimen, ROW: $row, COLUMN: \"Derived From\"\n";
 	} #end if for animal id
 	unless (exists $filecontent{$row}{'specimen%organism part'}) {
 	  $tissue = $filecontent{$row}{'specimen%organism part'};
@@ -166,13 +166,13 @@ if ($metadata){
 	} #end if for specimen collection date
 	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
 	unless (exists $organism{$derivedfrom}) {
-	  die "Failed:\tError in Excel file \"$file2consider\".\n\tAnimal \"$derivedfrom\" information is not provided in SHEET: animal\n\n";
+	  die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Animal \"$derivedfrom\" information is not provided in SHEET: animal\n";
 	} #check to make sure animal information from specimen sheet is provided
-	$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization) or die "Error:\tComplication in Sample table, contact $AUTHOR\n\n";
-	$verbose and printerr "Imported:\t$name\n"; #import to database
-        $sth-> finish; #end of query
+	printerr "NOTICE:\t Importing $name to Sample table\n"; #import to database
+	$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization) or die "\nERROR:\t Complication in Sample table, contact $AUTHOR\n";
+	      $sth-> finish; #end of query
       } else {
-        $verbose and printerr "Duplicate (Already exists):\t$name\n\n"; #import to database
+        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
       } #end unless in the database
     } #end foreach specimen; attribute of interest
   } #end if excel
@@ -180,17 +180,17 @@ if ($metadata){
 
 #PROCESSING DATA IMPORT
 if ($datadb) {
-  $verbose and printerr "Job:\tImporting Transcriptome analysis Information => $file2consider\n\n"; #status
+  printerr "JOB:\t Importing Transcriptome analysis Information => $file2consider\n"; #status
   if ($variant){
-    $verbose and printerr "Task:\tImporting ONLY Variant Information => $file2consider\n\n"; #status
+    printerr "TASK:\t Importing ONLY Variant Information => $file2consider\n"; #status
   } elsif ($all) {
-    $verbose and printerr "Task:\tImporting BOTH Gene Expression profiling and Variant Information => $file2consider\n\n"; #status
+    printerr "TASK:\t Importing BOTH Gene Expression profiling and Variant Information => $file2consider\n"; #status
   } else {
-    $verbose and printerr "Task:\tImporting ONLY Gene Expression Profiling information => $file2consider\n\n"; #status
+    printerr "TASK:\t Importing ONLY Gene Expression Profiling information => $file2consider\n"; #status
   }
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   my $dataid = (split("\/", $file2consider))[-1]; 
-  `find $file2consider` or pod2usage ("Error: Can not locate \"$file2consider\"");
+  `find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
   opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample location"); close (DIR);
   my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
   $acceptedbam = (grep /accepted_hits.bam/, @foldercontent)[0];
@@ -213,7 +213,7 @@ if ($datadb) {
       LOGFILE(); #parse logfile details
       #open alignment summary file
       if ($alignfile) {
-        open(ALIGN,"<", $alignfile) or die "Failed:\tCan not open Alignment summary file '$alignfile'\n\n";
+        open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
         while (<ALIGN>){
           chomp;
           if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
@@ -221,92 +221,142 @@ if ($datadb) {
         } close ALIGN;
         $unmapped = $total-$mapped;
         $prep = `cat $prepfile`;
-      } else {die "Failed:\tCan not find Alignment summary file '$alignfile'\n\n";}
+      } else {die "\nFAILED:\t Can not find Alignment summary file '$alignfile'\n";}
       #INSERT INTO DATABASE:
       #MapStats table
+      printerr "NOTICE:\t Importing $dataid to MapStats table ..."; 
       $sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, unmappedreads, infoprepreads, date ) values (?,?,?,?,?,?)");
-      $sth ->execute($dataid, $total, $mapped, $unmapped, $prep, $date) or die "Error:\tComplication in MapStats table, contact $AUTHOR\n\n";
-      $verbose and printerr "Imported:\t$dataid to MapStats table\n\n";
+      $sth ->execute($dataid, $total, $mapped, $unmapped, $prep, $date) or die "\nERROR:\t Complication in MapStats table, contact $AUTHOR\n";
+      printerr " Done\n";
       #metadata table
+      printerr "NOTICE:\t Importing $dataid to Metadata table ...";
       $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename ) values (?,?,?,?,?)");
-      $sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "Error:\tComplication in Metadata table, contact $AUTHOR\n\n";
-      $verbose and printerr "Imported:\t$dataid to Metadata table\n\n";
+      $sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
+      printerr " Done\n";
+      
       #toggle options
       unless ($variant) {
         GENE_INFO($dataid);
         #FPKM tables
+        printerr "NOTICE:\t Importing $dataid - Genes to GenesFpkm table ...";
         FPKM('GenesFpkm', $genesfile, $dataid); #GENES
-        $verbose and printerr "Imported:\t$dataid - Genes to GenesFpkm table\n\n";
+        printerr " Done\n";
+        printerr "NOTICE:\t Importing $dataid - Isoforms to IsoformsFpkm table ...";
         FPKM('IsoformsFpkm', $isoformsfile, $dataid); #ISOFORMS
-        $verbose and printerr "Imported:\t$dataid - Isoforms to IsoformsFpkm table\n\n";
+        printerr " Done\n";
         $sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$dataid'");
-        $sth ->execute() or die "Error:\tComplication in GeneStats table, contact $AUTHOR\n\n";
+        $sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
         if ($all){
+          printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
           DBVARIANT($variantfile, $dataid);
-          if ($vep) { VEPVARIANT($vepfile, $dataid); }
-          if ($annovar) { ANNOVARIANT($annofile, $dataid); }
-          $verbose and printerr "Imported:\t$dataid - Variants to Variant tables\n\n";
+          printerr " Done\n";
+          #variant annotation specifications
+          if ($vep) {
+            printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+          }
+          if ($annovar) {
+            printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+          }
         }
       }
       else { #variant option selected
+        printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
         DBVARIANT($variantfile, $dataid);
-        if ($vep) { VEPVARIANT($vepfile, $dataid); }
-        if ($annovar) { ANNOVARIANT($annofile, $dataid); }
-        $verbose and printerr "Imported:\t$dataid - Variants to Variant tables\n\n";
+        printerr " Done\n";
+        
+        #variant annotation specifications
+        if ($vep) {
+	  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+          printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+          VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+        }
+        if ($annovar) {
+          printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+  	  printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+          ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+        }
       }
-    } else {
-      $verbose and printerr "Duplicate:\t$dataid already in MapStats table... Moving on ...\n\n";
+    } else { #end unless found in MapStats table
+      $verbose and printerr "NOTICE:\t $dataid already in MapStats table... Moving on ...\n";
       $sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
       unless ($found) {
+        printerr "NOTICE:\t Importing $dataid to MapStats table ...";
         $sth = $dbh->prepare("insert into Metadata (sampleid,refgenome, annfile, stranded, sequencename ) values (?,?,?,?,?)");
-        $sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "Error:\tComplication in Metadata table\n\n";
-        $verbose and printerr "Imported:\t$dataid to MapStats table\n";
-      }
+        $sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "\nERROR:\t Complication in Metadata table\n";
+        printerr " Done\n";
+      } #end else found in MapStats table
       #toggle options
       unless ($variant) {
         GENE_INFO($dataid);
         my $genecount = 0; $genecount = $dbh->selectrow_array("select genes from GeneStats where sampleid = '$dataid'");
         unless ($genes == $genecount) { # processing for GenesFpkm
-          $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in GenesFpkm table\n\n";
+          $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in GenesFpkm table\n";
           $sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$dataid'"); $sth->execute();
-          FPKM('GenesFpkm', $genesfile, $dataid, $dbh);
-          $verbose and printerr "Imported:\t$dataid - Genes to GenesFpkm table\n\n";
+          printerr "NOTICE:\t Importing $dataid - Genes to GenesFpkm table ...";
+          FPKM('GenesFpkm', $genesfile, $dataid); #GENES
+          printerr " Done\n";
         } else {
-          $verbose and printerr "Duplicate:\t$dataid already in GenesFpkm table... Moving on ...\n\n";
+          $verbose and printerr "NOTICE:\t $dataid already in GenesFpkm table... Moving on ...\n";
         } #end gene unless
         my $isoformscount = 0; $isoformscount = $dbh->selectrow_array("select isoforms from GeneStats where sampleid = '$dataid'");
         unless ($isoforms == $isoformscount) { # processing for IsoformsFpkm
-          $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in IsoformsFpkm table\n\n";
+          $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in IsoformsFpkm table\n";
           $sth = $dbh->prepare("delete from IsoformsFpkm where sampleid = '$dataid'"); $sth->execute();
-          FPKM('IsoformsFpkm', $isoformsfile, $dataid, $dbh);
-          $verbose and printerr "Imported:\t$dataid - Genes to IsoformsFpkm table\n\n";
+          printerr "NOTICE:\t Importing $dataid - Isoforms to IsoformsFpkm table ...";
+          FPKM('IsoformsFpkm', $isoformsfile, $dataid); #ISOFORMS
+          printerr " Done\n";
         } else {
-          $verbose and printerr "Duplicate:\t$dataid already in Isoforms table... Moving on ...\n\n";
+          $verbose and printerr "NOTICE:\t $dataid already in Isoforms table... Moving on ...\n";
         }# end isoforms unless
         $sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$dataid'");
-        $sth ->execute() or die "Error:\tComplication in GeneStats table, contact $AUTHOR\n\n";
+        $sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
         if ($all){
           my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid'");
           unless ($variantstatus){ #checking if completed in VarSummary table
-            $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in all Variants tables\n\n";
+            $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
             $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
             $sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
             $sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
+            printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
             DBVARIANT($variantfile, $dataid);
-            if ($vep) { VEPVARIANT($vepfile, $dataid); }
-            if ($annovar) { ANNOVARIANT($annofile, $dataid); }
-            $verbose and printerr "Imported:\t$dataid - Variants to Variant tables\n\n";
+            printerr " Done\n";
+            #variant annotation specifications
+            if ($vep) {
+	      printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+              printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+              VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+            }
+            if ($annovar) {
+	      printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+              printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+              ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+            }
           } else {
             if ($vep || $annovar) {
               my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
               unless ($variantstatus){
-                $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in all Variant Annotation tables\n\n";
+                $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
                 $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
-                if ($vep){ VEPVARIANT($vepfile, $dataid); }
-                if ($annovar) { ANNOVARIANT($annofile, $dataid); }
-              } #end unless annversion is previously specified
+                if ($vep) {
+ 		  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+                  printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+                  VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+                }
+                if ($annovar) {
+                  printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+  		  printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+                  ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+                }
+              } else { #end unless annversion is previously specified
+                $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+                $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
+              }
             } else {
-              $verbose and printerr "Duplicate:\t$dataid already in Variant tables... Moving on ...\n\n";
+              $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
             } #end if annversion is previously specified
           } #end unless it's already in variants table
         } #end if "all" option
@@ -314,42 +364,63 @@ if ($datadb) {
       else { #variant option selected
         my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid'");
         unless ($variantstatus){ #checking if completed in VarSummary table
-          $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in all Variants tables\n\n";
+          $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
           $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
           $sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
           $sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
+          printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
           DBVARIANT($variantfile, $dataid);
-          if ($vep) { VEPVARIANT($vepfile, $dataid); }
-          if ($annovar) { ANNOVARIANT($annofile, $dataid); }
-          $verbose and printerr "Imported:\t$dataid - Variants to Variant tables\n\n";
+          printerr " Done\n";
+          #variant annotation specifications
+          if ($vep) {
+            printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+          }
+          if ($annovar) {
+            printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+  	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+            ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+          }
         } else {
           if ($vep || $annovar) {
             my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
             unless ($variantstatus){
-              $verbose and printerr "Notice:\tRemoved incomplete records for $dataid in all Variant Annotation tables\n\n";
+              $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
               $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
-              if ($vep){ VEPVARIANT($vepfile, $dataid); }
-              if ($annovar) { ANNOVARIANT($annofile, $dataid); }
+              if ($vep) {
+		printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+                printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+                VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+              }
+              if ($annovar) {
+		printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+                printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
+                ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+              }
             } #end unless annversion is previously specified
           } else {
-            $verbose and printerr "Duplicate:\t$dataid already in Variant tables... Moving on ...\n\n";
+            $verbose and printerr "NOTICE:\t $dataid already in Variant tables... Moving on ...\n";
           } #end if annversion is previously specified
         } #end unless it's already in variants table
       } #end if "variant" option
     } #unless & else exists in Mapstats
   } else {
-      pod2usage("Failed:\t\"$dataid\" sample information is not in the database. Make sure the metadata has be previously imported using '-metadata'");
+      pod2usage("FAILED: \"$dataid\" sample information is not in the database. Make sure the metadata has be previously imported using '-metadata'");
   } #end if data in sample table
 }
 #output: the end
-if ($metadata){
-  printerr ("Success:\tImport of Sample Information in \"$file2consider\"\n\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
+printerr "-----------------------------------------------------------------\n";
+  if ($metadata){
+  printerr ("SUCCESS: Import of Sample Information in \"$file2consider\"\n");
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 } #end if complete RNASeq metadata
 if ($datadb){
-  printerr ("Success:\tImport of RNA Seq analysis information in \"$file2consider\"\n\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
+  printerr ("SUCCESS: Import of RNA Seq analysis information in \"$file2consider\"\n");
+  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 } #end if completed RNASeq data2db
+printerr ("NOTICE:\t Summary in log file $efile\n");
+printerr "-----------------------------------------------------------------\n";
 close (LOG);
 #--------------------------------------------------------------------------------
 
@@ -361,8 +432,8 @@ sub processArguments {
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   
-  pod2usage(-msg=>"Error: Invalid syntax specified, choose -metadata or -data2db.") unless ( $metadata || $datadb);
-  pod2usage(-msg=>"Error: Invalid syntax specified for @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
+  pod2usage(-msg=>"ERROR:\t Invalid syntax specified, choose -metadata or -data2db.") unless ( $metadata || $datadb);
+  pod2usage(-msg=>"ERROR:\t Invalid syntax specified for @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
    
   @ARGV==1 or pod2usage("Syntax error");
   $file2consider = $ARGV[0];
@@ -372,11 +443,12 @@ sub processArguments {
   $connect = $get.'/.connect.txt';
   #setup log file
   my $errfile = open_unique("db.tad_status.log"); 
-  open(LOG, ">>", @$errfile[1]) or die "Error: cannot write LOG information to log file @$errfile[1] $!\n";
+  open(LOG, ">>", @$errfile[1]) or die "\nERROR:\t cannot write LOG information to log file @$errfile[1] $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
+  $efile = @$errfile[1];
 }
 
 
@@ -422,15 +494,15 @@ sub GENE_INFO {
   #INSERT INTO DATABASE: #GeneStats table
   $sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
   unless ($found) { 
+    printerr "NOTICE:\t Importing $_[0] to GeneStats table\n";
     $sth = $dbh->prepare("insert into GeneStats (sampleid,deletions, insertions, junctions, isoforms, genes,date) values (?,?,?,?,?,?,?)");
-    $sth ->execute($_[0], $deletions, $insertions, $junctions, $isoforms, $genes, $date) or die "Error:\tComplication in GeneStats table, contact $AUTHOR\n\n";;
-    $verbose and printerr "Imported:\t$_[0] to GeneStats table\n\n";
+    $sth ->execute($_[0], $deletions, $insertions, $junctions, $isoforms, $genes, $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";; 
   } else {
-    $verbose and printerr "Duplicate:\t$_[0] already in GeneStats table... Moving on ...\n\n";
+    $verbose and printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on ...\n";
   }
 }
 sub FPKM { #subroutine for  importing the FPKM values
-  open(FPKM, "<", $_[1]) or die "Can not open file $_[1]\n";
+  open(FPKM, "<", $_[1]) or die "\nERROR:\t Can not open file $_[1]\n";
   my $syntax = "insert into $_[0] (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
   my $sth = $dbh->prepare($syntax);
   while (<FPKM>){
@@ -440,14 +512,14 @@ sub FPKM { #subroutine for  importing the FPKM values
       if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
       if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
       my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
-      $sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "Error:\tComplication in $_[0] table, contact $AUTHOR\n\n";
+      $sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
     }
   } close FPKM;
   $sth->finish();
 }
 
 sub DBVARIANT {
-  open(VARVCF,$_[0]) or die ("Can not open variant file $_[0]\n");
+  open(VARVCF,$_[0]) or die ("\nERROR:\t Can not open variant file $_[0]\n");
   $varianttool = "samtools";
   while (<VARVCF>) {
     chomp;
@@ -462,7 +534,7 @@ sub DBVARIANT {
     }
   } close VARVCF;
   $sth = $dbh->prepare("insert into VarSummary ( sampleid, varianttool, date) values (?,?,?)");
-  $sth ->execute($_[1], $varianttool, $date) or die "Error:\tComplication in VarSummary table, contact $AUTHOR\n\n";;
+  $sth ->execute($_[1], $varianttool, $date) or die "\nERROR:\t Complication in VarSummary table, contact $AUTHOR\n";;
 
   #VARIANT_RESULTS
   foreach my $abc (sort keys %VCFhash) {
@@ -480,7 +552,7 @@ sub DBVARIANT {
     
       #to variant_result
       $sth = $dbh->prepare("insert into VarResult ( sampleid, chrom, position, refallele, altallele, quality, variantclass, zygosity ) values (?,?,?,?,?,?,?,?)");
-      $sth ->execute($_[1], $abc, $def, $vcf[0], $vcf[1], $vcf[2], $variantclass, $vcf[3]) or die "Error:\tComplication in VarResult table, contact $AUTHOR\n\n";
+      $sth ->execute($_[1], $abc, $def, $vcf[0], $vcf[1], $vcf[2], $variantclass, $vcf[3]) or die "\nERROR:\t Complication in VarResult table, contact $AUTHOR\n";
     }
   }
   #update variantsummary with counts
@@ -490,10 +562,9 @@ sub DBVARIANT {
   $sth ->execute();
   $sth->finish();
 }
-my ($chrom, $position);
 sub VEPVARIANT {
-  $verbose and printerr "Task:\tImporting Variant annotation from VEP => $file2consider\n\n"; #status
-  open(VEP,$_[0]) or die ("Can not open vep file $_[0]\n");
+  my ($chrom, $position);
+  open(VEP,$_[0]) or die ("\nERROR:\t Can not open vep file $_[0]\n");
   while (<VEP>) {
     chomp;
     unless (/^\#/) {
@@ -516,11 +587,11 @@ sub VEPVARIANT {
         my $dbsnp = $veparray[12];
         my $locate = "$_[1],$chrom,$position,$consequence,$geneid,$pposition";
         if ( exists $VEPhash{$locate} ) {
-          unless ( $VEPhash{$locate} eq $locate ){ die "Error:\tDuplicate annotation in VEP file, contact $AUTHOR\n\n"; }
+          unless ( $VEPhash{$locate} eq $locate ){ die "\nERROR:\t Duplicate annotation in VEP file, contact $AUTHOR\n"; }
         } else {
           $VEPhash{$locate} = $locate;
           $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, genename, transcript, feature, genetype,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-          $sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "Error:\tComplication in VarAnno table, contact $AUTHOR\n\n";
+          $sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
           undef %extra;
           $DBSNP{$chrom}{$position} = $dbsnp;
         }
@@ -537,8 +608,7 @@ sub VEPVARIANT {
 }
 
 sub ANNOVARIANT {
-  $verbose and printerr "Task:\tImporting Variant annotation from Annovar => $file2consider\n\n"; #status
-  open(ANNOVAR,$_[0]) or die ("Can not open annovar file $_[0]\n");
+  open(ANNOVAR,$_[0]) or die ("\nERROR:\t Can not open annovar file $_[0]\n");
   close ANNOVAR;
   
 }

@@ -16,7 +16,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $help, $man);
+our ($verbose, $efile, $help, $man);
 our ($sqlfile,$connect, $schemaverdict, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
@@ -30,55 +30,48 @@ processArguments(); #Process input
 $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
 $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
 $sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(Error: Can't create database, make sure user has create schema  priviledges or use an existing database.));
+$sth->execute() or die (qq(ERROR:\t Can't create database, make sure user has create schema  priviledges or use an existing database.));
 $dbh->disconnect();
-$verbose and printerr "Executed:\tUsing SCHEMA $dbname\n\n";
+$verbose and printerr "EXECUTED: Using SCHEMA $dbname\n\n";
 
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Check if tables already exist in database
 SCHEMA();
-#$sth = $dbh-> prepare("select count(*) from Sample"); $sth->execute; $found = $sth->fetch();
+printerr "JOB:\t MySQL - $dbname and NoSQL = $fbname creation\n";
 if ($schemaverdict) { # if tables are in the database
-  print "Warning:\tDatabase has requisite tables with content\n";
-  print "\t\tDo you still want to recreate database? (Y/N): ";
+  print "\nWARNING: Database has requisite tables with content\n";
+  print "\t Do you still want to recreate database? (Y/N): ";
   chomp ($verdict = lc (<>));
   print "\n";
 } else { $verdict = "yes"; }
 if ($verdict =~ /^y/) { #Import schema to mysql
-  open (SQL, "$sqlfile") or die "Error:\tCan't open file schema file for reading, contact $AUTHOR\n\n";
+  open (SQL, "$sqlfile") or die "ERROR:\t Can't open file schema file for reading, contact $AUTHOR\n";
   while (my $sqlStatement = <SQL>) {
     unless ($sqlStatement =~ /^-/){
       $sth = $dbh->prepare($sqlStatement)
-        or die (qq(Error: Can't prepare $sqlStatement));
+        or die (qq(ERROR:\t Can not prepare $sqlStatement));
       $sth->execute()
-        or die qq(Error: Can't execute $sqlStatement);
-      $verbose and printerr "Executed:\t$sqlStatement\n";
+        or die qq(ERROR:\t Can not execute $sqlStatement);
+      $verbose and printerr "EXECUTED: $sqlStatement\n";
     }
   }
 } elsif ($verdict =~ /^n/) {
-  $verbose and printerr "Status:\tSkipping (re)-creation of MySQL tables\n\n";
-} else { die "Error:\tResponse not provided\n\n"; }
+  $verbose and printerr "NOTICE:\t Skipping (re)-creation of MySQL tables\n";
+} else { die "ERROR:\t Response not provided\n\n"; }
 $sth->finish();
 $dbh->disconnect();
-printerr ("Success:\tCreation of MySQL database ==> \"$dbname\"\n\n");
+
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
-$verdict = "cant"; `find $ffastbit` or $verdict = "yes"; 
-if ($verdict =~ /^cant/) { # if data is in ffastbit folder
-  print "Warning:\tFastbit database is present with content\n";
-  print "\t\tDo you still want to recreate fasbit database? (Y/N): ";
-  chomp ($verdict = lc (<>));
-  print "\n";
-}
-if ($verdict =~ /^y/) { #Import schema to mysql
-  `rm -rf $ffastbit`; $verbose and printerr "Executed:\tRemoved Fastbit folder $ffastbit\n\n";
-  `mkdir $ffastbit`; $verbose and printerr "Executed:\tCreated Fastbit folder $ffastbit\n\n"; 
-} elsif ($verdict =~ /^n/) {
-  $verbose and printerr "Status:\tSkipping (re)-creation of Fastbit folder\n\n";
-} else { die "Error:\tResponse not provided\n\n"; }
+`mkdir -p $ffastbit`;
+$verbose and printerr "EXECUTED: Created Fastbit folder $ffastbit\n"; 
 
-#output
-printerr ("Success:\tCreation of FastBit folder ==> \"".$ffastbit."\"\n\n");
+#output 
+printerr "-----------------------------------------------------------------\n";
+printerr ("NOTICE:\t Successful creation of MySQL database ==> \"$dbname\"\n");
+printerr ("NOTICE:\t Successful creation of FastBit folder ==> \"".$ffastbit."\"\n");
+printerr ("NOTICE:\t Summary in log file $efile\n");
+printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 
 #--------------------------------------------------------------------------------
@@ -102,12 +95,12 @@ sub processArguments {
 
   #setup log file
   my $errfile = open_unique("db.tad_status.log"); 
-  open(LOG, ">>", @$errfile[1]) or die "Error: cannot write LOG information to log file @$errfile[1] $!\n";
+  open(LOG, ">>", @$errfile[1]) or die "ERROR:\t Cannot write LOG information to log file @$errfile[1] $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
-
+  $efile = @$errfile[1];
   $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
   open(CONNECT, ">$get/\.connect.txt"); 
   my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname";
