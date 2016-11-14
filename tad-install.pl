@@ -17,12 +17,11 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 #--------------------------------------------------------------------------------
 
 our ($verbose, $help, $man);
-our ($sqlfile,$connect, $verdict, $found);
+our ($sqlfile,$connect, $schemaverdict, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
-
+our @dbtables = qw|Sample MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnno VarResult VarSummary|;
 #--------------------------------------------------------------------------------
-
 sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
@@ -37,15 +36,16 @@ $verbose and printerr "Executed:\tUsing SCHEMA $dbname\n\n";
 
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Check if tables already exist in database
-$sth = $dbh-> prepare("show tables"); $sth->execute; $found = $sth->fetch();
-if ($found) { # if tables are in the database
+SCHEMA();
+#$sth = $dbh-> prepare("select count(*) from Sample"); $sth->execute; $found = $sth->fetch();
+if ($schemaverdict) { # if tables are in the database
   print "Warning:\tDatabase has requisite tables with content\n";
   print "\t\tDo you still want to recreate database? (Y/N): ";
   chomp ($verdict = lc (<>));
   print "\n";
 } else { $verdict = "yes"; }
 if ($verdict =~ /^y/) { #Import schema to mysql
-  open (SQL, "$sqlfile") or die "Error: Can't open file schema file for reading, contact $AUTHOR\n\n";
+  open (SQL, "$sqlfile") or die "Error:\tCan't open file schema file for reading, contact $AUTHOR\n\n";
   while (my $sqlStatement = <SQL>) {
     unless ($sqlStatement =~ /^-/){
       $sth = $dbh->prepare($sqlStatement)
@@ -55,14 +55,16 @@ if ($verdict =~ /^y/) { #Import schema to mysql
       $verbose and printerr "Executed:\t$sqlStatement\n";
     }
   }
-}
+} elsif ($verdict =~ /^n/) {
+  $verbose and printerr "Status:\tSkipping (re)-creation of MySQL tables\n\n";
+} else { die "Error:\tResponse not provided\n\n"; }
 $sth->finish();
 $dbh->disconnect();
-
+printerr ("Success:\tCreation of MySQL database ==> \"$dbname\"\n\n");
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
-$verdict = "no"; `find $ffastbit` or $verdict = "yes"; 
-if ($verdict =~ /^n/) { # if data is in ffastbit folder
+$verdict = "cant"; `find $ffastbit` or $verdict = "yes"; 
+if ($verdict =~ /^cant/) { # if data is in ffastbit folder
   print "Warning:\tFastbit database is present with content\n";
   print "\t\tDo you still want to recreate fasbit database? (Y/N): ";
   chomp ($verdict = lc (<>));
@@ -71,10 +73,11 @@ if ($verdict =~ /^n/) { # if data is in ffastbit folder
 if ($verdict =~ /^y/) { #Import schema to mysql
   `rm -rf $ffastbit`; $verbose and printerr "Executed:\tRemoved Fastbit folder $ffastbit\n\n";
   `mkdir $ffastbit`; $verbose and printerr "Executed:\tCreated Fastbit folder $ffastbit\n\n"; 
-}
+} elsif ($verdict =~ /^n/) {
+  $verbose and printerr "Status:\tSkipping (re)-creation of Fastbit folder\n\n";
+} else { die "Error:\tResponse not provided\n\n"; }
 
 #output
-printerr ("Success:\tCreation of MySQL database ==> \"$dbname\"\n\n");
 printerr ("Success:\tCreation of FastBit folder ==> \"".$ffastbit."\"\n\n");
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
 
@@ -111,6 +114,19 @@ sub processArguments {
   print CONNECT $connectcontent; close (CONNECT);
 }
 
+sub SCHEMA {
+  $sth = $dbh-> prepare("show tables"); $sth->execute;
+  my %HashSchema = ();
+  while (my $row = $sth->fetchrow_array()){
+    $HashSchema{$row} = 1;
+  }
+  $sth->finish();
+  foreach (@dbtables){
+   if (exists $HashSchema{$_}){
+      $schemaverdict = 1;
+    } else { undef $schemaverdict; }
+  }
+}
 
 sub printerr {
   print STDERR @_;
