@@ -35,7 +35,7 @@ my ($refgenome, $stranded, $sequences, $annotation, $annotationfile); #for annot
 our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $prepfile, $logfile, $variantfile, $vepfile, $annofile);
 our ($total, $mapped, $unmapped, $deletions, $insertions, $junctions, $genes, $isoforms,$prep);
 #varaint import
-our ( %VCFhash, %DBSNP, %extra, %VEPhash );
+our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
 our ($varianttool, $verd, $variantclass);
 our ($itsnp,$itindel,$itvariants) = (0,0,0);
 #date
@@ -582,7 +582,7 @@ sub VEPVARIANT {
         my $geneid = $veparray[3];
         my $transcriptid = $veparray[4];
         my $featuretype = $veparray[5];
-        my $consequence = $veparray[6];
+        my $consequence = $veparray[6]; if ($consequence =~ /NON_(.*)$/){ $consequence = "NON".$1; } elsif ($consequence =~ /STOP_(.*)$/) {$consequence = "STOP".$1; }
         my $pposition = $veparray[9];
         my $aminoacid = $veparray[10];
         my $codons = $veparray[11];
@@ -610,9 +610,129 @@ sub VEPVARIANT {
 }
 
 sub ANNOVARIANT {
+  my (%REFGENE, %ENSGENE, %CONTENT);
   open(ANNOVAR,$_[0]) or die ("\nERROR:\t Can not open annovar file $_[0]\n");
-  close ANNOVAR;
+  my @annocontent = <ANNOVAR>; close ANNOVAR; 
+  my @header = split("\t", lc($annocontent[0]));
   
+  #getting headers
+  foreach my $no (5..$#header-1){ #checking if ens and ref is specified
+    my @tobeheader = split('\.', $header[$no]);
+    if ($tobeheader[1] =~ /refgene/i){
+      $REFGENE{$tobeheader[0]} = $header[$no];
+    } elsif ($tobeheader[1] =~ /ensgene/i){ 
+      $ENSGENE{$tobeheader[0]} = $header[$no];
+    } else {
+      die "ERROR:\t Do not understand notation '$tobeheader[1]' provided. Contact $AUTHOR \n";
+    }
+  }
+  #convert content to a hash array.
+  my $counter = $#header+1;
+  @annocontent = @annocontent[1..$#annocontent];
+  foreach my $rowno (0..$#annocontent) {
+    my @arrayrow = split("\t", $annocontent[$rowno], $counter);
+    foreach my $colno (0..$#header) {
+      $CONTENT{$rowno}{$header[$colno]} = $arrayrow[$colno];
+    }
+    $CONTENT{$rowno}{'position'} = (split("\t",$arrayrow[$#arrayrow]))[4];
+  }
+  #working with ENS
+  if (exists $ENSGENE{'func'}) {
+    foreach my $newno (sort {$a<=>$b} keys %CONTENT){
+      my $pposition = "-"; my $consequence = ""; my $transcript = ""; my $aminoacid = "-"; my $codons = "-";
+      if ($CONTENT{$newno}{$ENSGENE{'func'}} =~ /^exonic/i) {
+        $consequence = $CONTENT{$newno}{$ENSGENE{'exonicfunc'}};
+        unless ($consequence =~ /unknown/i){         
+          my @acontent = split(",", $CONTENT{$newno}{$ENSGENE{'aachange'}});
+          my @ocontent = split (":", $acontent[$#acontent]);
+          $transcript = $ocontent[1] =~ s/\.\d//g;
+          foreach (@ocontent){
+            if (/^c\.[a-zA-Z]/) {
+              my ($a, $b, $c) = $_ =~ /^c\.(\S)(\d+)(\S)$/; 
+              $codons = $a."/".$c;
+            } elsif (/^c\.[0-9]/) {
+              $codons = $_;
+            }
+            elsif (/^p\.\S\d+\S$/){ 
+              my ($a, $b, $c) = $_ =~ /^p\.(\S)(\d+)(\S)$/;
+              $pposition = $b;
+              if ($a eq $c) {$aminoacid = $a;} else {$aminoacid = $a."/".$b;}
+            } elsif (/^p\.\S\d+\S+$/) {
+              my $a = $_ =~ /^p\.\S(\d+)\S+$/;
+              $pposition = $a;
+              $aminoacid = $_;
+            }
+          }
+        } 
+      } else {
+        $consequence = $CONTENT{$newno}{$ENSGENE{'func'}};
+      }
+      unless ($consequence =~ /ncRNA/i) {
+        $consequence = uc($consequence);
+        if ($consequence eq "UTR5"){ $consequence = "5PRIME_UTR";}
+        if ($consequence eq "UTR3"){ $consequence = "3PRIME_UTR";} 
+      }
+      $CONTENT{$newno}{$ENSGENE{'gene'}} =~ s/\.\d//g; 
+      my $locate = "$_[1],$CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'},$consequence,$CONTENT{$newno}{$ENSGENE{'gene'}},$pposition";
+      if ( exists $ANNOhash{$locate} ) {
+        unless ( $ANNOhash{$locate} eq $locate ){ die "\nERROR:\t Duplicate annotation in ANNOVAR file, contact $AUTHOR\n"; }
+      } else {
+        $ANNOhash{$locate} = $locate;
+        $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?)");
+        $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'Ensembl', $CONTENT{$newno}{$ENSGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+      }
+    }
+  }
+  
+  #working with REF
+  if (exists $REFGENE{'func'}) {
+    foreach my $newno (sort {$a<=>$b} keys %CONTENT){
+      my $pposition = "-"; my $consequence = ""; my $transcript = ""; my $aminoacid = ""; my $codons = "";
+      if ($CONTENT{$newno}{$REFGENE{'func'}} =~ /^exonic/i) {
+        $consequence = $CONTENT{$newno}{$REFGENE{'exonicfunc'}};
+        unless ($consequence =~ /unknown/i){         
+          my @acontent = split(",", $CONTENT{$newno}{$REFGENE{'aachange'}});
+          my @ocontent = split (":", $acontent[$#acontent]);
+          $transcript = $ocontent[1] =~ s/\.\d//g;
+          foreach (@ocontent){
+            if (/^c\.[a-zA-Z]/) {
+              my ($a, $b, $c) = $_ =~ /^c\.(\S)(\d+)(\S)$/; 
+              $codons = $a."/".$c;
+            } elsif (/^c\.[0-9]/) {
+              $codons = $_;
+            }
+            elsif (/^p\.\S\d+\S$/){ 
+              my ($a, $b, $c) = $_ =~ /^p\.(\S)(\d+)(\S)$/;
+              $pposition = $b;
+              if ($a eq $c) {$aminoacid = $a;} else {$aminoacid = $a."/".$b;}
+            } elsif (/^p\.\S\d+\S+$/) {
+              my $a = $_ =~ /^p\.\S(\d+)\S+$/;
+              $pposition = $a;
+              $aminoacid = $_;
+            }
+          }
+        } 
+      } else {
+        $consequence = $CONTENT{$newno}{$ENSGENE{'func'}};
+      }
+      unless ($consequence =~ /ncRNA/i) {
+        $consequence = uc($consequence);
+        if ($consequence eq "UTR5"){ $consequence = "5PRIME_UTR";}
+        if ($consequence eq "UTR3"){ $consequence = "3PRIME_UTR";} 
+      }
+      $CONTENT{$newno}{$ENSGENE{'gene'}} =~ s/\.\d//g;
+      my $locate = "$_[1],$CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'},$consequence,$CONTENT{$newno}{$REFGENE{'gene'}},$pposition";
+      if ( exists $ANNOhash{$locate} ) {
+        unless ( $ANNOhash{$locate} eq $locate ){ die "\nERROR:\t Duplicate annotation in ANNOVAR file, contact $AUTHOR\n"; }
+      } else {
+        $ANNOhash{$locate} = $locate;
+        $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, genename, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?)");
+        $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}},$CONTENT{$newno}{$REFGENE{'gene'}},$transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+      }
+    }
+  }
+  $sth = $dbh->prepare("update VarSummary set annversion = 'ANNOVAR' where sampleid = '$_[1]'"); $sth ->execute();
+
 }
 #--------------------------------------------------------------------------------
 
