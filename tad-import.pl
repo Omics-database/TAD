@@ -309,7 +309,7 @@ if ($datadb) {
           FPKM('IsoformsFpkm', $isoformsfile, $dataid); #ISOFORMS
           printerr " Done\n";
         } else {
-          $verbose and printerr "NOTICE:\t $dataid already in Isoforms table... Moving on ...\n";
+          $verbose and printerr "NOTICE:\t $dataid already in IsoformsFpkm table... Moving on ...\n";
         }# end isoforms unless
         $sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$dataid'");
         $sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";

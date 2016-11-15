@@ -17,7 +17,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 #--------------------------------------------------------------------------------
 
 our ($verbose, $efile, $help, $man);
-our ($sqlfile,$connect, $schemaverdict, $verdict, $found);
+our ($sqlfile,$connect, $dbverdict, $schemaverdict, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
 our @dbtables = qw|Sample MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnno VarResult VarSummary|;
@@ -26,18 +26,26 @@ sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-#create schema attributes 
-$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database (if applicable)
-$schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
-$sth = $dbh->prepare($schema);
-$sth->execute() or die (qq(ERROR:\t Can't create database, make sure user has create schema  priviledges or use an existing database.));
-$dbh->disconnect();
-$verbose and printerr "EXECUTED: Using SCHEMA $dbname\n\n";
+#creating or using databases
+$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database$
+$verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n\n";
+$sth = $dbh-> prepare("show databases"); $sth->execute;
+my %HashDB = ();
+while (my $row = $sth->fetchrow_array()){ print $row; $HashDB{$row} = $row; }
+$sth->finish(); 
+unless (exists $HashDB{$dbname}){$dbverdict = 1;} else { undef $dbverdict; }
+if ($dbverdict) {
+  $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
+  $sth = $dbh->prepare($schema);
+  $sth->execute() or die (qq(ERROR:\t Can't create database, make sure user has create schema  priviledges or use an existing database.));
+  $verbose and printerr "EXECUTED: Created SCHEMA $dbname\n\n";
+}
 
+$dbh->disconnect();
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Check if tables already exist in database
 SCHEMA();
-printerr "JOB:\t MySQL - $dbname and NoSQL = $fbname creation\n";
+printerr "JOB:\t MySQL = $dbname and NoSQL = $fbname creation\n";
 if ($schemaverdict) { # if tables are in the database
   print "\nWARNING: Database has requisite tables with content\n";
   print "\t Do you still want to recreate database? (Y/N): ";
@@ -49,9 +57,9 @@ if ($verdict =~ /^y/) { #Import schema to mysql
   while (my $sqlStatement = <SQL>) {
     unless ($sqlStatement =~ /^-/){
       $sth = $dbh->prepare($sqlStatement)
-        or die (qq(ERROR:\t Can not prepare $sqlStatement));
+        or die (qq(FAILED:\t Can not prepare $sqlStatement));
       $sth->execute()
-        or die qq(ERROR:\t Can not execute $sqlStatement);
+        or die qq(FAILED:\t Can not execute $sqlStatement);
       $verbose and printerr "EXECUTED: $sqlStatement\n";
     }
   }
