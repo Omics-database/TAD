@@ -1,9 +1,11 @@
 #package CC::Parse;
 use strict;
+use Cwd qw(abs_path);
+use lib dirname(abs_path $0) .'/lib/lib/perl5';
 use Spreadsheet::Read;
 
 sub excelcontent {
-  my $workbook = ReadData("$_[0]") or pod2usage("Error: Could not open excel file \"$_[0]\"");
+  my $workbook = ReadData($_[0]) or pod2usage("Error: Could not open excel file \"$_[0]\"");
   my ($odacontent, $source_cell);
   foreach my $source_sheet_number (1..length($workbook)) {
     my @rows = Spreadsheet::Read::rows($workbook->[$source_sheet_number]);

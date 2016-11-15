@@ -8,7 +8,6 @@ use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
-use DBD::mysql;
 
 our $VERSION = '$ Version: 1 $';
 our $DATE = '$ Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
@@ -31,7 +30,7 @@ $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create 
 $verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n\n";
 $sth = $dbh-> prepare("show databases"); $sth->execute;
 my %HashDB = ();
-while (my $row = $sth->fetchrow_array()){ print $row; $HashDB{$row} = $row; }
+while (my $row = $sth->fetchrow_array()){ $HashDB{$row} = $row; }
 $sth->finish(); 
 unless (exists $HashDB{$dbname}){$dbverdict = 1;} else { undef $dbverdict; }
 if ($dbverdict) {

@@ -7,7 +7,6 @@ use File::Spec;
 use File::Basename;
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
-use DBI;
 use CC::Create;
 use CC::Parse;
 
@@ -338,7 +337,7 @@ if ($datadb) {
             if ($vep || $annovar) {
               my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
               unless ($variantstatus){
-                $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
+                $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in VarAnno table\n";
                 $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
                 if ($vep) {
  		  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
@@ -413,16 +412,15 @@ if ($datadb) {
 }
 #output: the end
 printerr "-----------------------------------------------------------------\n";
-  if ($metadata){
+if ($metadata){
   printerr ("SUCCESS: Import of Sample Information in \"$file2consider\"\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 } #end if complete RNASeq metadata
 if ($datadb){
   printerr ("SUCCESS: Import of RNA Seq analysis information in \"$file2consider\"\n");
-  print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 } #end if completed RNASeq data2db
 printerr ("NOTICE:\t Summary in log file $efile\n");
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 #--------------------------------------------------------------------------------
 

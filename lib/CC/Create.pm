@@ -1,7 +1,8 @@
 #package CC::Create;
 use strict;
-use warnings;
-use DBI;
+use Cwd qw(abs_path);
+use lib dirname(abs_path $0) . '/lib/lib/perl5/darwin-thread-multi-2level';
+use DBD::mysql;
 use IO::File;
 
 sub DEFAULTS {

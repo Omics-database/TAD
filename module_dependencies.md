@@ -1,4 +1,5 @@
-#PERL MODULE DEPENDENCIES
+#PRECONFIGURED PERL MODULES 
+Perl modules already configured in the package
 ##1. DBD::mysql
 	Version: 4.038
 	Location: http://search.cpan.org/~capttofu/DBD-mysql/lib/DBD/mysql.pm
