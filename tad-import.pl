@@ -10,7 +10,7 @@ use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
 use CC::Parse;
 
-our $VERSION = '$ Version: 1 $';
+our $VERSION = '$ Version: 2 $';
 our $DATE = '$ Date: 2016-10-28 14:40:00 (Fri, 28 Oct 2016) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
@@ -21,8 +21,9 @@ our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar); #
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
 
-my ($name, $description, $derivedfrom, $organism, $tissue, $collection, $scientist, $organization); #metadata table
-our (%specimen, %filecontent, %description, %organism);
+#my ($name, $description, $derivedfrom, $organism, $tissue, $collection, $organization); #metadata table
+our ($sheetid, %NAME, %ORGANIZATION);
+#our (%specimen, , %description, %organism);
 
 #data2db options
 our ($found);
@@ -53,127 +54,309 @@ if ($metadata){
   $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   if ($tab) { #unix tab delimited file
     printerr "JOB:\t Importing Sample Information from tab-delimited file => $file2consider\n"; #status
-    %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
-    foreach my $row (sort keys %filecontent){
-
+    my %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
+		foreach my $row (sort keys %filecontent){
       if (exists $filecontent{$row}{'sample name'}) { #sample name
-	$name = $filecontent{$row}{'sample name'};
-      } else {
-	pod2usage("\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
-      } #end if for getting sample information 
-      $sth = $dbh->prepare("select sampleid from Sample where sampleid = '$name'"); $sth->execute(); $found = $sth->fetch();
-      unless ($found) { # if sample is not in the database
-	$scientist = $filecontent{$row}{'scientist'};  #scientist
-	$organization = $filecontent{$row}{'organization name'}; #organization name
-		
-	if (exists $filecontent{$row}{'organism'}) { #organism
- 	  $organism = $filecontent{$row}{'organism'};
-	} else {
-	  die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
-	} #end if for animal info
-	$description = $filecontent{$row}{'sample description'}; #description
-	if (exists $filecontent{$row}{'derived from'}) { #animal
-	  $derivedfrom = uc($filecontent{$row}{'derived from'});
-	} else {
-	  die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
-	} #end if for animal id
-	unless (exists $filecontent{$row}{'organism part'}) { #tissue
-	  $tissue = $filecontent{$row}{'organism part'};
-	} else {
-	  $tissue = $filecontent{$row}{'sample description'};
-	} #end if for tissue
-	if (exists $filecontent{$row}{'specimen collection date'}){
-	  $collection =$filecontent{$row}{'specimen collection date'};
-	my @date = split('-', $collection);
-	if ($#date == 0) {$collection = $date[0]."0101";}
-	elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
-	elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
-	else {$collection = undef;}
-	} else {
-	  $collection = undef;
-	} #end id for specimen collection date
-	printerr "NOTICE:\t Importing $name to Sample table\n"; #import to database
-	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-	$sth->execute($name, $description,$derivedfrom,$organism, $tissue, $collection, $scientist, $organization) or die "\nERROR:\t Complication in Sample table, contact $AUTHOR\n";
-	$sth-> finish; #end of query
-      } else {
-        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
-      } #end unless in the database
-    } #end foreach filecontent
-  } #end if (tab-delimited)
+				my $sheetid = "$filecontent{$row}{'first name'} $filecontent{$row}{'middle initial'} $filecontent{$row}{'last name'}"; #scientist name
+				if (length $sheetid > 3) { #Person Name 
+					$sth = $dbh->prepare("select personid from Person where personid = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+					unless ($found) { # if person is not in the database
+						$sth = $dbh->prepare("insert into Person (personid, firstname, lastname, middleinitial) values (?,?,?,?)");
+						$sth->execute($sheetid, $filecontent{$row}{'first name'}, $filecontent{$row}{'last name'}, $filecontent{$row}{'middle initial'}) or die "\nERROR:\t Complication in Person table\n";
+					}
+					$NAME{$sheetid} = $sheetid;
+				} else {
+					undef $sheetid;
+				}
+				$sheetid = $filecontent{$row}{'organization name'}; #organization name
+				if ($sheetid) { #Organization Name
+					$sth = $dbh->prepare("select organizationname from Organization where organizationname = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+					unless ($found) { # if person is not in the database
+						$sth = $dbh->prepare("insert into Organization (organizationname) values ('$sheetid')");
+						$sth->execute() or die "\nERROR:\t Complication in Organization table\n";
+					}
+					$ORGANIZATION{$sheetid} = $sheetid;
+				} else {
+					undef $sheetid;
+				}
+				if (exists $filecontent{$row}{'organism'}) { #organism name
+					$sheetid = $filecontent{$row}{'organism'};
+					$sth = $dbh->prepare("select organism from Organism where organism = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+					unless ($found) { # if is not in the database
+						$sth = $dbh->prepare("insert into Organism (organism) values ('$sheetid')");
+						$sth->execute() or die "\nERROR:\t Complication in Organism table\n";
+					}
+					undef $sheetid;
+				} else {
+						die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Organism\"\n";
+				} #end if for animal info
+				if (exists $filecontent{$row}{'derived from'}) { #animal id
+					$sheetid = uc($filecontent{$row}{'derived from'});
+					$sth = $dbh->prepare("select animalid from Animal where animalid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+					unless ($found) {
+						printerr "NOTICE:\t Importing $sheetid to Animal table\n";
+						$sth = $dbh->prepare("insert into Animal (animalid, organism) values (?,?)");
+						$sth->execute($sheetid, $filecontent{$row}{'organism'} ) or die "\nERROR:\t Complication in Animal table\n";
+					} else {
+						$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on...\n";
+					}
+					undef $sheetid;
+				} else {
+					die "\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Derived From\"\n";
+				}
+				if (exists $filecontent{$row}{'organism part'}) { #organism part / tissue
+					$sheetid  = $filecontent{$row}{'organism part'};
+					$sth = $dbh->prepare("select tissue from Tissue where tissue = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+					unless ($found) { # if is not in the database
+							$sth = $dbh->prepare("insert into Tissue (tissue) values ('$sheetid')");
+							$sth->execute() or die "\nERROR:\t Complication in Tissue table\n";
+					}
+					undef $sheetid;
+				}
+				$sheetid  = uc($filecontent{$row}{'sample name'}); #Sample Table
+				$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+				unless ($found) { # if sample is not in the database
+					printerr "NOTICE:\t Importing $sheetid to Sample table\n";
+					$sth = $dbh->prepare("insert into Sample (sampleid, tissue, derivedfrom, description) values (?,?,?,?)");
+					$sth->execute($sheetid, $filecontent{$row}{'organism part'}, $filecontent{$row}{'derived from'}, $filecontent{$row}{'sample description'}) or die "\nERROR:\t Complication in Sample table\n";
+				} else {
+					$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on...\n";
+				}
+			} else {
+				pod2usage("\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
+      } #end of if sample name is real
+		} #end of foreach file content
+	} #end of tab unix option
   else { #import faang excel sheet
+		my ($sheetid, @excelcontent, %columnpos); #metadata excel
     printerr "JOB:\t Importing Sample Information from excel file => $file2consider\n"; #status    
-    %filecontent = %{ excelcontent($file2consider) }; #get excel content
-    #get name information
-    if (exists $filecontent{2}{'person%person first name'}){
-      $scientist = "$filecontent{2}{'person%person first name'} $filecontent{2}{'person%person initials'} $filecontent{2}{'person%person last name'}";
-    } else {$scientist = undef;} #end if for scientist
-    if (exists $filecontent{2}{'organization%organization name'}){
-      $organization = $filecontent{2}{'organization%organization name'};
-    } else {$organization = undef;} #end if for organization name
-    #get specimen information
-    foreach my $row (sort keys %filecontent){
-      foreach my $column (keys %{$filecontent{$row}}){
-	if ($column =~ /^specimen.*/){
-  	  $specimen{$row}{$column} = $filecontent{$row}{$column};
-	} #end if for getting sample information
-      } #end foreach
-    } #end foreach
-		
-    #get animal information
-    foreach my $row (sort keys %filecontent){
-      foreach my $column (keys %{$filecontent{$row}}){
-        if ($column =~ /^animal%sample name/){
-	  $description{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%sample description'};
-	  if (exists $filecontent{$row}{'animal%organism'}) {
-	    $organism{uc($filecontent{$row}{'animal%sample name'})}= $filecontent{$row}{'animal%organism'};
-	  } else {
-	    die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: animal, ROW: $row, COLUMN: \"Organism\"\n";
-	  } #end if for animal information
-	} #end if for animal id
-      } #end foreach
-    } #end foreach
-		
-    #attributes of interest
-    foreach my $row  (sort keys %specimen){
-      if (exists $filecontent{$row}{'specimen%sample name'}) {
-	$name = $filecontent{$row}{'specimen%sample name'};
-      } else {
-	die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: specimen, ROW: $row, COLUMN: \"Sample Name\"\n";
-      } #end if to get sampleid
-      $sth = $dbh->prepare("select sampleid from Sample where sampleid = '$name'"); $sth->execute(); $found = $sth->fetch();
-      unless ($found) { # if sample is not in the database
-	if (exists $filecontent{$row}{'specimen%derived from'}) {
-  	  $derivedfrom = uc($filecontent{$row}{'specimen%derived from'});
-	} else {
-	  die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Check => SHEET: specimen, ROW: $row, COLUMN: \"Derived From\"\n";
-	} #end if for animal id
-	unless (exists $filecontent{$row}{'specimen%organism part'}) {
-	  $tissue = $filecontent{$row}{'specimen%organism part'};
-	} else {
-	  $tissue = $filecontent{$row}{'specimen%sample description'};
-	} #end if for tissue 
-	if (exists $filecontent{$row}{'specimen%specimen collection date'}){
-	  $collection =$filecontent{$row}{'specimen%specimen collection date'};
-	  my @date = split('-', $collection);
-	  if ($#date == 0) {$collection = $date[0]."0101";}
-	  elsif ($#date == 1) { $collection = $date[0].$date[1]."01";}
-	  elsif ($#date == 2) { $collection = $date[0].$date[1].$date[2];}
-	  else {$collection = undef;}
-	} else {
-	  $collection = undef;
-	} #end if for specimen collection date
-	$sth = $dbh->prepare("insert into Sample (sampleid, sampleinfo, derivedfrom, organism, tissue, collectiondate, scientist, organizationname) values (?,?,?,?,?,?,?,?)");
-	unless (exists $organism{$derivedfrom}) {
-	  die "\nFAILED:\t Error in Excel file \"$file2consider\".\n\t Animal \"$derivedfrom\" information is not provided in SHEET: animal\n";
-	} #check to make sure animal information from specimen sheet is provided
-	printerr "NOTICE:\t Importing $name to Sample table\n"; #import to database
-	$sth->execute($name, $description{$derivedfrom},$derivedfrom,$organism{$derivedfrom}, $tissue, $collection, $scientist, $organization) or die "\nERROR:\t Complication in Sample table, contact $AUTHOR\n";
-	      $sth-> finish; #end of query
-      } else {
-        $verbose and printerr "Duplicate (Already exists):\t$name\n"; #import to database
-      } #end unless in the database
-    } #end foreach specimen; attribute of interest
+    @excelcontent = excelcontent($file2consider); #get excel content
+		for (@excelcontent){s/%%//g;}
+		foreach (@excelcontent) {
+			my @array = split "\n";
+			my @header = split('\?abc\?',lc($array[1]));
+			if ($array[0] =~ /person/) { #Working with Person Sheet;
+				undef %columnpos; #undefined column position
+				if ($#array > 1) {
+					foreach my $no (0..$#header) {
+						$columnpos{$header[$no]} = $no;
+					}	#end foreach : put header info into a Dictionary
+					foreach my $ne (2..$#array) {
+						my @value = split('\?abc\?', $array[$ne]);
+						if (length $value[0] > 1) {
+							$sheetid  = "$value[$columnpos{'person first name'}] $value[$columnpos{'person initials'}] $value[$columnpos{'person last name'}]";
+							$sth = $dbh->prepare("select personid from Person where personid = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+							unless ($found) { # if person is not in the database
+								$sth = $dbh->prepare("insert into Person (personid, lastname, middleinitial, firstname, email, role) values (?,?,?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'person last name'}], $value[$columnpos{'person initials'}], $value[$columnpos{'person first name'}], $value[$columnpos{'person email'}], $value[$columnpos{'person role'}]) or die "\nERROR:\t Complication in Person table\n";
+							}
+							$NAME{$sheetid} = $sheetid;
+						} else { #end if : insert into database
+							undef $sheetid;
+						} #end else table has no information
+					} #end foreach : getting information into the database and into dictionary
+				} else { #end if : if there is content in thetable
+					undef $sheetid; #make sure sheetid is undefined if there is no content in the sheet
+				}
+			}
+			
+			if ($array[0] =~ /organization/)  { #Working with Organization Sheet;
+				undef %columnpos; #undefine column position
+				if ($#array > 1) {
+					foreach my $no (0..$#header) {
+						$columnpos{$header[$no]} = $no;
+					}	#end foreach : put header info into a Dictionary
+					foreach my $ne (2..$#array) {
+						my @value = split('\?abc\?', $array[$ne]);
+						if (length $value[0] > 1) {
+							$sheetid  = $value[$columnpos{'organization name'}];
+							$sth = $dbh->prepare("select organizationname from Organization where organizationname = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+							unless ($found) { # if organization is not in the database
+								$sth = $dbh->prepare("insert into Organization (organizationname,address, URL, role) values (?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'organization address'}], $value[$columnpos{'organization uri'}], $value[$columnpos{'organization role'}]) or die "\nERROR:\t Complication in Organization table\n";
+							} 
+							$ORGANIZATION{$sheetid} = $sheetid;
+						} else { #end if : insert into database
+							undef $sheetid;
+						} #end else table has no information
+					} #end foreach : getting information into the database and into dictionary
+				} else { #end if : if there is content in thetable
+					undef $sheetid; #make sure sheetid is undefined if there is no content in the sheet
+				} #end else
+			} #end if organization
+			
+			if ($array[0] =~ /animal/)  { #Working with Animal Sheet;
+				my %ANIMAL = (material=>'Material', organism => 'Organism', sex => 'Sex', breed => 'Breed');
+				undef %columnpos; #undefine column position
+				if ($#array > 1) {
+					foreach my $no (0..$#header) {
+						if ($header[$no] =~ /[material|organism|sex|breed|health]/) {
+							$columnpos{$header[$no]} = $no;
+							$no = $no+2;
+						} elsif ($header[$no] =~ /[birth|placental|pregnancy]/) {
+							$columnpos{$header[$no]} = $no;
+							$no = $no+2;
+						} else {
+							$columnpos{$header[$no]} = $no;
+						}
+					}	#end foreach : put header info into a Dictionary
+					foreach my $ne (2..$#array) {
+						my @value = split('\?abc\?', $array[$ne]);
+						if (length $value[0] > 1) {
+							foreach my $id (sort keys %ANIMAL) {
+								if (length $value[$columnpos{$id}] > 1) {
+									$sheetid  = "$value[$columnpos{$id}]";
+									my $loc = $columnpos{$id};
+									$sth = $dbh->prepare("select $id from $ANIMAL{$id} where $id = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+									unless ($found) { # if material is not in the database
+										$sth = $dbh->prepare("insert into $ANIMAL{$id} ($id, termref, termid) values (?,?,?)");
+										$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in $ANIMAL{$id} table\n";
+									}
+								}
+							} undef %ANIMAL;
+							if (length $value[$columnpos{'health status'}] > 1) {
+								$sheetid  = "$value[$columnpos{'health status'}]";
+								my $loc = $columnpos{'health status'};
+								$sth = $dbh->prepare("select health from HealthStatus where health = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) { # if material is not in the database
+									$sth = $dbh->prepare("insert into HealthStatus (health,termref, termid) values (?,?,?)");
+									$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in HealthStatus table\n";
+								}
+							}
+							$sheetid  = uc($value[$columnpos{'sample name'}]); #Animal Table
+							$sth = $dbh->prepare("select animalid from Animal where animalid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+							unless ($found) { # if animal is not in the database
+								printerr "NOTICE:\t Importing $sheetid to Animal table\n";
+								$sth = $dbh->prepare("insert into Animal (animalid, project, material, organism, sex, health, breed, description) values (?,?,?,?,?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'project'}], $value[$columnpos{'material'}], $value[$columnpos{'organism'}], $value[$columnpos{'sex'}], $value[$columnpos{'health status'}], $value[$columnpos{'breed'}],$value[$columnpos{'sample description'}]) or die "\nERROR:\t Complication in Animal table\n";
+							} else {
+								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on...\n";
+							}
+							$sth = $dbh->prepare("select animalid from AnimalStats where animalid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+							unless ($found) { # if animalstats is not in the database
+								my ($loc, $birthdate, $birthlocation, $birthloclatitude, $birthloclongitude, $birthweight, $placentaweight, $pregnancylength) = ();
+								#$loc = $columnpos{'birth date'}; print "the", length($value[$loc]), " thisis \n";die;
+								if ($value[$columnpos{'birth date'}]) { $birthdate = "$value[$columnpos{'birth date'}] \($value[$columnpos{'birth date'}+1]\)"; }
+								if ($value[$columnpos{'birth location'}]) { $birthlocation = "$value[$columnpos{'birth location'}] \($value[$columnpos{'birth location'}+1]\)"; }
+								if ($value[$columnpos{'birth location latitude'}]) { $birthloclatitude = "$value[$columnpos{'birth location latitude'}] \($value[$columnpos{'birth location latitude'}+1]\)"; }
+								if ($value[$columnpos{'birth location longitude'}]) { $birthloclongitude = "$value[$columnpos{'birth location longitude'}] \($value[$columnpos{'birth location longitude'}+1]\)"; }
+								if ($value[$columnpos{'birth weight'}]) { $birthweight = "$value[$columnpos{'birth weight'}] \($value[$columnpos{'birth weight'}+1]\)"; }
+								if ($value[$columnpos{'placental weight'}]) { $placentaweight = "$value[$columnpos{'placental weight'}] \($value[$columnpos{'placental weight'}+1]\)"; }
+								if ($value[$columnpos{'pregnancy length'}]) { $pregnancylength = "$value[$columnpos{'pregnancy length'}] \($value[$columnpos{'pregnancy length'}+1]\)"; }
+								$sth = $dbh->prepare("insert into AnimalStats (animalid, birthdate, birthlocation, birthloclatitude, birthloclongitude, birthweight, placentalweight, pregnancylength, deliveryease, deliverytiming, pedigree) values (?,?,?,?,?,?,?,?,?,?,?)");
+								$sth->execute($sheetid, $birthdate, $birthlocation, $birthloclatitude, $birthloclongitude, $birthweight, $placentaweight, $pregnancylength, $value[$columnpos{'delivery ease'}], $value[$columnpos{'delivery timing'}], $value[$columnpos{'pedigree'}]) or die "\nERROR:\t Complication in AnimalStats table\n";
+							} else {
+								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in AnimalStats table. Moving on...\n";
+							}							
+						} else { #end if : insert into database
+							undef $sheetid;
+						} #end else table has no information
+					} #end foreach : getting information into the database
+				} else { #end if : if there is content in thetable
+					undef $sheetid; #make sure sheetid is undefined if there is no content in the sheet
+				} #end else
+			} #end if animal
+			
+			if ($array[0] =~ /specimen/)  { #Working with Specimen Sheet;
+				undef %columnpos; #undefine column position
+				if ($#array > 1) {
+					foreach my $no (0..$#header) {
+						if ($header[$no] =~ /[material|organism|health|developmental]/) {
+							$columnpos{$header[$no]} = $no;
+							$no = $no+2;
+						} elsif ($header[$no] =~ /[date|animal age|number|volume|size|weight|gestational]/) {
+							$columnpos{$header[$no]} = $no;
+							$no = $no+2;
+						} else {
+							$columnpos{$header[$no]} = $no;
+						}
+					}	#end foreach : put header info into a Dictionary
+					foreach my $ne (2..$#array) { #each row
+						my @value = split('\?abc\?', $array[$ne]);
+						if (length $value[0] > 1) {
+							if (length $value[$columnpos{'material'}] > 1) {
+								$sheetid  = "$value[$columnpos{'material'}]";
+								my $loc = $columnpos{'material'};
+								$sth = $dbh->prepare("select material from Material where material = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) { # if material is not in the database
+									$sth = $dbh->prepare("insert into Material (material,termref, termid) values (?,?,?)");
+									$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in Material table\n";
+								}
+							}
+							if (length $value[$columnpos{'organism part'}] > 1) {
+								$sheetid  = "$value[$columnpos{'organism part'}]";
+								my $loc = $columnpos{'organism part'};
+								$sth = $dbh->prepare("select tissue from Tissue where tissue = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) { # if is not in the database
+									$sth = $dbh->prepare("insert into Tissue (tissue,termref, termid) values (?,?,?)");
+									$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in Tissue table\n";
+								}
+							}
+							if (length $value[$columnpos{'developmental stage'}] > 1) {
+								$sheetid  = "$value[$columnpos{'developmental stage'}]";
+								my $loc = $columnpos{'developmental stage'};
+								$sth = $dbh->prepare("select developmentalstage from DevelopmentalStage where developmentalstage = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) { # ifis not in the database
+									$sth = $dbh->prepare("insert into DevelopmentalStage (developmentalstage,termref, termid) values (?,?,?)");
+									$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in DevelopmentalStage table\n";
+								}
+							}
+							if (length $value[$columnpos{'health status at collection'}] > 1) {
+								$sheetid  = "$value[$columnpos{'health status at collection'}]";
+								my $loc = $columnpos{'health status at collection'};
+								$sth = $dbh->prepare("select health from HealthStatus where health = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) { # if is not in the database
+									$sth = $dbh->prepare("insert into HealthStatus (health,termref, termid) values (?,?,?)");
+									$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in HealthStatus table\n";
+								}
+							}
+							$sheetid  = uc($value[$columnpos{'sample name'}]); #Sample Table
+							$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+							unless ($found) { # if sample is not in the database
+								printerr "NOTICE:\t Importing $sheetid to Sample table\n";
+								$sth = $dbh->prepare("insert into Sample (sampleid, project, material, tissue, derivedfrom, availability, developmentalstage, health, description) values (?,?,?,?,?,?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'project'}], $value[$columnpos{'material'}], $value[$columnpos{'organism part'}], uc($value[$columnpos{'derived from'}]), $value[$columnpos{'availability'}], $value[$columnpos{'developmental stage'}], $value[$columnpos{'health status at collection'}],$value[$columnpos{'sample description'}]) or die "\nERROR:\t Complication in Sample table\n";
+							} else {
+								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on...\n";
+							}
+							$sth = $dbh->prepare("select sampleid from SampleStats where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
+							unless ($found) { # if samplestats is not in the database
+								my ($specimendate, $agecollect, $noofpieces, $specimenvolume, $specimensize, $specimenweight, $gestage) = ();
+								if ($value[$columnpos{'specimen collection date'}]) { $specimendate = "$value[$columnpos{'specimen collection date'}] \($value[$columnpos{'specimen collection date'}+1]\)"; }
+								if ($value[$columnpos{'animal age at collection'}]) { $agecollect = "$value[$columnpos{'animal age at collection'}] \($value[$columnpos{'animal age at collection'}+1]\)"; }
+								if ($value[$columnpos{'number of pieces'}]) { $noofpieces = "$value[$columnpos{'number of pieces'}] \($value[$columnpos{'number of pieces'}+1]\)"; }
+								if ($value[$columnpos{'specimen volume'}]) { $specimenvolume = "$value[$columnpos{'pecimen volume'}] \($value[$columnpos{'pecimen volume'}+1]\)"; }
+								if ($value[$columnpos{'specimen size'}]) { $specimensize = "$value[$columnpos{'specimen size'}] \($value[$columnpos{'specimen size'}+1]\)"; }
+								if ($value[$columnpos{'specimen weight'}]) { $specimenweight = "$value[$columnpos{'specimen weight'}] \($value[$columnpos{'specimen weight'}+1]\)"; }
+								if ($value[$columnpos{'gestational age at sample collection'}]) { $gestage = "$value[$columnpos{'gestational age at sample collection'}] \($value[$columnpos{'gestational age at sample collection'}+1]\)"; }
+								$sth = $dbh->prepare("insert into SampleStats (sampleid, collectionprotocol, collectiondate, ageatcollection, fastedstatus, noofpieces, specimenvol, specimensize, specimenwgt, specimenpictureurl, gestationalage) values (?,?,?,?,?,?,?,?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'specimen collection protocol'}], $specimendate, $agecollect, $value[$columnpos{'fasted status'}], $noofpieces, $specimenvolume, $specimensize, $specimenweight, $value[$columnpos{'specimen picture url'}], $gestage) or die "\nERROR:\t Complication in SampleStats table\n";
+							} else {
+								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in SampleStats table. Moving on...\n";
+							}
+							foreach (keys %NAME) {
+								$sth = $dbh->prepare("select sampleid, personid from SamplePerson where sampleid = '$sheetid' and personid = '$_'"); $sth->execute(); $found =$sth->fetch();
+								unless ($found) { # if sample-person is not in the database
+									$sth = $dbh->prepare("insert into SamplePerson (sampleid, personid) values (?,?)");
+									$sth->execute($sheetid, $_) or die "\nERROR:\t Complication in SamplePerson table\n";
+								}
+							}
+							foreach (keys %ORGANIZATION) {
+								$sth = $dbh->prepare("select sampleid, organizationname from SampleOrganization where sampleid = '$sheetid' and organizationname = '$_'"); $sth->execute(); $found =$sth->fetch();
+								unless ($found) { # if sample-organization is not in the database
+									$sth = $dbh->prepare("insert into SampleOrganization (sampleid, organizationname) values (?,?)");
+									$sth->execute($sheetid, $_) or die "\nERROR:\t Complication in SampleOrganization table\n";
+								}
+							}
+						} else { #end if : insert into database
+							undef $sheetid;
+						} #end else table has no information
+					} #end foreach : getting information into the database
+				} else { #end if : if there is content in thetable
+					undef $sheetid; #make sure sheetid is undefined if there is no content in the sheet
+				}	#end else			
+			} #end if specimen
+		} #end foreach @excelcontent
   } #end if excel
 } #end if metadata
 

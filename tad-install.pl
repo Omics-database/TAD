@@ -27,7 +27,7 @@ processArguments(); #Process input
 
 #creating or using databases
 $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database$
-$verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n\n";
+$verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n";
 $sth = $dbh-> prepare("show databases"); $sth->execute;
 my %HashDB = ();
 while (my $row = $sth->fetchrow_array()){ $HashDB{$row} = $row; }
@@ -37,7 +37,7 @@ if ($dbverdict) {
   $schema = "CREATE SCHEMA IF NOT EXISTS $dbname";
   $sth = $dbh->prepare($schema);
   $sth->execute() or die (qq(ERROR:\t Can't create database, make sure user has create schema  priviledges or use an existing database.));
-  $verbose and printerr "EXECUTED: Created SCHEMA $dbname\n\n";
+  $verbose and printerr "EXECUTED: Created SCHEMA $dbname\n";
 }
 
 $dbh->disconnect();
@@ -64,7 +64,7 @@ if ($verdict =~ /^y/) { #Import schema to mysql
   }
 } elsif ($verdict =~ /^n/) {
   $verbose and printerr "NOTICE:\t Skipping (re)-creation of MySQL tables\n";
-} else { die "ERROR:\t Response not provided\n\n"; }
+} else { die "ERROR:\t Response not provided\n"; }
 $sth->finish();
 $dbh->disconnect();
 

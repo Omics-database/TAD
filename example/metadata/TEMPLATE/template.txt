@@ -1,1 +1,2 @@
-Sample Name	Sample Description	Derived From	Organism	Organism Part	Specimen Collection Date	Scientist	Organization name
+Sample Name	Sample description	Derived from	Organism	Organism Part	First name	Middle Initial	Last name	Organization
+
