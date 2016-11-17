@@ -226,3 +226,12 @@ CREATE TABLE `vw_vanno` (`sampleid` INT, `chrom` INT, `position` INT, `refallele
 DROP VIEW IF EXISTS `vw_vanno` ;
 DROP TABLE IF EXISTS `vw_vanno`;
 CREATE VIEW `vw_vanno` AS select `a`.`sampleid` AS `sampleid`,`a`.`chrom` AS `chrom`,`a`.`position` AS `position`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`a`.`variantclass` AS `variantclass`,group_concat(distinct ifnull(`b`.`consequence`,'none') separator '; ') AS `annotation`,ifnull(group_concat(distinct `b`.`genename` separator '; '),'none') AS `genename`,group_concat(distinct ifnull(`a`.`dbsnpvariant`,'none') separator '; ') AS `dbsnpvariant` from (`VarResult` `a` join `VarAnno` `b` on(((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) where (`b`.`genename` is not null) group by `a`.`sampleid`,`a`.`chrom`,`a`.`position`;
+-- -----------------------------------------------------
+-- View `vw_nosql`
+-- -----------------------------------------------------
+DROP VIEW IF EXISTS `vw_nosql`;
+DROP TABLE IF EXISTS `vw_nosql`;
+CREATE TABLE `vw_nosql` (`variantclass` INT,`zygosity` INT,`dbsnpvariant` INT,`consequence` INT,`geneid` INT,`genename` INT,`transcript` INT,`feature` INT,`genetype` INT,`refallele` INT,`altallele` INT,`tissue` INT,`chrom` INT,`aachange` INT,`codonchange` INT,`organism` INT,`sampleid` INT,`quality` INT,`position` INT,`proteinposition` INT);
+DROP VIEW IF EXISTS `vw_nosql` ;
+DROP TABLE IF EXISTS `vw_nosql`;
+CREATE VIEW `vw_nosql` AS select `a`.`variantclass` AS `variantclass`,`a`.`zygosity` AS `zygosity`,`a`.`dbsnpvariant` AS `dbsnpvariant`,`b`.`consequence` AS `consequence`,`b`.`geneid` AS `geneid`,`b`.`genename` AS `genename`,`b`.`transcript` AS `transcript`,`b`.`feature` AS `feature`,`b`.`genetype` AS `genetype`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`c`.`tissue` AS `tissue`,`a`.`chrom` AS `chrom`,`b`.`aachange` AS `aachange`,`b`.`codonchange` AS `codonchange`,`d`.`organism` AS `organism`,`a`.`sampleid` AS `sampleid`,`a`.`quality` AS `quality`,`a`.`position` AS `position`,`b`.`proteinposition` AS `proteinposition` from (((`VarResult` `a` join `VarAnno` `b` on (((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) join Sample `c` on ((`a`.`sampleid` = `c`.`sampleid`))) join Animal `d` on ((`c`.`derivedfrom` = `d`.`animalid`)));

@@ -16,14 +16,12 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $efile, $help, $man);
+our ($verbose, $efile, $help, $man, $nosql);
 our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar); #command options
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
 
-#my ($name, $description, $derivedfrom, $organism, $tissue, $collection, $organization); #metadata table
 our ($sheetid, %NAME, %ORGANIZATION);
-#our (%specimen, , %description, %organism);
 
 #data2db options
 our ($found);
@@ -34,10 +32,13 @@ my ($refgenome, $stranded, $sequences, $annotation, $annotationfile); #for annot
 #genes import
 our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $prepfile, $logfile, $variantfile, $vepfile, $annofile);
 our ($total, $mapped, $unmapped, $deletions, $insertions, $junctions, $genes, $isoforms,$prep);
-#varaint import
+#variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
 our ($varianttool, $verd, $variantclass);
 our ($itsnp,$itindel,$itvariants) = (0,0,0);
+
+#nosql append
+my (@nosqlrow, $showcase);
 #date
 my $date = `date +%Y-%m-%d`;
 
@@ -51,7 +52,7 @@ my %all_details = %{connection($connect, $default)}; #get connection details
 
 #PROCESSING METADATA
 if ($metadata){
-  $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+  $dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   if ($tab) { #unix tab delimited file
     printerr "JOB:\t Importing Sample Information from tab-delimited file => $file2consider\n"; #status
     my %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
@@ -235,7 +236,6 @@ if ($metadata){
 							$sth = $dbh->prepare("select animalid from AnimalStats where animalid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
 							unless ($found) { # if animalstats is not in the database
 								my ($loc, $birthdate, $birthlocation, $birthloclatitude, $birthloclongitude, $birthweight, $placentaweight, $pregnancylength) = ();
-								#$loc = $columnpos{'birth date'}; print "the", length($value[$loc]), " thisis \n";die;
 								if ($value[$columnpos{'birth date'}]) { $birthdate = "$value[$columnpos{'birth date'}] \($value[$columnpos{'birth date'}+1]\)"; }
 								if ($value[$columnpos{'birth location'}]) { $birthlocation = "$value[$columnpos{'birth location'}] \($value[$columnpos{'birth location'}+1]\)"; }
 								if ($value[$columnpos{'birth location latitude'}]) { $birthloclatitude = "$value[$columnpos{'birth location latitude'}] \($value[$columnpos{'birth location latitude'}+1]\)"; }
@@ -437,11 +437,13 @@ if ($datadb) {
             printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
   	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
           }
           if ($annovar) {
             printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
   	    printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
           }
         }
       }
@@ -454,11 +456,13 @@ if ($datadb) {
 	  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
           printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
           VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+					NOSQL($dataid);
         }
         if ($annovar) {
           printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
   	  printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
           ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+					NOSQL($dataid);
         }
       }
     } else { #end unless found in MapStats table
@@ -473,7 +477,7 @@ if ($datadb) {
       #toggle options
       unless ($variant) {
         GENE_INFO($dataid);
-        my $genecount = 0; $genecount = $dbh->selectrow_array("select genes from GeneStats where sampleid = '$dataid'");
+        my $genecount = 0; $genecount = $dbh->selectrow_array("select count(*) from GenesFpkm where sampleid = '$dataid'");
         unless ($genes == $genecount) { # processing for GenesFpkm
           $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in GenesFpkm table\n";
           $sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$dataid'"); $sth->execute();
@@ -483,7 +487,7 @@ if ($datadb) {
         } else {
           $verbose and printerr "NOTICE:\t $dataid already in GenesFpkm table... Moving on ...\n";
         } #end gene unless
-        my $isoformscount = 0; $isoformscount = $dbh->selectrow_array("select isoforms from GeneStats where sampleid = '$dataid'");
+        my $isoformscount = 0; $isoformscount = $dbh->selectrow_array("select count(*) from IsoformsFpkm where sampleid = '$dataid'");
         unless ($isoforms == $isoformscount) { # processing for IsoformsFpkm
           $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in IsoformsFpkm table\n";
           $sth = $dbh->prepare("delete from IsoformsFpkm where sampleid = '$dataid'"); $sth->execute();
@@ -510,34 +514,37 @@ if ($datadb) {
 	      printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
               printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
               VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+							NOSQL($dataid);
             }
             if ($annovar) {
 	      printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
               printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
               ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+							NOSQL($dataid);
             }
           } else {
-            if ($vep || $annovar) {
+            $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+						if ($vep || $annovar) {
               my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
-              unless ($variantstatus){
+							my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
+							unless ($variantstatus && $nosqlstatus){ #if annversion or nosqlstatus is not specified
                 $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in VarAnno table\n";
                 $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
                 if ($vep) {
  		  printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
                   printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                   VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+									NOSQL($dataid);
                 }
                 if ($annovar) {
                   printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
   		  printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                   ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+									NOSQL($dataid);
                 }
               } else { #end unless annversion is previously specified
-                $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
                 $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
               }
-            } else {
-              $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
             } #end if annversion is previously specified
           } #end unless it's already in variants table
         } #end if "all" option
@@ -557,35 +564,38 @@ if ($datadb) {
             printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
             printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
           }
           if ($annovar) {
             printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
             printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
             ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
           }
         } else { #if completed in VarSummary table
-          if ($vep || $annovar) { #checking if vep or annovar was specified
+          $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+					if ($vep || $annovar) { #checking if vep or annovar was specified
             my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
-            unless ($variantstatus){ #if annversion is not specified
+						my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
+            unless ($variantstatus && $nosqlstatus){ #if annversion or nosqlstatus is not specified
               $verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
               $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
               if ($vep) {
                 printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
                 printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                 VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+								NOSQL($dataid);
               }
               if ($annovar) {
                 printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
                 printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnno table ...";
                 ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+								NOSQL($dataid);
               }
             } else { #end unless annversion is previously specified
-              $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
               $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
             }
-          } else {
-            $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
-          }
+          } #end if annversion is previously specified
         } # end else already in VarSummary table;
       } #end if "variant" option
     } #unless & else exists in Mapstats
@@ -605,6 +615,7 @@ printerr ("NOTICE:\t Summary in log file $efile\n");
 printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
+`rm -rf $nosql`;
 #--------------------------------------------------------------------------------
 
 sub processArguments {
@@ -625,6 +636,7 @@ sub processArguments {
   my $get = dirname(abs_path $0); #get source path
   $connect = $get.'/.connect.txt';
   #setup log file
+	my $nosqlfile = open_unique("nosqlout.txt");
   my $errfile = open_unique("db.tad_status.log"); 
   open(LOG, ">>", @$errfile[1]) or die "\nERROR:\t cannot write LOG information to log file @$errfile[1] $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
@@ -632,6 +644,7 @@ sub processArguments {
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
   $efile = @$errfile[1];
+	$nosql = @$nosqlfile[1];
 }
 
 
@@ -775,8 +788,27 @@ sub VEPVARIANT {
           $VEPhash{$locate} = $locate;
           $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, genename, transcript, feature, genetype,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
           $sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
-          undef %extra;
-          $DBSNP{$chrom}{$position} = $dbsnp;
+					
+					#NOSQL portion
+					@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$chrom' and position = $position and consequence = '$consequence' and geneid = '$geneid' and proteinposition = '$pposition'");
+					$showcase = undef; 
+					foreach my $variables (0..$#nosqlrow){
+						if ($variables == 2) { $nosqlrow[$variables] = $dbsnp; }
+						if (!($nosqlrow[$variables]) ||(length($nosqlrow[$variables]) < 1) || ($nosqlrow[$variables] =~ /^\-$/) ){
+							$nosqlrow[$variables] = "NULL";
+						}
+						if ($variables < 17) {
+							$showcase .= "'$nosqlrow[$variables]',";
+						}
+						else {
+							$showcase .= "$nosqlrow[$variables],";
+						}
+					}
+					chop $showcase; $showcase .= "\n";
+					open (NOSQL, ">>$nosql"); print NOSQL $showcase; close NOSQL; #end of nosql portion
+				
+					undef %extra; #making sure extra is blank
+					$DBSNP{$chrom}{$position} = $dbsnp; #updating dbsnp	
         }
       }
     }
@@ -806,7 +838,7 @@ sub ANNOVARIANT {
     } else {
       die "ERROR:\t Do not understand notation '$tobeheader[1]' provided. Contact $AUTHOR \n";
     }
-  }
+  } #end foreach dictionary
   #convert content to a hash array.
   my $counter = $#header+1;
   @annocontent = @annocontent[1..$#annocontent];
@@ -816,7 +848,7 @@ sub ANNOVARIANT {
       $CONTENT{$rowno}{$header[$colno]} = $arrayrow[$colno];
     }
     $CONTENT{$rowno}{'position'} = (split("\t",$arrayrow[$#arrayrow]))[4];
-  }
+  } #end getting column position
   #working with ENS
   if (exists $ENSGENE{'func'}) {
     foreach my $newno (sort {$a<=>$b} keys %CONTENT){
@@ -861,9 +893,27 @@ sub ANNOVARIANT {
         $ANNOhash{$locate} = $locate;
         $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?)");
         $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'Ensembl', $CONTENT{$newno}{$ENSGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
-      }
-    }
-  }
+				
+				#NOSQL portion
+				@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$CONTENT{$newno}{'chr'}' and position = $CONTENT{$newno}{'position'} and consequence = '$consequence' and geneid = '$CONTENT{$newno}{$ENSGENE{'gene'}}' and proteinposition = '$pposition'");
+				$showcase = undef; 
+				foreach my $variables (0..$#nosqlrow){
+					if (!($nosqlrow[$variables]) ||(length($nosqlrow[$variables]) < 1) || ($nosqlrow[$variables] =~ /^\-$/) ){
+						$nosqlrow[$variables] = "NULL";
+					}
+					if ($variables < 17) {
+						$showcase .= "'$nosqlrow[$variables]',";
+					}
+					else {
+						$showcase .= "$nosqlrow[$variables],";
+					}
+				}
+				chop $showcase; $showcase .= "\n";
+				open (NOSQL, ">>$nosql"); print NOSQL $showcase; close NOSQL; #end of nosql portion
+				
+			} #end if annohash locate
+		} # end foreach looking at content
+	} #end if ENSGENE
   
   #working with REF
   if (exists $REFGENE{'func'}) {
@@ -909,11 +959,39 @@ sub ANNOVARIANT {
         $ANNOhash{$locate} = $locate;
         $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, genename, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?)");
         $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}},$CONTENT{$newno}{$REFGENE{'gene'}},$transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
-      }
-    }
-  }
-  $sth = $dbh->prepare("update VarSummary set annversion = 'ANNOVAR' where sampleid = '$_[1]'"); $sth ->execute();
-
+      
+				#NOSQL portion
+				@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$CONTENT{$newno}{'chr'}' and position = $CONTENT{$newno}{'position'} and consequence = '$consequence' and geneid = '$CONTENT{$newno}{$REFGENE{'gene'}}' and proteinposition = '$pposition'");
+				$showcase = undef; 
+				foreach my $variables (0..$#nosqlrow){
+					if (!($nosqlrow[$variables]) ||(length($nosqlrow[$variables]) < 1) || ($nosqlrow[$variables] =~ /^\-$/) ){
+						$nosqlrow[$variables] = "NULL";
+					}
+					if ($variables < 17) {
+						$showcase .= "'$nosqlrow[$variables]',";
+					}
+					else {
+						$showcase .= "$nosqlrow[$variables],";
+					}
+				}
+				chop $showcase; $showcase .= "\n";
+				open (NOSQL, ">>$nosql"); print NOSQL $showcase; close NOSQL; #end of nosql portion
+				
+			} #end if annohash locate
+		} # end foreach looking at content
+	} #end if REFGENE
+		
+  $sth = $dbh->prepare("update VarSummary set annversion = 'ANNOVAR' where sampleid = '$_[1]'"); $sth ->execute(); #update database annversion :  ANNOVAR
+}
+sub NOSQL {
+	printerr "TASK:\t Importing Variant annotation for $_[0] to NoSQL platform\n"; #status
+  my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+	printerr "NOTICE:\t Importing $_[0] - Variant Annotation to NoSQL '$ffastbit' ...";
+	my $execute = "ardea -d $ffastbit -m 'variantclass:char,zygosity:char,dbsnp:char,consequence:char,geneid:char,genename:char,transcript:char,feature:char,genetype:char,ref:char,alt:char,tissue:char,chrom:char,aachange:char,codon:char,species:key, library:key,quality:double,position:int,proteinposition:int' -t $nosql";
+  `$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
+	`rm -rf $nosql`;
+	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE
+	printerr " Done\n";
 }
 #--------------------------------------------------------------------------------
 
@@ -934,7 +1012,7 @@ sub ANNOVARIANT {
 
         Arguments to control metadata import
 	    -x, --excel         metadata will import the faang excel file provided (default)
-      -t, --tab         	metadata will import the tab-delimited file provided
+      	    -t, --tab         	metadata will import the tab-delimited file provided
 	     
 
 
@@ -952,8 +1030,8 @@ sub ANNOVARIANT {
   Function: import data files into the database
  
   Example: #import metadata files
- 	   tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
-	   tad-import.pl -metadata -x -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
+ 	   tad-import.pl -metadata -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
+	   tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
  	   
   	   #import transcriptome analysis data files
  	   tad-import.pl -data2db example/sample_sxt/GGA_UD_1004/

@@ -19,7 +19,7 @@ our ($verbose, $efile, $help, $man);
 our ($sqlfile,$connect, $dbverdict, $schemaverdict, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
-our @dbtables = qw|Sample MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnno VarResult VarSummary|;
+our @dbtables = qw|Sample Animal MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnno VarResult VarSummary|;
 #--------------------------------------------------------------------------------
 sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
@@ -71,7 +71,24 @@ $dbh->disconnect();
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
 `mkdir -p $ffastbit`;
-$verbose and printerr "EXECUTED: Created Fastbit folder $ffastbit\n"; 
+my $check = `ls $ffastbit`;
+$verdict = "no";
+if (length $check > 0){
+	print "\nWARNING: FastBit already exists with content\n";
+  print "\t Do you still want to recreate FastBit folder (Y/N): ";
+  chomp ($verdict = lc (<>));
+  print "\n";
+} else { $verdict = "clean"; }
+unless ($verdict =~ /clean/){
+	if ($verdict =~ /^y/) {
+	`rm -rf $ffastbit/*`;
+	$verbose and printerr "NOTICE:\t Removed all data in existing FastBit folder\n";
+	} elsif ($verdict =~ /^n/) {
+	  $verbose and printerr "NOTICE:\t Skipping removal of initial data in FastBit folder\n";
+	} else { die "ERROR:\t Response not provided\n"; }
+}
+
+$verbose and printerr "EXECUTED:Created Fastbit folder $ffastbit\n"; 
 
 #output 
 printerr "-----------------------------------------------------------------\n";
