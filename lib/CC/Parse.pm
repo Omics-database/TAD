@@ -779,7 +779,7 @@ sub VARANNO {
 
 sub CHRANNO {
 	open(LOG, ">>", $_[2]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n";
-	printerr colored("G.\tCHROMSOMAL REGION ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
+	printerr colored("H.\tCHROMSOMAL REGION ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
 	$dbh = $_[0];
 	$fastbit = $_[1];
 	my ($chromosome, %ORGANISM, %CHRVAR, %CHROM, @chromosomes, $species,$indent,$region);
@@ -932,8 +932,8 @@ sub CHRANNO {
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome \n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome --output export.txt\n";
+		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome \n";
+		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome --output export.txt\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";
