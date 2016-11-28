@@ -5,6 +5,7 @@ use lib dirname(abs_path $0) . '/lib/lib/perl5/darwin-thread-multi-2level';
 use DBD::mysql;
 use IO::File;
 
+
 sub DEFAULTS {
   my $default = "https://github.com/modupeore/TAD";
   return $default;
@@ -22,7 +23,7 @@ sub mysql_create {
 }
 sub mysql {
   my $dsn = 'dbi:mysql:database='.$_[0].';host=localhost;port=3306';
-  my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "\nConnection Error: Database $_[0] doesn't exist. Run 'tad-install.pl' first\n";
+  my $dbh = DBI -> connect($dsn, $_[1], $_[2]) or die "\nConnection Error: Database $_[0] doesn't exist. Run 'INSTALL-tad.pL' first\n";
   return $dbh;
 }
 
@@ -35,7 +36,7 @@ sub connection {
   our %DBS = ("MySQL", 1,"FastBit", 2,);
   our %interest = ("username", 1, "password", 2, "databasename", 3, "path", 4, "foldername", 5);
   my %ALL;
-  open (CONTENT, $_[0]) or die "Error: Can't open connection file. Run 'tad-connect.pl'\n"; 
+  open (CONTENT, $_[0]) or die "Error: Can't open connection file. Run 'connect-tad.pL'\n"; 
   my @contents = <CONTENT>; close (CONTENT);
   my $nameofdb; 
   foreach (@contents){
@@ -79,4 +80,10 @@ sub open_unique {
     }
     return [$io,$base.$seq.$ext] if defined $io;
 }
+
+sub printerr {
+  print STDERR @_;
+  print LOG @_;
+}
+
 1;

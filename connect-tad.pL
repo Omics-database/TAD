@@ -15,7 +15,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $help, $man);
+our ($verbose, $help, $man, $efile);
 our ($sqlfile,$connect);
 my ($dbname,$username,$password,$location,$fbname, $ffastbit);
 my ($sth,$dbh,$schema); #connect to database;
@@ -26,10 +26,13 @@ sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
-printerr ("Success:\tStored the following connection details.\n");
-printerr ("Connection:\n\tUsername = $username\n\tPassword = $password\n\tMySQL database = $dbname\n");
-printerr ("\tFastBit folder \t $ffastbit\n");
+#output 
+printerr ("NOTICE:\t Connection Details:\n\t\tUsername = $username\n\t\tPassword = $password\n\t\tMySQL database = $dbname\n");
+printerr ("\t\tFastBit folder = $ffastbit\n");
+printerr ("NOTICE:\t Summary in log file $efile\n");
+printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
+
 
 #--------------------------------------------------------------------------------
 
@@ -38,49 +41,58 @@ sub processArguments {
 		'username|u=s'=>\$username, 'password|p=s'=>\$password, 'location|l=s'=>\$location,
 		'fastbitname|n=s'=>\$fbname ) or pod2usage ();
 
-  $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
-  $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
-  pod2usage(-msg=>"Error: Required argument -p (MySQL password) not provided.") if (!$password);
-
-  #set defaults
   $verbose ||=0;
+	$help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
+  $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   my $get = dirname(abs_path $0); #get source path
-  $dbname = "transatlasdb" if (! $dbname);
-  $fbname = "transatlasfb" if (! $fbname);
-  $username = "root" if (! $username);
-  if (! $location) {$location = `pwd`; chomp $location;}
-
-  #setup log file
-  my $errfile = open_unique("db.tad_status.log"); 
-  open(LOG, ">>", @$errfile[1]) or die "Error: cannot write LOG information to log file @$errfile[1] $!\n";
-  print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
-  print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
-  print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
-
-  #make sure connection details are accurate
-  $dbh = mysql($dbname, $username, $password); #connect to mysql
-
-  #find fastbit location or die;
-  $ffastbit = fastbit($location, $fbname);
-  `find $ffastbit` or pod2usage("Error:\tFastbit folder '$ffastbit' can not found");
-
-  open(CONNECT, ">$get/\.connect.txt"); 
-  my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n";
-  print CONNECT $connectcontent; close (CONNECT);
-}
-
-
-sub printerr {
-  print STDERR @_;
-  print LOG @_;
+  
+	if (!$password) {
+		`find $get/\.connect.txt` or pod2usage(-msg=>"ERROR:\t Unavailable Connection details\nERROR:\t Required argument -p (MySQL password) not provided.");
+		$connect = $get.'/.connect.txt';
+	}
+	if ($connect){
+		my %all_details = %{connection($connect, $default)}; #get connection details
+		$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+		$ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+		`find $ffastbit` or pod2usage("ERROR:\t Fastbit folder '$ffastbit' can not found. Run INSTALL-tad.pL");
+		$username = $all_details{'MySQL-username'}; $password = $all_details{'MySQL-password'}; $dbname = $all_details{'MySQL-databasename'};
+		printerr "-----------------------------------------------------------------\n";
+		printerr ("NOTICE:\t Retrieved the following connection details.\n");
+	} else {
+		$dbname = "transatlasdb" if (! $dbname);
+		$fbname = "transatlasfb" if (! $fbname);
+		$username = "root" if (! $username);
+		if (! $location) {$location = `pwd`; chomp $location;}
+	
+		#make sure connection details are accurate
+		$dbh = mysql($dbname, $username, $password); #connect to mysql
+	
+		#find fastbit location or die;
+		$ffastbit = fastbit($location, $fbname);
+		`find $ffastbit` or pod2usage("ERROR:\tFastbit folder '$ffastbit' can not found. Run INSTALL-tad.PL");
+	
+		open(CONNECT, ">$get/\.connect.txt"); 
+		my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n";
+		print CONNECT $connectcontent; close (CONNECT);
+		printerr "-----------------------------------------------------------------\n";
+		printerr ("NOTICE:\t Stored the following connection details.\n");
+	}
+	#setup log file
+	my $errfile = open_unique("db.tad_status.log");
+	$efile = @$errfile[1];
+	open(LOG, ">>", @$errfile[1]) or die "Error: cannot write LOG information to log file @$errfile[1] $!\n";
+	print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
+	print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
+	print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
+	print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
+	
 }
 
 #--------------------------------------------------------------------------------
 
 =head1 SYNOPSIS
 
- tad-connect.pl [arguments]
+ connect-tad.pL [arguments]
 
  Optional arguments:
        -h, --help                      print help message
@@ -98,15 +110,14 @@ sub printerr {
 
  Function: store connection details to existing TransAtlasDB if connection details were lost or changed after installation.
  
- Example: #to retrieve connection details if exists
-	  tad-connect.pl
-	  
-  	  #store connection details to existing TransAtlasDB with mysql root password as 'password' and using default options
-          tad-connect.pl -p password
+ Example: #to test/retrieve connection details
+	  connect-tad.pL
         
-          #store connection details to existing TransAtlasDB with username:root, password:root, databasename:testmysql, fastbitname:testfastbit
-          tad-connect.pl -u root -p root -d testmysql -n testfastbit
-
+	  #store connection details to existing TransAtlasDB with mysql root password as 'password' and using default options
+          connect-tad.pL -p password
+					
+	  #store connection details to existing TransAtlasDB with username:root, password:root, databasename:testmysql, fastbitname:testfastbit
+          connect-tad.pL -u root -p root -d testmysql -n testfastbit
 
  Version: $Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $
 
@@ -181,14 +192,14 @@ respectively. An example is shown below:
 	/sample_name/tophat_folder/prep_reads.info
 	/sample_name/tophat_folder/unmapped.bam
 	/sample_name/cufflinks_folder/
-        /sample_name/cufflinks_folder/genes.fpkm_tracking
-        /sample_name/cufflinks_folder/isoforms.fpkm_tracking
-        /sample_name/cufflinks_folder/skipped.gtf
-        /sample_name/cufflinks_folder/transcripts.gtf
-        /sample_name/variant_folder/
-        /sample_name/variant_folder/<filename>.vcf
-        /sample_name/variant_folder/<filename>.multianno.txt
-        /sample_name/variant_folder/<filename>.vep.txt
+  	/sample_name/cufflinks_folder/genes.fpkm_tracking
+	/sample_name/cufflinks_folder/isoforms.fpkm_tracking
+	/sample_name/cufflinks_folder/skipped.gtf
+	/sample_name/cufflinks_folder/transcripts.gtf
+	/sample_name/variant_folder/
+	/sample_name/variant_folder/<filename>.vcf
+	/sample_name/variant_folder/<filename>.multianno.txt
+	/sample_name/variant_folder/<filename>.vep.txt
 
 =item * B<variant file format>
 

@@ -145,16 +145,11 @@ sub SCHEMA {
   }
 }
 
-sub printerr {
-  print STDERR @_;
-  print LOG @_;
-}
-
 #--------------------------------------------------------------------------------
 
 =head1 SYNOPSIS
 
- tad-install.pl [arguments] -p <MySQLpassword>
+ INSTALL-tad.pL [arguments] -p <MySQLpassword>
 
  Optional arguments:
        -h, --help                      print help message
@@ -173,10 +168,10 @@ sub printerr {
  Function: create the TransAtlasDB tables in MySQL and FastBit location on local disk
  
  Example: #create TransAtlasDB with mysql root password as 'password' and using default options
-          tad-install.pl -p password
+          INSTALL-tad.pL -p password
         
           #create TransAtlasDB database with username:root, password:root, databasename:testmysql, fastbitname:testfastbit
-          tad-install.pl -u root -p root -d testmysql -n testfastbit
+          INSTALL-tad.pL -u root -p root -d testmysql -n testfastbit
 
 
  Version: $Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $
@@ -252,14 +247,14 @@ respectively. An example is shown below:
 	/sample_name/tophat_folder/prep_reads.info
 	/sample_name/tophat_folder/unmapped.bam
 	/sample_name/cufflinks_folder/
-        /sample_name/cufflinks_folder/genes.fpkm_tracking
-        /sample_name/cufflinks_folder/isoforms.fpkm_tracking
-        /sample_name/cufflinks_folder/skipped.gtf
-        /sample_name/cufflinks_folder/transcripts.gtf
-        /sample_name/variant_folder/
-        /sample_name/variant_folder/<filename>.vcf
-        /sample_name/variant_folder/<filename>.multianno.txt
-        /sample_name/variant_folder/<filename>.vep.txt
+  /sample_name/cufflinks_folder/genes.fpkm_tracking
+	/sample_name/cufflinks_folder/isoforms.fpkm_tracking
+	/sample_name/cufflinks_folder/skipped.gtf
+	/sample_name/cufflinks_folder/transcripts.gtf
+	/sample_name/variant_folder/
+	/sample_name/variant_folder/<filename>.vcf
+	/sample_name/variant_folder/<filename>.multianno.txt
+	/sample_name/variant_folder/<filename>.vep.txt
 
 =item * B<variant file format>
 

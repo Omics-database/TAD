@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "DBD::mysql 3"
-.TH DBD::mysql 3 "2016-10-19" "perl v5.18.2" "User Contributed Perl Documentation"
+.TH DBD::mysql 3 "2016-11-19" "perl v5.18.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -459,8 +459,10 @@ disallow \s-1LOCAL.\s0)
 Support for multiple statements separated by a semicolon
 (;) may be enabled by using this option. Enabling this option may cause
 problems if server-side prepared statements are also enabled.
-.IP "Prepared statement support (server side prepare)" 4
-.IX Item "Prepared statement support (server side prepare)"
+.IP "mysql_server_prepare" 4
+.IX Item "mysql_server_prepare"
+This option is used to enable server side prepared statements.
+.Sp
 To use server side prepared statements, all you need to do is set the variable
 mysql_server_prepare in the connect:
 .Sp
@@ -470,6 +472,17 @@ mysql_server_prepare in the connect:
 \&    "",
 \&    "",
 \&    { RaiseError => 1, AutoCommit => 1 }
+\&  );
+.Ve
+.Sp
+or:
+.Sp
+.Vb 6
+\&  $dbh = DBI\->connect(
+\&    "DBI:mysql:database=test;host=localhost",
+\&    "",
+\&    "",
+\&    { RaiseError => 1, AutoCommit => 1, mysql_server_prepare => 1 }
 \&  );
 .Ve
 .Sp
@@ -483,6 +496,17 @@ need to export the env variable \s-1MYSQL_SERVER_PREPARE:\s0
 .Vb 1
 \&  export MYSQL_SERVER_PREPARE=1
 .Ve
+.Sp
+Please note that mysql server cannot prepare or execute some prepared statements.
+In this case DBD::mysql fallbacks to normal non-prepared statement and tries again.
+.IP "mysql_server_prepare_disable_fallback" 4
+.IX Item "mysql_server_prepare_disable_fallback"
+This option disable fallback to normal non-prepared statement when mysql server
+does not support execution of current statement as prepared.
+.Sp
+Useful when you want to be sure that statement is going to be executed as
+server side prepared. Error message and code in case of failure is propagated
+back to \s-1DBI.\s0
 .IP "mysql_embedded_options" 4
 .IX Item "mysql_embedded_options"
 The option <mysql_embedded_options> can be used to pass 'command\-line'

@@ -1,4 +1,26 @@
-=head2 Tue Nov 15 10:40:29 2016: C<Module> L<Test::NoWarnings|Test::NoWarnings>
+=head2 Mon Nov 28 14:21:47 2016: C<Module> L<DBD::mysql|DBD::mysql>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupeadetunji/Desktop/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 4.040>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Mon Nov 28 14:23:42 2016: C<Module> L<Test::NoWarnings|Test::NoWarnings>
 
 =over 4
 
@@ -20,7 +42,7 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Tue Nov 15 10:40:34 2016: C<Module> L<Spreadsheet::Read|Spreadsheet::Read>
+=head2 Mon Nov 28 14:23:47 2016: C<Module> L<Spreadsheet::Read|Spreadsheet::Read>
 
 =over 4
 
@@ -42,7 +64,7 @@ C<EXE_FILES: examples/xlscat examples/xlsgrep examples/ss2tk examples/ssdiff exa
 
 =back
 
-=head2 Tue Nov 15 10:42:13 2016: C<Module> L<Digest::Perl::MD5|Digest::Perl::MD5>
+=head2 Mon Nov 28 14:24:14 2016: C<Module> L<Digest::Perl::MD5|Digest::Perl::MD5>
 
 =over 4
 
@@ -64,29 +86,7 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Tue Nov 15 10:42:14 2016: C<Module> L<OLE::Storage_Lite|OLE::Storage_Lite>
-
-=over 4
-
-=item *
-
-C<installed into: /Users/modupeadetunji/Desktop/TAD/lib/lib/perl5>
-
-=item *
-
-C<LINKTYPE: dynamic>
-
-=item *
-
-C<VERSION: 0.19>
-
-=item *
-
-C<EXE_FILES: >
-
-=back
-
-=head2 Tue Nov 15 10:42:15 2016: C<Module> L<Crypt::RC4|Crypt::RC4>
+=head2 Mon Nov 28 14:24:15 2016: C<Module> L<Crypt::RC4|Crypt::RC4>
 
 =over 4
 
@@ -108,7 +108,29 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Tue Nov 15 10:42:20 2016: C<Module> L<Spreadsheet::ParseExcel|Spreadsheet::ParseExcel>
+=head2 Mon Nov 28 14:24:16 2016: C<Module> L<OLE::Storage_Lite|OLE::Storage_Lite>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupeadetunji/Desktop/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.19>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Mon Nov 28 14:24:21 2016: C<Module> L<Spreadsheet::ParseExcel|Spreadsheet::ParseExcel>
 
 =over 4
 
@@ -130,7 +152,7 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Tue Nov 15 10:42:22 2016: C<Module> L<Spreadsheet::XLSX|Spreadsheet::XLSX>
+=head2 Mon Nov 28 14:24:33 2016: C<Module> L<Spreadsheet::XLSX|Spreadsheet::XLSX>
 
 =over 4
 
@@ -152,7 +174,7 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Tue Nov 15 11:17:15 2016: C<Module> L<DBD::mysql|DBD::mysql>
+=head2 Mon Nov 28 14:26:52 2016: C<Module> L<Text::TabularDisplay|Text::TabularDisplay>
 
 =over 4
 
@@ -166,7 +188,7 @@ C<LINKTYPE: dynamic>
 
 =item *
 
-C<VERSION: 4.038>
+C<VERSION: 1.38>
 
 =item *
 

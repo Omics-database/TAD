@@ -32,7 +32,7 @@ use Carp;
 use Exporter;
 our @ISA       = qw( Exporter );
 our @EXPORT    = qw( ReadData cell2cr cr2cell );
-our @EXPORT_OK = qw( ReadData cell2cr cr2cell parses rows cellrow row );
+our @EXPORT_OK = qw( parses rows cellrow row );
 
 use Encode       qw( decode );
 use File::Temp   qw( );

@@ -99,7 +99,7 @@ if ($metadata){
 						$sth = $dbh->prepare("insert into Animal (animalid, organism) values (?,?)");
 						$sth->execute($sheetid, $filecontent{$row}{'organism'} ) or die "\nERROR:\t Complication in Animal table\n";
 					} else {
-						$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on...\n";
+						$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on\n";
 					}
 					undef $sheetid;
 				} else {
@@ -118,10 +118,10 @@ if ($metadata){
 				$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
 				unless ($found) { # if sample is not in the database
 					printerr "NOTICE:\t Importing $sheetid to Sample table\n";
-					$sth = $dbh->prepare("insert into Sample (sampleid, tissue, derivedfrom, description) values (?,?,?,?)");
-					$sth->execute($sheetid, $filecontent{$row}{'organism part'}, $filecontent{$row}{'derived from'}, $filecontent{$row}{'sample description'}) or die "\nERROR:\t Complication in Sample table\n";
+					$sth = $dbh->prepare("insert into Sample (sampleid, tissue, derivedfrom, description,date) values (?,?,?,?,?)");
+					$sth->execute($sheetid, $filecontent{$row}{'organism part'}, $filecontent{$row}{'derived from'}, $filecontent{$row}{'sample description'},$date) or die "\nERROR:\t Complication in Sample table\n";
 				} else {
-					$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on...\n";
+					$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on\n";
 				}
 			} else {
 				pod2usage("\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
@@ -204,7 +204,7 @@ if ($metadata){
 					foreach my $ne (2..$#array) {
 						my @value = split('\?abc\?', $array[$ne]);
 						if (length $value[0] > 1) {
-							foreach my $id (sort keys %ANIMAL) {
+							foreach my $id (sort keys %ANIMAL) { 
 								if (length $value[$columnpos{$id}] > 1) {
 									$sheetid  = "$value[$columnpos{$id}]";
 									my $loc = $columnpos{$id};
@@ -214,7 +214,7 @@ if ($metadata){
 										$sth->execute($sheetid, $value[$loc+1], $value[$loc+2] ) or die "\nERROR:\t Complication in $ANIMAL{$id} table\n";
 									}
 								}
-							} undef %ANIMAL;
+							}
 							if (length $value[$columnpos{'health status'}] > 1) {
 								$sheetid  = "$value[$columnpos{'health status'}]";
 								my $loc = $columnpos{'health status'};
@@ -231,7 +231,7 @@ if ($metadata){
 								$sth = $dbh->prepare("insert into Animal (animalid, project, material, organism, sex, health, breed, description) values (?,?,?,?,?,?,?,?)");
 								$sth->execute($sheetid, $value[$columnpos{'project'}], $value[$columnpos{'material'}], $value[$columnpos{'organism'}], $value[$columnpos{'sex'}], $value[$columnpos{'health status'}], $value[$columnpos{'breed'}],$value[$columnpos{'sample description'}]) or die "\nERROR:\t Complication in Animal table\n";
 							} else {
-								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on...\n";
+								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in Animal table. Moving on\n";
 							}
 							$sth = $dbh->prepare("select animalid from AnimalStats where animalid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
 							unless ($found) { # if animalstats is not in the database
@@ -246,7 +246,7 @@ if ($metadata){
 								$sth = $dbh->prepare("insert into AnimalStats (animalid, birthdate, birthlocation, birthloclatitude, birthloclongitude, birthweight, placentalweight, pregnancylength, deliveryease, deliverytiming, pedigree) values (?,?,?,?,?,?,?,?,?,?,?)");
 								$sth->execute($sheetid, $birthdate, $birthlocation, $birthloclatitude, $birthloclongitude, $birthweight, $placentaweight, $pregnancylength, $value[$columnpos{'delivery ease'}], $value[$columnpos{'delivery timing'}], $value[$columnpos{'pedigree'}]) or die "\nERROR:\t Complication in AnimalStats table\n";
 							} else {
-								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in AnimalStats table. Moving on...\n";
+								$verbose and printerr "Duplicate: AnimalID '$sheetid' already exists in AnimalStats table. Moving on\n";
 							}							
 						} else { #end if : insert into database
 							undef $sheetid;
@@ -314,10 +314,10 @@ if ($metadata){
 							$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
 							unless ($found) { # if sample is not in the database
 								printerr "NOTICE:\t Importing $sheetid to Sample table\n";
-								$sth = $dbh->prepare("insert into Sample (sampleid, project, material, tissue, derivedfrom, availability, developmentalstage, health, description) values (?,?,?,?,?,?,?,?,?)");
-								$sth->execute($sheetid, $value[$columnpos{'project'}], $value[$columnpos{'material'}], $value[$columnpos{'organism part'}], uc($value[$columnpos{'derived from'}]), $value[$columnpos{'availability'}], $value[$columnpos{'developmental stage'}], $value[$columnpos{'health status at collection'}],$value[$columnpos{'sample description'}]) or die "\nERROR:\t Complication in Sample table\n";
+								$sth = $dbh->prepare("insert into Sample (sampleid, project, material, tissue, derivedfrom, availability, developmentalstage, health, description, date) values (?,?,?,?,?,?,?,?,?,?)");
+								$sth->execute($sheetid, $value[$columnpos{'project'}], $value[$columnpos{'material'}], $value[$columnpos{'organism part'}], uc($value[$columnpos{'derived from'}]), $value[$columnpos{'availability'}], $value[$columnpos{'developmental stage'}], $value[$columnpos{'health status at collection'}],$value[$columnpos{'sample description'}], $date) or die "\nERROR:\t Complication in Sample table\n";
 							} else {
-								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on...\n";
+								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on\n";
 							}
 							$sth = $dbh->prepare("select sampleid from SampleStats where sampleid = '$sheetid'"); $sth->execute(); $found =$sth->fetch();
 							unless ($found) { # if samplestats is not in the database
@@ -332,7 +332,7 @@ if ($metadata){
 								$sth = $dbh->prepare("insert into SampleStats (sampleid, collectionprotocol, collectiondate, ageatcollection, fastedstatus, noofpieces, specimenvol, specimensize, specimenwgt, specimenpictureurl, gestationalage) values (?,?,?,?,?,?,?,?,?,?,?)");
 								$sth->execute($sheetid, $value[$columnpos{'specimen collection protocol'}], $specimendate, $agecollect, $value[$columnpos{'fasted status'}], $noofpieces, $specimenvolume, $specimensize, $specimenweight, $value[$columnpos{'specimen picture url'}], $gestage) or die "\nERROR:\t Complication in SampleStats table\n";
 							} else {
-								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in SampleStats table. Moving on...\n";
+								$verbose and printerr "Duplicate: SampleID '$sheetid' already exists in SampleStats table. Moving on\n";
 							}
 							foreach (keys %NAME) {
 								$sth = $dbh->prepare("select sampleid, personid from SamplePerson where sampleid = '$sheetid' and personid = '$_'"); $sth->execute(); $found =$sth->fetch();
@@ -466,7 +466,7 @@ if ($datadb) {
         }
       }
     } else { #end unless found in MapStats table
-      $verbose and printerr "NOTICE:\t $dataid already in MapStats table... Moving on ...\n";
+      $verbose and printerr "NOTICE:\t $dataid already in MapStats table... Moving on \n";
       $sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
       unless ($found) {
         printerr "NOTICE:\t Importing $dataid to MapStats table ...";
@@ -485,7 +485,7 @@ if ($datadb) {
           FPKM('GenesFpkm', $genesfile, $dataid); #GENES
           printerr " Done\n";
         } else {
-          $verbose and printerr "NOTICE:\t $dataid already in GenesFpkm table... Moving on ...\n";
+          $verbose and printerr "NOTICE:\t $dataid already in GenesFpkm table... Moving on \n";
         } #end gene unless
         my $isoformscount = 0; $isoformscount = $dbh->selectrow_array("select count(*) from IsoformsFpkm where sampleid = '$dataid'");
         unless ($isoforms == $isoformscount) { # processing for IsoformsFpkm
@@ -495,7 +495,7 @@ if ($datadb) {
           FPKM('IsoformsFpkm', $isoformsfile, $dataid); #ISOFORMS
           printerr " Done\n";
         } else {
-          $verbose and printerr "NOTICE:\t $dataid already in IsoformsFpkm table... Moving on ...\n";
+          $verbose and printerr "NOTICE:\t $dataid already in IsoformsFpkm table... Moving on \n";
         }# end isoforms unless
         $sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$dataid'");
         $sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
@@ -523,7 +523,7 @@ if ($datadb) {
 							NOSQL($dataid);
             }
           } else {
-            $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+            $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
 						if ($vep || $annovar) {
               my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
 							my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
@@ -543,7 +543,7 @@ if ($datadb) {
 									NOSQL($dataid);
                 }
               } else { #end unless annversion is previously specified
-                $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
+                $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on\n";
               }
             } #end if annversion is previously specified
           } #end unless it's already in variants table
@@ -573,7 +573,7 @@ if ($datadb) {
 						NOSQL($dataid);
           }
         } else { #if completed in VarSummary table
-          $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on ...\n";
+          $verbose and printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
 					if ($vep || $annovar) { #checking if vep or annovar was specified
             my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
 						my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
@@ -593,7 +593,7 @@ if ($datadb) {
 								NOSQL($dataid);
               }
             } else { #end unless annversion is previously specified
-              $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on ...\n";
+              $verbose and printerr "NOTICE:\t $dataid already in VarAnno table... Moving on \n";
             }
           } #end if annversion is previously specified
         } # end else already in VarSummary table;
@@ -604,6 +604,7 @@ if ($datadb) {
   } #end if data in sample table
 }
 #output: the end
+`rm -rf $nosql`;
 printerr "-----------------------------------------------------------------\n";
 if ($metadata){
   printerr ("SUCCESS: Import of Sample Information in \"$file2consider\"\n");
@@ -628,6 +629,9 @@ sub processArguments {
   
   pod2usage(-msg=>"ERROR:\t Invalid syntax specified, choose -metadata or -data2db.") unless ( $metadata || $datadb);
   pod2usage(-msg=>"ERROR:\t Invalid syntax specified for @ARGV.") if (($metadata && $datadb)||($vep && $annovar) || ($gene && $vep) || ($gene && $annovar) || ($gene && $variant));
+  if ($vep || $annovar) {
+		pod2usage(-msg=>"ERROR:\t Invalid syntax specified for @ARGV, specify -variant.") unless (($variant && $annovar)||($variant && $vep) || ($all && $annovar) || ($all && $vep));
+	}
    
   @ARGV==1 or pod2usage("Syntax error");
   $file2consider = $ARGV[0];
@@ -636,7 +640,7 @@ sub processArguments {
   my $get = dirname(abs_path $0); #get source path
   $connect = $get.'/.connect.txt';
   #setup log file
-	my $nosqlfile = open_unique("nosqlout.txt");
+	my $nosqlfile = open_unique(".nosqlout.txt"); 	$nosql = @$nosqlfile[1];
   my $errfile = open_unique("db.tad_status.log"); 
   open(LOG, ">>", @$errfile[1]) or die "\nERROR:\t cannot write LOG information to log file @$errfile[1] $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
@@ -644,16 +648,10 @@ sub processArguments {
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
   $efile = @$errfile[1];
-	$nosql = @$nosqlfile[1];
+
 }
 
-
-sub printerr {
-  print STDERR @_;
-  print LOG @_;
-}
-
-sub LOGFILE {
+sub LOGFILE { #subroutine for getting metadata
   if ($logfile){
     @allgeninfo = split('\s',`head -n 1 $logfile`);
     #also getting metadata info
@@ -680,7 +678,7 @@ sub LOGFILE {
    }
  } #end if seq
 }
-sub GENE_INFO {
+sub GENE_INFO { #subroutine for getting gene information
   $deletions = `cat $deletionsfile | wc -l`; $deletions--;
   $insertions = `cat $insertionsfile | wc -l`; $insertions--;
   $junctions = `cat $junctionsfile | wc -l`; $junctions--;
@@ -694,7 +692,7 @@ sub GENE_INFO {
     $sth = $dbh->prepare("insert into GeneStats (sampleid,deletions, insertions, junctions, isoforms, genes,date) values (?,?,?,?,?,?,?)");
     $sth ->execute($_[0], $deletions, $insertions, $junctions, $isoforms, $genes, $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";; 
   } else {
-    $verbose and printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on ...\n";
+    $verbose and printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on \n";
   }
 }
 sub FPKM { #subroutine for  importing the FPKM values
@@ -787,6 +785,7 @@ sub VEPVARIANT {
         } else {
           $VEPhash{$locate} = $locate;
           $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, genename, transcript, feature, genetype,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+					if (exists $extra{'SYMBOL'}) { $extra{'SYMBOL'} = uc($extra{'SYMBOL'}); }
           $sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
 					
 					#NOSQL portion
@@ -843,12 +842,14 @@ sub ANNOVARIANT {
   my $counter = $#header+1;
   @annocontent = @annocontent[1..$#annocontent];
   foreach my $rowno (0..$#annocontent) {
-    my @arrayrow = split("\t", $annocontent[$rowno], $counter);
-    foreach my $colno (0..$#header) {
-      $CONTENT{$rowno}{$header[$colno]} = $arrayrow[$colno];
-    }
-    $CONTENT{$rowno}{'position'} = (split("\t",$arrayrow[$#arrayrow]))[4];
-  } #end getting column position
+		unless ($annocontent[$rowno] =~ /intergenic.*NONE,NONE/i) {
+			my @arrayrow = split("\t", $annocontent[$rowno], $counter);
+			foreach my $colno (0..$#header) {
+			  $CONTENT{$rowno}{$header[$colno]} = $arrayrow[$colno];
+			}
+			$CONTENT{$rowno}{'position'} = (split("\t",$arrayrow[$#arrayrow]))[4];
+		} # end unless var annotation is useless
+  } #end getting column position o entire file
   #working with ENS
   if (exists $ENSGENE{'func'}) {
     foreach my $newno (sort {$a<=>$b} keys %CONTENT){
@@ -958,7 +959,8 @@ sub ANNOVARIANT {
       } else {
         $ANNOhash{$locate} = $locate;
         $sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, genename, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?)");
-        $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}},$CONTENT{$newno}{$REFGENE{'gene'}},$transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+				if (exists $CONTENT{$newno}{$REFGENE{'gene'}}) { $CONTENT{$newno}{$REFGENE{'gene'}} = uc($CONTENT{$newno}{$REFGENE{'gene'}}); }
+        $sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}}, $CONTENT{$newno}{$REFGENE{'gene'}},$transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
       
 				#NOSQL portion
 				@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$CONTENT{$newno}{'chr'}' and position = $CONTENT{$newno}{'position'} and consequence = '$consequence' and geneid = '$CONTENT{$newno}{$REFGENE{'gene'}}' and proteinposition = '$pposition'");
@@ -984,14 +986,16 @@ sub ANNOVARIANT {
   $sth = $dbh->prepare("update VarSummary set annversion = 'ANNOVAR' where sampleid = '$_[1]'"); $sth ->execute(); #update database annversion :  ANNOVAR
 }
 sub NOSQL {
+	
 	printerr "TASK:\t Importing Variant annotation for $_[0] to NoSQL platform\n"; #status
   my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 	printerr "NOTICE:\t Importing $_[0] - Variant Annotation to NoSQL '$ffastbit' ...";
-	my $execute = "ardea -d $ffastbit -m 'variantclass:char,zygosity:char,dbsnp:char,consequence:char,geneid:char,genename:char,transcript:char,feature:char,genetype:char,ref:char,alt:char,tissue:char,chrom:char,aachange:char,codon:char,species:key, library:key,quality:double,position:int,proteinposition:int' -t $nosql";
+	my $execute = "ardea -d $ffastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codon:text,organism:key,sampleid:text,quality:double,position:int,proteinposition:int' -t $nosql";
   `$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
 	`rm -rf $nosql`;
 	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE
 	printerr " Done\n";
+	
 }
 #--------------------------------------------------------------------------------
 
@@ -999,47 +1003,43 @@ sub NOSQL {
 
   tad-import.pl [arguments] <metadata-file|sample-location>
 
-  Optional arguments:
-	-h, --help		print help message
-  	-m, --man		print complete documentation
-  	-v, --verbose		use verbose output
+	
+ Optional arguments:
+       -h, --help                      print help message
+       -m, --man                       print complete documentation
+       -v, --verbose                   use verbose output
 
+ Arguments to import metadata or sample analysis
+				--metadata          import metadata file provided
+				--data2db		import data files from gene expression profiling and/or variant analysis (default: --gene)
 
-        Arguments to import metadata or sample analysis
-            --metadata          import metadata file provided
-            --data2db		import data files from gene expression profiling and/or variant analysis (default: --gene)
-
-
-        Arguments to control metadata import
-	    -x, --excel         metadata will import the faang excel file provided (default)
-      	    -t, --tab         	metadata will import the tab-delimited file provided
-	     
-
-
-	Arguments to control data2db import
-            --gene     		data2db will import only the alignment file [TopHat2] and expression profiling files [Cufflinks] (default)
-            --variant           data2db will import only the alignment file [TopHat2] and variant analysis files [.vcf]
-            --all          	data2db will import all data files specified
-
-
-        Arguments to fine-tune variant import procedure
-            --vep		import ensembl vep variant annotation file [tab-delimited format] [suffix: .vep.txt] (in variant operation)
-	    --annovar		import annovar variant annotation file [suffix: .multianno.txt] (in variant operation)
-
-
-  Function: import data files into the database
+ Arguments to control metadata import
+				-x, --excel         metadata will import the faang excel file provided (default)
+				-t, --tab         	metadata will import the tab-delimited file provided
  
-  Example: #import metadata files
- 	   tad-import.pl -metadata -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
-	   tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
+ Arguments to control data2db import
+        --gene     		data2db will import only the alignment file [TopHat2] and expression profiling files [Cufflinks] (default)
+        --variant           data2db will import only the alignment file [TopHat2] and variant analysis files [.vcf]
+        --all          	data2db will import all data files specified
+
+ Arguments to fine-tune variant import procedure
+        --vep		import ensembl vep variant annotation file [tab-delimited format] [suffix: .vep.txt] (in variant operation)
+		    --annovar		import annovar variant annotation file [suffix: .multianno.txt] (in variant operation)
+
+
+ Function: import data files into the database
+ 
+ Example: #import metadata files
+					tad-import.pl -metadata -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
+					tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
  	   
-  	   #import transcriptome analysis data files
- 	   tad-import.pl -data2db example/sample_sxt/GGA_UD_1004/
-	   tad-import.pl -data2db -all -v example/sample_sxt/GGA_UD_1014/
-	   tad-import.pl -data2db -variant -annovar example/sample_sxt/GGA_UD_1004/
+				  #import transcriptome analysis data files
+					tad-import.pl -data2db example/sample_sxt/GGA_UD_1004/
+					tad-import.pl -data2db -all -v example/sample_sxt/GGA_UD_1014/
+					tad-import.pl -data2db -variant -annovar example/sample_sxt/GGA_UD_1004/
 
 
-  Version: $Date: 2016-10-28 15:50:08 (Fri, 28 Oct 2016) $
+ Version: $Date: 2016-10-28 15:50:08 (Fri, 28 Oct 2016) $
 
 =head1 OPTIONS
 
@@ -1132,14 +1132,14 @@ respectively. An example is shown below:
 	/sample_name/tophat_folder/prep_reads.info
 	/sample_name/tophat_folder/unmapped.bam
 	/sample_name/cufflinks_folder/
-        /sample_name/cufflinks_folder/genes.fpkm_tracking
-        /sample_name/cufflinks_folder/isoforms.fpkm_tracking
-        /sample_name/cufflinks_folder/skipped.gtf
-        /sample_name/cufflinks_folder/transcripts.gtf
-        /sample_name/variant_folder/
-        /sample_name/variant_folder/<filename>.vcf
-        /sample_name/variant_folder/<filename>.multianno.txt
-        /sample_name/variant_folder/<filename>.vep.txt
+  /sample_name/cufflinks_folder/genes.fpkm_tracking
+	/sample_name/cufflinks_folder/isoforms.fpkm_tracking
+	/sample_name/cufflinks_folder/skipped.gtf
+	/sample_name/cufflinks_folder/transcripts.gtf
+	/sample_name/variant_folder/
+	/sample_name/variant_folder/<filename>.vcf
+	/sample_name/variant_folder/<filename>.multianno.txt
+	/sample_name/variant_folder/<filename>.vep.txt
 
 =item * B<variant file format>
 
