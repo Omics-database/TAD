@@ -16,7 +16,7 @@ our $DATE = '$ Date: 2016-11-17 17:38:00 (Thu, 17 Nov 2016) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
-our ($connect, $verbose, $efile, $help, $man, $nosql);
+our ($connect, $efile, $help, $man, $nosql);
 our (%MAINMENU, $verdict);
 my $choice = 0;
 my ($dbh, $sth, $fastbit);
@@ -92,7 +92,7 @@ close (LOG);
 #--------------------------------------------------------------------------------
 
 sub processArguments {
-  GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'a|summary'=>\$opa,'b|metadata'=>\$opb,
+  GetOptions('help|h'=>\$help, 'man|m'=>\$man, 'a|summary'=>\$opa,'b|metadata'=>\$opb,
 						 'c|transummary'=>\$opc, 'd|avgfpkm'=>\$opd, 'e|genexp'=>\$ope,'f|chrvar'=>\$opf,
 						 'g|varanno'=>\$opg, 'j|chranno'=>\$opj) or pod2usage ();
 
@@ -101,20 +101,18 @@ sub processArguments {
   
   @ARGV==0 or pod2usage("Syntax error");
 
-  $verbose ||=0;
 	#process command line options
 
   my $get = dirname(abs_path $0); #get source path
   $connect = $get.'/.connect.txt';
   #setup log file
-  my $errfile = open_unique("db.tad_status.log");
-	my $nosqlfile = open_unique(".nosqlout.txt"); 	$nosql = @$nosqlfile[1];
-  open(LOG, ">>", @$errfile[1]) or die "\nERROR:\t cannot write LOG information to log file @$errfile[1] $!\n";
+  $efile = @{ open_unique("db.tad_status.log") }[1];
+	$nosql = @{ open_unique(".nosqlout.txt") }[1];
+  open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
   print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
-  $efile = @$errfile[1];
 }
 
 sub OPTIONS {

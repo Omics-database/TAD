@@ -139,7 +139,7 @@ sub METADATA {
 	printerr "NOTICE:\t $indent $precount samples are displayed.\n";
 	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 	printerr "\ttad-export.pl --query 'select * from vw_metadata'\n";
-	printerr "\ttad-export.pl --query 'select * from vw_metadata' --output export.txt\n";
+	printerr "\ttad-export.pl --query 'select * from vw_metadata' --output output.txt\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr color('reset'); printerr "\n\n";
@@ -172,7 +172,7 @@ sub TRANSCRIPT {
 	printerr "NOTICE:\t $indent $precount samples are displayed.\n";
 	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 	printerr "\ttad-export.pl --query 'select * from vw_sampleinfo'\n";
-	printerr "\ttad-export.pl --query 'select * from vw_sampleinfo' --output export.txt\n";
+	printerr "\ttad-export.pl --query 'select * from vw_sampleinfo' --output output.txt\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr color('reset'); printerr "\n\n";
@@ -290,7 +290,7 @@ sub AVERAGE {
 		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 		printerr "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
-		printerr "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output export.txt\n";
+		printerr "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";
@@ -461,7 +461,7 @@ sub GENEXP {
 	printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 	printerr "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
-	printerr "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output export.txt\n";
+	printerr "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr color('reset'); printerr "\n\n";
@@ -652,7 +652,7 @@ sub CHRVAR {
 	printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 	printerr "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples\n";
-	printerr "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples --output export.txt\n";
+	printerr "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples --output output.txt\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr "--------------------------------------------------------------------------\n";
 	printerr color('reset'); printerr "\n\n";
@@ -768,7 +768,7 @@ sub VARANNO {
 		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 		printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes' \n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes' --output export.txt\n";
+		printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes' --output output.txt\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";
@@ -933,7 +933,7 @@ sub CHRANNO {
 		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
 		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome \n";
-		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome --output export.txt\n";
+		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome --output output.txt\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";
