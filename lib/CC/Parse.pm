@@ -218,7 +218,7 @@ sub AVERAGE {
 		while (my $row = $sth->fetchrow_array() ) {
 			$tnumber++;
 			$TISSUE{$tnumber} = $row;
-			$tissue = $row.",";
+			$tissue .= $row.",";
 		} chop $tissue;
 		$verdict = undef;
 		if ($tnumber > 1) {
@@ -234,6 +234,7 @@ sub AVERAGE {
 		} else { $verdict = 0;}
 		$TISSUE{0} = $tissue;
 		$verdict =~ s/\s+//g;
+		unless ($verdict) { $verdict = 0; }
 		my @tissue = split(",", $verdict); undef $tissue; 
 		foreach (@tissue) {
 			unless (exists $TISSUE{$_}){
@@ -248,7 +249,7 @@ sub AVERAGE {
 			foreach my $ftissue (@tissue) {
 				my $syntax = "call usp_gdtissue(\"".$gene."\",\"".$ftissue."\",\"". $species."\")";
 				$sth = $dbh->prepare($syntax);
-				$sth->execute or die "SQL Eror: $DBI::errstr\n";
+				$sth->execute or die "SQL Error: $DBI::errstr\n";
 				while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) {
 					$count++;
 					$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
@@ -303,7 +304,7 @@ sub GENEXP {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; # open log file
 	printerr colored("E.\tGENE EXPRESSION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
 	$dbh = $_[0];
-	my (%FPKM, %POSITION, %ORGANISM, %SAMPLE, %REALPOST, %CHROM, $species, $sample, $genes, $syntax, @row, $indent);
+	my (%FPKM, %POSITION, %ORGANISM, %SAMPLE, %REALPOST, %CHROM, $species, $sample, $finalsample, $genes, $syntax, @row, $indent);
 	$count = 0;
 	$sth = $dbh->prepare("select distinct organism from vw_sampleinfo where genes is not null"); #get organisms
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -332,7 +333,7 @@ sub GENEXP {
 		while (my $row = $sth->fetchrow_array() ) {
 			$snumber++;
 			$SAMPLE{$snumber} = $row;
-			$sample = $row.",";
+			$sample .= $row.",";
 		} chop $sample;
 		printerr "\nORGANISM : $species\n";
 		$verdict = undef;
@@ -349,6 +350,7 @@ sub GENEXP {
 		} else { $verdict = 0;}
 		$SAMPLE{0} = $sample;
 		$verdict =~ s/\s+//g;
+		unless ($verdict) { $verdict = 0; }
 		my @sample = split(",", $verdict); undef $sample;
 		foreach (@sample) {
 			unless (exists $SAMPLE{$_}){
@@ -357,7 +359,12 @@ sub GENEXP {
 				$sample .= $SAMPLE{$_}.",";
 			}
 		} chop $sample;
-		printerr "\nSAMPLE(S) selected: $sample\n";
+		if ($verdict =~ /^0/) {
+			printerr "\nSAMPLE(S) selected: 'all samples for $species'\n";
+		} else {
+			printerr "\nSAMPLE(S) selected: $sample\n";
+			$finalsample = $sample;
+		}
 		my @newsample;
 		@sample = split("\,",$sample);
 		if ($#sample > 1) {
@@ -454,7 +461,7 @@ sub GENEXP {
 	
 	my ($dgenes, $dsamples);
 	if ($genes) {$dgenes = "--gene '$genes'";}
-	if ($sample) {$dsamples = " --samples '$sample'";}
+	if ($finalsample) {$dsamples = " --samples '$sample'";}
 	printerr color('bright_black'); #additional procedure
 	printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
 	printerr "--------------------------------------------------------------------------\n";
@@ -469,9 +476,9 @@ sub GENEXP {
 
 sub CHRVAR {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
-	printerr colored("F.\tVARIANT CHROMSOMAL DISTRIBUTION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
+	printerr colored("F.\tVARIANT CHROMOSOMAL DISTRIBUTION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
 	$dbh = $_[0];
-	my (%VARIANTS, %SNPS, %INDELS, %ORGANISM, %SAMPLE, %CHROM, $species, $sample, $chromosome, $syntax, @row, @newsample, @sample, $indent);
+	my (%VARIANTS, %SNPS, %INDELS, %ORGANISM, %SAMPLE, %CHROM, $species, $chromsyntax, $sample, $chromosome, $syntax, @row, @newsample, @sample, $indent);
 	
 	$count = 0;
 	$sth = $dbh->prepare("select distinct organism from vw_sampleinfo where totalvariants is not null"); #get organism
@@ -541,8 +548,11 @@ sub CHRVAR {
 			$syntax = "select sampleid, chrom, count(*) from VarResult where sampleid in (";
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") ";
 		}
+		$chromsyntax = "select distinct chrom from VarResult where sampleid in (";
+		foreach (@sample) { $chromsyntax .= "'$_',";} chop $chromsyntax; $chromsyntax .= ") ";									 
+		$chromsyntax .= "order by length(chrom), chrom";
 		$t = Text::TabularDisplay->new(qw(SAMPLE CHROM VARIANTS SNPs INDELs));
-		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = '$sample[0]' order by length(chrom), chrom");
+		$sth = $dbh->prepare($chromsyntax);
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
 		$number = 0;
 		while (my $row = $sth->fetchrow_array() ) {
@@ -713,7 +723,7 @@ sub VARANNO {
 			##using mysql
 			# my $syntax = "call usp_vgene(\"".$species."\",\"".$gene."\")"; 
 			# $sth = $dbh->prepare($syntax);
-			# $sth->execute or die "SQL Eror: $DBI::errstr\n";
+			# $sth->execute or die "SQL Error: $DBI::errstr\n";
 			# while (my @row = $sth->fetchrow_array() ) {
 			# 	$count++;
 			# 	$GENEVAR{$gene}{$row[0]}{$row[1]} = [@row];
