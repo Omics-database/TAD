@@ -79,7 +79,6 @@ while ($choice < 1){
 		printerr "NOTICE:\t No Option selected\n";
 	}
 }
-`rm -rf $nosql`;
 #output: the end
 printerr "-----------------------------------------------------------------\n";
 printerr ("SUCCESS: Clean exit from TransAtlasDB interaction module\n");
@@ -87,7 +86,6 @@ printerr ("NOTICE:\t Summary in log file $efile\n");
 printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
-`rm -rf $nosql`;
 
 #--------------------------------------------------------------------------------
 
@@ -107,7 +105,7 @@ sub processArguments {
   $connect = $get.'/.connect.txt';
   #setup log file
   $efile = @{ open_unique("db.tad_status.log") }[1];
-	$nosql = @{ open_unique(".nosqlout.txt") }[1];
+	$nosql = @{ open_unique(".nosqlinteract.txt") }[1]; `rm -rf $nosql`;
   open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
