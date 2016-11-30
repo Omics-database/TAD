@@ -19,8 +19,8 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 #--------------------------------------------------------------------------------
 
 our ($verbose, $efile, $help, $man, $nosql, $tmpout);
-our ($dbh, $sth, $found, $count, @header, $connect);
-my ($query, $output,$avgfpkm, $gene, $tissue, $organism, $genexp, $chrvar, $sample, $chromosome);
+our ($dbh, $sth, $found, $count, @header, $connect, $fastbit);
+my ($query, $output,$avgfpkm, $gene, $tissue, $organism, $genexp, $chrvar, $sample, $chromosome, $varanno, $region);
 my $dbdata;
 my ($table, $outfile, $syntax);
 my $tmpname = rand(20);
@@ -30,8 +30,9 @@ our (%ARRAYQUERY, %SAMPLE);
 my (@genearray, @VAR, $newfile, @threads, @headers); #splicing the genes into threads
 my ($realstart, $realstop, $queue);
 my (%FPKM, %CHROM, %POSITION, %REALPOST);
-	
-my (%VARIANTS, %SNPS, %INDELS);	
+#chrvar module
+my (%VARIANTS, %SNPS, %INDELS);
+
 #--------------------------------------------------------------------------------
 
 sub printerr; #declare error routine
@@ -69,14 +70,14 @@ if ($query) { #if user query mode selected
 } #end of user query module
 
 if ($avgfpkm){
+	$count = 0;
 	undef %ARRAYQUERY;
 	#making sure required attributes are specified.
 	$verbose and printerr "TASK:\t Average Fpkm Values of Individual Genes\n";
-	unless ($gene || $tissue || $organism){
+	unless ($gene && $organism){
 		unless ($gene) {printerr "ERROR:\t Gene option '-gene' is not specified\n"; }
-		unless ($tissue) {printerr "ERROR:\t Tissue option '-tissue' is not specified\n"; }
 		unless ($organism) {printerr "ERROR:\t Organism option '-species' is not specified\n"; }
-		pod2usage("ERROR:\t Details for -avgfpkm aren't specified. Review 'tad-interact.pl -d' for more information");
+		pod2usage("ERROR:\t Details for -avgfpkm are missing. Review 'tad-interact.pl -d' for more information");
 	}
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 	#checking if the organism is in the database
@@ -84,20 +85,33 @@ if ($avgfpkm){
 	$sth = $dbh->prepare("select organism from Animal where organism = '$organism'");$sth->execute(); $found =$sth->fetch();
 	unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is invalid. Consult 'tad-interact.pl -d' for more information"); }
 	$verbose and printerr "NOTICE:\t Organism selected: $organism\n";
-	#checking if tissue is in the database
-	my @tissue = split(",", $tissue); undef $tissue; 
-	foreach (@tissue) {
-		$_ =~ s/^\s+|\s+$//g;
-		$sth = $dbh->prepare("select distinct tissue from Sample where tissue = '$_'");$sth->execute(); $found =$sth->fetch();
-		unless ($found) { pod2usage("ERROR:\t Tissue name '$_' is invalid. Consult 'tad-interact.pl -d' for more information"); }
-		$tissue .= $_ .",";
-	}chop $tissue;
-	$verbose and printerr "NOTICE:\t Tissue(s) selected: $tissue\n";
-	#retrieving each genes from the database
+	
+	
+	if ($tissue) {
+		my @tissue = split(",", $tissue); undef $tissue; 
+		foreach (@tissue) {
+			$_ =~ s/^\s+|\s+$//g;
+			$sth = $dbh->prepare("select distinct tissue from Sample where tissue = '$_'");$sth->execute(); $found =$sth->fetch();
+			unless ($found) { pod2usage("ERROR:\t Tissue name '$_' is invalid. Consult 'tad-interact.pl -d' for more information"); }
+			$tissue .= $_ .",";
+		}chop $tissue;
+		$verbose and printerr "NOTICE:\t Tissue(s) selected: $tissue\n";
+	} else {
+		$verbose and printerr "NOTICE:\t Tissue(s) selected: 'all tissue for $organism'\n";
+		$sth = $dbh->prepare("select tissue from vw_sampleinfo where organism = '$organism' and genes is not null"); #get samples
+		$sth->execute or die "SQL Error: $DBI::errstr\n";
+		my $tnumber= 0;
+		while (my $row = $sth->fetchrow_array() ) {
+			$tnumber++;
+			$SAMPLE{$tnumber} = $row;
+			$tissue .= $row.",";
+		} chop $tissue;
+	} #checking sample options
+	my @tissue = split(",", $tissue);
+	$verbose and printerr "NOTICE:\t Gene(s) selected: $gene\n";
 	my @genes = split(",", $gene);
 	foreach my $fgene (@genes){
 		$fgene =~ s/^\s+|\s+$//g;
-		$verbose and printerr "NOTICE:\t Gene(s) selected: $fgene\n";
 		foreach my $ftissue (@tissue) {
 			$syntax = "call usp_gdtissue(\"".$fgene."\",\"".$ftissue."\",\"". $organism."\")";
 			$sth = $dbh->prepare($syntax);
@@ -105,7 +119,6 @@ if ($avgfpkm){
 			@header = @{ $sth->{NAME_uc} }; #header
 			splice @header, 1, 0, 'TISSUE';
 			$table = Text::TabularDisplay->new( @header );
-			$count = 0;
 			while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { #content
 				push my @row, ($genename, $ftissue, $max, $avg, $min);
 				$count++;
@@ -121,7 +134,6 @@ if ($avgfpkm){
 			foreach my $a (sort keys %ARRAYQUERY){
 				foreach my $b (sort keys % { $ARRAYQUERY{$a} }){
 					print OUT join("\t", @{$ARRAYQUERY{$a}{$b}}),"\n";
-					$table->add(@{$ARRAYQUERY{$a}{$b}});
 				}
 			} close OUT;
 		} else {
@@ -143,7 +155,7 @@ if ($genexp){
 	$verbose and printerr "TASK:\t Gene Expression (FPKM) information across Samples\n";
 	unless ($organism){
 		printerr "ERROR:\t Organism option '-species' is not specified\n";
-		pod2usage("ERROR:\t Details for -genexp aren't specified. Review 'tad-interact.pl -e' for more information");
+		pod2usage("ERROR:\t Details for -genexp are missing. Review 'tad-interact.pl -e' for more information");
 	}
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 	#checking if the organism is in the database
@@ -242,7 +254,7 @@ if ($chrvar){
 	$verbose and printerr "TASK:\t Chromosomal Variant Distribution Across Samples\n";
 	unless ($organism){
 		printerr "ERROR:\t Organism option '-species' is not specified\n";
-		pod2usage("ERROR:\t Details for -chrvar aren't specified. Review 'tad-interact.pl -f' for more information");
+		pod2usage("ERROR:\t Details for -chrvar are missing. Review 'tad-interact.pl -f' for more information");
 	}
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 	#checking if the organism is in the database
@@ -340,7 +352,6 @@ if ($chrvar){
 			$outfile = @{ open_unique($output) }[1];
 			open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
 			print OUT join("\t", @header),"\n";
-			my @newcontent = split("\n", @content);
 			foreach (sort keys %ARRAYQUERY) { print OUT join("\t",@{$ARRAYQUERY{$_}}), "\n"; }
 			close OUT;
 		} else {
@@ -350,7 +361,118 @@ if ($chrvar){
 	} else { printerr "NOTICE:\t No Results based on search criteria \n"; }
 } #end of chrvar module
 
-
+if ($varanno){
+	undef %SAMPLE; undef %ARRAYQUERY;
+	$count = 0;
+	#making sure required attributes are specified.
+	$verbose and printerr "TASK:\t Associated Variant Annotation Information\n";
+	unless ($organism){
+		printerr "ERROR:\t Organism option '-species' is not specified\n";
+		pod2usage("ERROR:\t Details for -varanno are missing. Review 'tad-interact.pl' for more information");
+	}
+	if ($gene) { $verbose and printerr "SUBTASK: Gene-associated Variants with Annotation Information\n"; }
+	if ($chromosome) { $verbose and printerr "SUBTASK: Chromosomal region-associated Variants with Annotation Information\n"; }
+	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+	$fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+	$organism =~ s/^\s+|\s+$//g;
+	$sth = $dbh->prepare("select organism from Animal where organism = '$organism'");$sth->execute(); $found =$sth->fetch();
+	unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is invalid. Consult 'tad-interact.pl -f' for more information"); }
+	$verbose and printerr "NOTICE:\t Organism selected: $organism\n";
+	my $number = 0;
+	unless ($gene) {
+		$syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
+		if ($chromosome){
+			my @chromosomes = split(",", $chromosome); undef $chromosome;
+			foreach (@chromosomes){ $_ =~ s/^\s+|\s+$//g; $chromosome .= $_.","; } chop $chromosome;
+			$verbose and printerr "NOTICE:\t Chromosome(s) selected: '$chromosome'\n";
+			$syntax .= " and (";
+			foreach (@chromosomes) { $syntax .= "chrom = '$_' or "; } $syntax = substr($syntax, 0, -3); $syntax .= ") ";
+			if ($region){
+				if ($region =~ /\-/) {
+					my @region = split("-", $region);
+					$syntax .= "and position between $region[0] and $region[1] ";
+					$verbose and printerr "NOTICE:\t Region: between $region[0] and $region[1]\n";
+				} else {
+					my $start = $region-1500;
+					my $stop = $region+1500;
+					$syntax .= "and position between ". $start." and ". $stop;
+					$verbose and printerr "NOTICE:\t Region: 3000bp region of $region\n";
+				}
+			} #end if region
+		} #end if chromosome
+		else { $verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n"; }
+		$syntax .= "\" -o $nosql";
+		`$syntax 2>> $efile`;
+		open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+		foreach (@nosqlcontent) {
+			chomp; $count++;
+			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+			my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+			$SAMPLE{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+		}
+		foreach my $aa (sort {$a cmp $b || $a <=> $b} keys %SAMPLE){
+			foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
+				foreach my $cc (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa}{$bb} }){
+					$number++;
+					$ARRAYQUERY{$number} = [@{ $SAMPLE{$aa}{$bb}{$cc} }];
+				}
+			}
+		} #end parsing the results to arrayquery
+	} #end unless gene
+	else {
+		my @genes = split(",", $gene); undef $gene;
+		foreach (@genes){ $_ =~ s/^\s+|\s+$//g; $gene .= $_.","; } chop $gene;
+		$verbose and printerr "NOTICE:\t Gene(s) selected: '$gene'\n";
+		foreach (@genes) {
+			$syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where genename like '%".uc($_)."%' and organism='$organism'\" -o $nosql";
+			`$syntax 2>> $efile`;
+			#open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
+			#open my $nosqlcontent,"<",$nosql; `rm -rf $nosql`;
+			#while (<$nosqlcontent>){
+			open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+			foreach (@nosqlcontent) {
+				chomp; $count++;
+				my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+				my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+				$SAMPLE{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+			}
+		}
+		foreach my $aa (keys %SAMPLE){ #getting content to output
+			foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
+				foreach my $cc (sort {$a <=> $b} keys % {$SAMPLE{$aa}{$bb} }) {
+					foreach my $dd (sort keys % {$SAMPLE{$aa}{$bb}{$cc} }) {
+						$number++;
+						$ARRAYQUERY{$number} = [@{ $SAMPLE{$aa}{$bb}{$cc}{$dd} }];
+					}
+				}
+			}
+		} #end parsing the results to arrayquery
+	} #end if gene
+	
+	@header = qw(Chrom Position Refallele Altallele Variantclass Consequence Genename Dbsnpvariant Sampleid);
+	tr/a-z/A-Z/ for @header;
+	$table = Text::TabularDisplay->new(@header); #header
+	
+	unless ($count == 0) {
+		if ($output) { #if output file is specified, else, result will be printed to the screen
+			$outfile = @{ open_unique($output) }[1];
+			open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
+			print OUT join("\t", @header),"\n";
+			foreach my $a (sort keys %ARRAYQUERY){
+				print OUT join("\t", @{$ARRAYQUERY{$a}}),"\n";
+			} close OUT;
+		} else {
+			foreach my $a (sort keys %ARRAYQUERY){
+				$table->add(@{$ARRAYQUERY{$a}});
+			}
+			printerr $table-> render, "\n"; #print display
+		}	
+		$verbose and printerr "NOTICE:\t Summary: $count rows in result\n";
+	} else { printerr "NOTICE:\t No Results based on search criteria \n"; }
+} #end of varanno module
 
 #output: the end
 printerr "-----------------------------------------------------------------\n";
@@ -364,12 +486,9 @@ close (LOG);
 #--------------------------------------------------------------------------------
 
 sub processArguments {
-  GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'query=s'=>\$query, 'db2data'=>\$dbdata, 'output=s'=>\$output,
+  GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'query=s'=>\$query, 'db2data'=>\$dbdata, 'o|output=s'=>\$output,
 						 'avgfpkm'=>\$avgfpkm, 'gene=s'=>\$gene, 'tissue=s'=>\$tissue, 'species=s'=>\$organism, 'genexp'=>\$genexp,
-						 'samples|sample=s'=>\$sample, 'chrvar'=>\$chrvar, 'chromosome=s'=>\$chromosome
-						 
-						 
-						 ) or pod2usage ();
+						 'samples|sample=s'=>\$sample, 'chrvar'=>\$chrvar, 'chromosome=s'=>\$chromosome, 'varanno'=>\$varanno,'region=s'=>\$region) or pod2usage ();
 
   $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
@@ -389,6 +508,7 @@ sub processArguments {
 	  #setup log file
 	$efile = @{ open_unique("db.tad_status.log") }[1];
 	$tmpout = @{ open_unique(".export.txt") }[1]; `rm -rf $tmpout`;
+	$nosql = @{ open_unique(".nosqlinteract.txt") }[1]; `rm -rf $nosql`;
   open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";

@@ -16,5 +16,7 @@ Perl modules already configured in the package
 	Version: 0.15
 	Location: http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm
 
-
+##5. Text::TabularDisplay
+	Version: 1.38
+	Location: http://search.cpan.org/~darren/Text-TabularDisplay/TabularDisplay.pm
 

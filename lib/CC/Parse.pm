@@ -251,11 +251,11 @@ sub AVERAGE {
 				$sth = $dbh->prepare($syntax);
 				$sth->execute or die "SQL Error: $DBI::errstr\n";
 				while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) {
-					$count++;
 					$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
 				}
 			}
 		}
+		$count = scalar keys %AVGFPKM;
 	} elsif ($number == 0){
 		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
 	} else {
@@ -263,7 +263,7 @@ sub AVERAGE {
 	}
   $t = Text::TabularDisplay->new(qw(GeneName Tissue MaximumFpkm AverageFpkm MinimumFpkm)); #header
 	$precount = 0;
-	foreach my $a (keys %AVGFPKM){ #preset to 10 rows
+	foreach my $a (sort keys %AVGFPKM){ #preset to 10 rows
 		unless ($precount >= 10) { 
 			foreach my $b (sort keys % {$AVGFPKM{$a} }){
 				unless ($precount >= 10) {
@@ -704,11 +704,12 @@ sub VARANNO {
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { printerr "ERROR:\t Gene(s) not provided\n"; next MAINMENU; } # if genes aren't provided
 		$genes = $verdict;
+		printerr "\nGENE(S) selected : $genes\n";
 		@genes = split(",", $verdict);
 		foreach my $gene (@genes){
 			
 			#using fastbit
-			my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),dbsnpvariant, group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
+			my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
 			`$syntax 2>> $_[2]`;
 			open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
 			foreach (@nosqlcontent) {
@@ -716,7 +717,7 @@ sub VARANNO {
 				$count++;
 				my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
 				my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , $arraynosqlB[5], join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
 				$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
 			}
 			
@@ -794,7 +795,7 @@ sub CHRANNO {
 	$fastbit = $_[1];
 	my ($chromosome, %ORGANISM, %CHRVAR, %CHROM, @chromosomes, $species,$indent,$region);
 	
-	my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),dbsnpvariant, group_concat(sampleid) where ";
+	my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where ";
 	$count = 0;
 	$sth = $dbh->prepare("select distinct a.organism from vw_sampleinfo a join VarSummary b on a.sampleid = b.sampleid where b.annversion is not null"); #get organism with annotation information
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -817,7 +818,7 @@ sub CHRANNO {
 	} else { $verdict = 1; } # else if there's only one organism
 	if ($verdict >= 1 && $verdict <= $number ) {
 		$species = $ORGANISM{$verdict};
-		$syntax .= "organism='$species' and ";
+		$syntax .= "organism='$species'";
 		printerr "\nORGANISM : $species\n";
 		$verdict = undef;
 		$sth = $dbh->prepare("select distinct chrom from VarAnno where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
@@ -839,6 +840,7 @@ sub CHRANNO {
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { $verdict = 0; }
 		unless ($verdict =~ /^0/) {
+			$syntax .= " and ";
 			@chromosomes = split(",",$verdict);
 			if ($#chromosomes > 0) {
 				foreach (@chromosomes){
@@ -852,7 +854,7 @@ sub CHRANNO {
 				printerr "\nCHROMOSOME(S) selected : $chromosome\n";
 				@chromosomes = split(",", $chromosome);
 				foreach (@chromosomes) { $syntax .= "chrom = '$_' or "; } $syntax = substr($syntax, 0, -3);
-			}else {
+			} else {
 				$_ = int($chromosomes[0]);
 				if ($_ >= 1 && $_ <= $number) {
 					$chromosome .= $CHROM{$_};
@@ -880,11 +882,11 @@ sub CHRANNO {
 					}
 				}
 			}
-			
 		} else {
 			printerr "\nCHROMOSOME(S) selected : 'all chromosomes'\n";
 		}
-		$syntax .= "\" -o $_[3]";
+		
+		$syntax .= "\" -o $_[3]"; 
 		`$syntax 2>> $_[2]`;
 		open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
 		foreach (@nosqlcontent) {
@@ -893,7 +895,7 @@ sub CHRANNO {
 			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
 			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
 			my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , $arraynosqlB[5], join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
 			$CHRVAR{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
 		}
 	} elsif ($number == 0){
@@ -942,8 +944,8 @@ sub CHRANNO {
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome \n";
-		printerr "\ttad-export.pl --db2data --chranno --species '$species' $dchromosome --output output.txt\n";
+		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome \n";
+		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome --output output.txt\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";

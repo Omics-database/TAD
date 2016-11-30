@@ -15,8 +15,7 @@ Major files include
 	Interactive options to retrieve database content
 
 ###5. tad-export.pl
-
-###6. web-interface/interface.php
+	To view or export data from either database
 
 ###7. example/
-
+	Contains sample files and templates
