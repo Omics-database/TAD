@@ -210,7 +210,6 @@ sub AVERAGE {
 	  chomp ($verdict = uc(<>)); 
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { printerr "ERROR:\t Gene(s) not provided\n"; next MAINMENU; } # if genes aren't provided
-		$genes = $verdict;
 		my @genes = split(",", $verdict); 
 		$sth = $dbh->prepare("select distinct tissue from vw_sampleinfo where genes is not null and organism = '$species'"); #get tissues
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -250,8 +249,14 @@ sub AVERAGE {
 				my $syntax = "call usp_gdtissue(\"".$gene."\",\"".$ftissue."\",\"". $species."\")";
 				$sth = $dbh->prepare($syntax);
 				$sth->execute or die "SQL Error: $DBI::errstr\n";
-				while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) {
-					$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
+				my $found = $sth->fetch();
+				if ($found) {
+					while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) {
+						$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
+					}
+					$genes .= $gene;
+				} else {
+					printerr "NOTICE:\t No Results found with gene '$gene'\n";
 				}
 			}
 		}
@@ -377,13 +382,13 @@ sub GENEXP {
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { $verdict = 0; }
 		if ($verdict =~ /^0/) { 
-			printerr "\nGENE(S) selected : 'all genes'\n";
+			printerr "GENE(S) selected : 'all genes'\n";
 			$syntax = "select geneshortname, fpkm, sampleid, chromnumber, chromstart, chromstop from GenesFpkm where sampleid in ("; #syntax
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") order by geneid desc";
 		}else {
 			my @genes = split(",", $verdict);
 			$genes = $verdict;
-			printerr "\nGENE(S) selected : $verdict\n";
+			printerr "GENE(S) selected : $verdict\n";
 			$syntax = "select geneshortname, fpkm, sampleid, chromnumber, chromstart, chromstop from GenesFpkm where sampleid in (";
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") and (";
 			foreach (@genes) { $syntax .= " geneshortname like '%$_%' or"; } $syntax = substr($syntax, 0, -2); $syntax .= ") order by geneid desc";
@@ -703,8 +708,8 @@ sub VARANNO {
 	  chomp ($verdict = uc(<>)); 
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { printerr "ERROR:\t Gene(s) not provided\n"; next MAINMENU; } # if genes aren't provided
-		$genes = $verdict;
-		printerr "\nGENE(S) selected : $genes\n";
+		$genes = undef;
+		printerr "\nGENE(S) selected : $verdict\n";
 		@genes = split(",", $verdict);
 		foreach my $gene (@genes){
 			
@@ -712,13 +717,19 @@ sub VARANNO {
 			my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
 			`$syntax 2>> $_[2]`;
 			open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
-			foreach (@nosqlcontent) {
-				chomp;
-				$count++;
-				my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-				my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-				$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+			if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with gene '$gene' \n";}
+			else {
+				foreach (@nosqlcontent) {
+					chomp;
+					$count++;
+					my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+					my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+					my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+					my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+					push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+					$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				}
+				$genes .= $gene.",";
 			}
 			
 			##using mysql
@@ -730,7 +741,7 @@ sub VARANNO {
 			# 	$GENEVAR{$gene}{$row[0]}{$row[1]} = [@row];
 			# }
 			
-		}
+		} chop $genes;
 	} elsif ($number == 0){
 		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
 	} else {
@@ -740,7 +751,6 @@ sub VARANNO {
 	$precount = 0;
 	my ($odacount, $endcount) = (0,10);
 	if ($#genes >= 1){ $endcount = 5*($#genes+1);}
-	
 	foreach my $aa (keys %GENEVAR){ #preset to 10 rows	
 		unless ($precount >= $endcount) {
 			if ($#genes >= 1) { if ($odacount == 5) {	$odacount = 0;} }
@@ -865,7 +875,7 @@ sub CHRANNO {
 				printerr "\nCHROMOSOME(S) selected : $chromosome\n";
 				$syntax .= "chrom = '$chromosome' and ";
 				print "\nSpecify region of interest (eg: 10000-500000) or 0 for the entire chromosome. ? "; #ask for region
-				chomp ($verdict = uc(<>)); 
+				chomp ($verdict = <>); 
 				$verdict =~ s/\s+//g;
 				if ($verdict) {
 					if ($verdict =~ /\-/) {
@@ -889,14 +899,18 @@ sub CHRANNO {
 		$syntax .= "\" -o $_[3]"; 
 		`$syntax 2>> $_[2]`;
 		open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
-		foreach (@nosqlcontent) {
-			chomp;
-			$count++;
-			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-			my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-			$CHRVAR{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+		if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with chromosomal location \n";}
+		else {
+			foreach (@nosqlcontent) {
+				chomp;
+				$count++;
+				my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+				my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+				my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+				my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+				$CHRVAR{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+			}
 		}
 	} elsif ($number == 0){
 		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");

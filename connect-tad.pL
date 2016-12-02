@@ -30,13 +30,14 @@ processArguments(); #Process input
 printerr ("NOTICE:\t Connection Details:\n\t\tUsername = $username\n\t\tPassword = $password\n\t\tMySQL database = $dbname\n");
 printerr ("\t\tFastBit folder = $ffastbit\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n\n";
-
+close (LOG);
 
 #--------------------------------------------------------------------------------
 
 sub processArguments {
+	my @commandline = @ARGV;
   GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'databasename|d=s'=>\$dbname,
 		'username|u=s'=>\$username, 'password|p=s'=>\$password, 'location|l=s'=>\$location,
 		'fastbitname|n=s'=>\$fbname ) or pod2usage ();
@@ -82,7 +83,7 @@ sub processArguments {
   open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
   print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
   print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
+  print LOG "TransAtlasDB Command:\t $0 @commandline\n";
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
 	
 	

@@ -30,6 +30,7 @@ processArguments(); #Process input
 
 my %all_details = %{connection($connect, $default)}; #get connection details
 print "\tWELCOME TO TRANSATLASDB INTERACTIVE MODULE\n";
+my $count =0;
 MAINMENU:
 while ($choice < 1){
 	$verdict = undef;
@@ -53,7 +54,7 @@ while ($choice < 1){
 	print "--------------------------------------------------------------------------\n";
 	print "--------------------------------------------------------------------------\n";
 	print color('reset');
-	print "\nSelect an option : ";
+	print "\nSelect an option ? ";
 	chomp ($verdict = lc (<>)); print "\n";
 	}
 	if ($verdict =~ /^[a-h]/){
@@ -83,80 +84,80 @@ while ($choice < 1){
 printerr "-----------------------------------------------------------------\n";
 printerr ("SUCCESS: Clean exit from TransAtlasDB interaction module\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
-printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+printerr "-----------------------------------------------------------------\n";
 close (LOG);
 
 #--------------------------------------------------------------------------------
 
 sub processArguments {
-  GetOptions('help|h'=>\$help, 'man|m'=>\$man, 'a|summary'=>\$opa,'b|metadata'=>\$opb,
-						 'c|transummary'=>\$opc, 'd|avgfpkm'=>\$opd, 'e|genexp'=>\$ope,'f|chrvar'=>\$opf,
-						 'g|varanno'=>\$opg, 'j|chranno'=>\$opj) or pod2usage ();
+	my @commandline = @ARGV;
+	GetOptions('help|h'=>\$help, 'man|m'=>\$man, 'a|summary'=>\$opa,'b|metadata'=>\$opb,
+		 'c|transummary'=>\$opc, 'd|avgfpkm'=>\$opd, 'e|genexp'=>\$ope,'f|chrvar'=>\$opf,
+		 'g|varanno'=>\$opg, 'j|chranno'=>\$opj) or pod2usage ();
 
-  $help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
-  $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
+  	$help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
+  	$man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   
-  @ARGV==0 or pod2usage("Syntax error");
+  	@ARGV==0 or pod2usage("Syntax error");
 
 	#process command line options
 
-  my $get = dirname(abs_path $0); #get source path
-  $connect = $get.'/.connect.txt';
-  #setup log file
-  $efile = @{ open_unique("db.tad_status.log") }[1];
+  	my $get = dirname(abs_path $0); #get source path
+  	$connect = $get.'/.connect.txt';
+	#setup log file
+  	$efile = @{ open_unique("db.tad_status.log") }[1];
 	$nosql = @{ open_unique(".nosqlinteract.txt") }[1]; `rm -rf $nosql`;
-  open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
-  print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
-  print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-  print LOG "TransAtlasDB Command:\t $0 @ARGV\n";
-  print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
+  	open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
+  	print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
+  	print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
+  	print LOG "TransAtlasDB Command:\t $0 @commandline;\n";
+  	print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
 }
 
 sub OPTIONS {
 	%MAINMENU = ( 
-								a=>'Summary of samples in the database',
-								b=>'Metadata details of samples', 
-								c=>'Transcriptome analysis summary of samples',
-								d=>'Average expression (fpkm) values of individual genes',
-								e=>'Genes expression (fpkm) values across the samples',
-								f=>'Chromosomal variant distribution',
-								g=>'Gene-associated Variants with annotation information',
-								h=>'Chromosomal region-associated Variants with annotation information',
-								x=>'exit'
-							);
+			a=>'Summary of samples in the database',
+			b=>'Metadata details of samples', 
+			c=>'Transcriptome analysis summary of samples',
+			d=>'Average expression (fpkm) values of individual genes',
+			e=>'Genes expression (fpkm) values across the samples',
+			f=>'Chromosomal variant distribution',
+			g=>'Gene-associated Variants with annotation information',
+			h=>'Chromosomal region-associated Variants with annotation information',
+			x=>'exit'
+		);
 
 }
 
 
 #--------------------------------------------------------------------------------
 
+
 =head1 SYNOPSIS
 
-  tad-interact.pl <argument>
+ tad-interact.pl <argument>
 
-	
  Optional arguments:
-       -h, --help                      print help message
-       -m, --man                       print complete documentation
+        -h, --help                      print help message
+        -m, --man                       print complete documentation
 
- Interactive options:
-       -a, --summary                   summary of samples in the database
-       -b, --metadata                  metadata details of samples
-       -c, --transummary               transcriptome analysis summary of samples
-       -d, --avgfpkm                   average expression (fpkm) values of individual genesm
-       -e, --genexp                    genes expression (fpkm) values across the samples
-       -f, --chrvar                    chromosomal variant distribution
-       -g, --varanno                   gene-associated variants with respecitive annotation information
-       -j, --chranno                   chromsomal region-associated variants with annotation information
+	Interactive Arguments 
+	    -a, --summary               summary of samples in the database
+            -b, --metadata              metadata details of samples
+            -c, --transummary           transcriptome analysis summary of samples
+            -d, --avgfpkm               average expression (fpkm) values of individual genes
+            -e, --genexp                genes expression (fpkm) values across the samples
+            -f, --chrvar                chromosomal variant distribution
+            -g, --varanno               gene-associated variants with respective annotation information
+       	    -j, --chranno               chromsomal region-associated variants with annotation information
 
-
- Function: interactive database module
+ Function: interactive database module and guide to using tad-export.pl
  
  Example: #enter default interactive module
 	  tad-interact.pl
 
-	 #view summary of samples in the database
+	  #view summary of samples in the database
           tad-interact.pl -a
 	  tad-interact.pl -summary
 
@@ -174,6 +175,40 @@ print a brief usage message and detailed explantion of options.
 =item B<--man>
 
 print the complete manual of the program.
+
+=item B<--summary>
+
+provides summary tables of all the samples in the database.
+
+=item B<--metadata>
+
+provides the sample information of all the samples in the database.
+
+=item B<--transummary>
+
+provides transcriptome analysis summary, this includes:
+mapping information summary, variant information summary and
+gene information summary of samples in the database.
+
+=item B<--avgfpkm>
+
+provides average expression (fpkm) values of specified genes.
+
+=item B<--genexp>
+
+provides genes expression (fpkm) values of specified genes across samples
+
+=item B<--chrvar>
+
+provides summary counts of the different variant types per chromosome for each sample.
+
+=item B<--varanno>
+
+provides gene-associated variants with respective annotation information.
+
+=item B<--chranno>
+
+provides chromsomal region-associated variants with annotation information.
 
 =back
 
