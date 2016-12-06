@@ -196,3 +196,25 @@ C<EXE_FILES: >
 
 =back
 
+=head2 Tue Dec  6 16:54:50 2016: C<Module> L<DBD::mysql|DBD::mysql>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupeadetunji/Desktop/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 4.041>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
