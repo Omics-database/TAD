@@ -124,7 +124,7 @@ sub OPTIONS {
 			e=>'Genes expression (fpkm) values across the samples',
 			f=>'Chromosomal variant distribution',
 			g=>'Gene-associated Variants with annotation information',
-			h=>'Chromosomal region-associated Variants with annotation information',
+			h=>'Chromosomal region-associated Variants and annotation information',
 			x=>'exit'
 		);
 
@@ -150,7 +150,7 @@ sub OPTIONS {
             -e, --genexp                genes expression (fpkm) values across the samples
             -f, --chrvar                chromosomal variant distribution
             -g, --varanno               gene-associated variants with respective annotation information
-       	    -j, --chranno               chromsomal region-associated variants with annotation information
+       	    -j, --chranno               chromosomal region-associated variants and annotation information
 
  Function: interactive database module and guide to using tad-export.pl
  
@@ -208,7 +208,7 @@ provides gene-associated variants with respective annotation information.
 
 =item B<--chranno>
 
-provides chromsomal region-associated variants with annotation information.
+provides chromosomal region-associated variants and (optional) annotation information.
 
 =back
 

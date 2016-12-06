@@ -17,12 +17,11 @@ our $DATE = '$ Date: 2016-11-28 15:14:00 (Thu, 28 Nov 2016) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
-
+print "\n";
 our ($verbose, $efile, $help, $man, $nosql, $tmpout);
 our ($dbh, $sth, $found, $count, @header, $connect, $fastbit);
 my ($query, $output,$avgfpkm, $gene, $tissue, $organism, $genexp, $chrvar, $sample, $chromosome, $varanno, $region, $vcf);
-my $dbdata;
-my ($table, $outfile, $syntax, $status);
+my ($dbdata, $table, $outfile, $syntax, $status, $vcfsyntax);
 my $tmpname = rand(20);
 our (%ARRAYQUERY, %SAMPLE);
 
@@ -33,7 +32,7 @@ my (%FPKM, %CHROM, %POSITION, %REALPOST);
 #chrvar module
 my (%VARIANTS, %SNPS, %INDELS);
 #vcf optino
-my (%GT, %TISSUE, %REF, %ALT, %QUAL, %CSQ, %DBSNP, $chrheader);
+my (%GT, %TISSUE, %REF, %ALT, %QUAL, %CSQ, %DBSNP, $chrheader, $consequenceheader);
 my (%ODACSQ,%number, %NEWQUAL, %NEWCSQ, %NEWREF, %NEWDBSNP, %NEWALT,%NEWGT);
 my (%subref, %subalt, %subgt,%MTD);
 
@@ -380,7 +379,7 @@ if ($dbdata){ #if db 2 data mode selected
 			pod2usage("ERROR:\t Details for -varanno are missing. Review 'tad-interact.pl' for more information");
 		}
 		if ($gene) { $verbose and printerr "SUBTASK: Gene-associated Variants with Annotation Information\n"; }
-		if ($chromosome) { $verbose and printerr "SUBTASK: Chromosomal region-associated Variants with Annotation Information\n"; }
+		if ($chromosome) { $verbose and printerr "SUBTASK: Chromosomal region-associated Variants and Annotation Information\n"; }
 		$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 		$fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 		$organism =~ s/^\s+|\s+$//g;
@@ -388,65 +387,131 @@ if ($dbdata){ #if db 2 data mode selected
 		unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is not found in database. Consult 'tad-interact.pl -f' for more information"); }
 		$verbose and printerr "NOTICE:\t Organism selected: $organism\n";
 		my $number = 0;
-		$syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
-		my $vcfsyntax = "ibis -d $fastbit -q \"select sampleid, chrom, position, refallele, altallele, quality, consequence, proteinposition, genename, geneid, feature, transcript, genetype, aachange,  codonchange, dbsnpvariant, variantclass, zygosity, tissue where organism='$organism'";
-	
+		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$organism' and a.nosql = 'done' order by a.date desc limit 1");$sth->execute(); $found =$sth->fetch();
+		unless ($found) {
+			$vcfsyntax = "select sampleid, chrom, position, refallele, altallele, quality, consequence, genename, geneid, feature, transcript, genetype, proteinposition, aachange, codonchange, dbsnpvariant, variantclass, zygosity, tissue from vw_vvcf where organism='$organism'";
+		} else {
+			$syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
+			$vcfsyntax = "ibis -d $fastbit -q \"select sampleid, chrom, position, quality, proteinposition, refallele, altallele, consequence, genename, geneid, feature, transcript, genetype, aachange,  codonchange, dbsnpvariant, variantclass, zygosity, tissue where organism='$organism'";
+		} #the toggle between mysql and fastbit
 		unless ($gene) {
 			if ($chromosome){
+				my ($start, $stop) = (0,0);
 				my @chromosomes = split(",", $chromosome); undef $chromosome;
 				foreach (@chromosomes){ $_ =~ s/^\s+|\s+$//g; $chromosome .= $_.","; } chop $chromosome;
 				$verbose and printerr "NOTICE:\t Chromosome(s) selected: '$chromosome'\n";
 				$chrheader = $chromosome;
-				$syntax .= " and (";
-				$vcfsyntax .= " and (";
-				foreach (@chromosomes) {
-					$syntax .= "chrom = '$_' or ";
-					$vcfsyntax .= "chrom = '$_' or ";
-				}
-				$syntax = substr($syntax, 0, -3); $syntax .= ") ";
-				$vcfsyntax = substr($vcfsyntax, 0, -3); $vcfsyntax .= ") ";
-				if ($region){
-					if ($region =~ /\-/) {
-						my @region = split("-", $region);
-						$syntax .= "and position between $region[0] and $region[1] ";
-						$vcfsyntax .= "and position between $region[0] and $region[1] ";
-						$chrheader .= ":$region[0]\-$region[1]";
-						$verbose and printerr "NOTICE:\t Region: between $region[0] and $region[1]\n";
-					} else {
-						my $start = $region-1500;
-						my $stop = $region+1500;
-						$syntax .= "and position between ". $start." and ". $stop;
-						$vcfsyntax .= "and position between ". $start." and ". $stop;
-						$chrheader .= ":$start\-$stop";
-						$verbose and printerr "NOTICE:\t Region: 3000bp region of $region\n";
+				if ($#chromosomes == 0) {
+					if ($region){
+						if ($region =~ /\-/) {
+							($start, $stop) = split("-", $region);
+							$syntax .= " and position between $start and $stop";
+							$vcfsyntax .= " and position between $start and $stop";
+							$chrheader .= ":$start\-$stop";
+							$verbose and printerr "NOTICE:\t Region: between $start and $stop\n";
+						} else {
+							$start = $region-1500; $stop = $region+1500;
+							$syntax .= " and position between ". $start." and ". $stop;
+							$vcfsyntax .= " and position between ". $start." and ". $stop;
+							$chrheader .= ":$start\-$stop";
+							$verbose and printerr "NOTICE:\t Region: 3000bp region of $region\n";
+						}
+						unless ($found) { # if no nosql output
+							$syntax = "call usp_vchrposition(\"".$organism."\",\"".$chromosomes[0]."\",\"".$start."\",\"".$stop."\")";
+							$sth = $dbh->prepare($syntax);
+							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							while (my @row = $sth->fetchrow_array() ) {
+								$count++;
+								if ($row[5] =~ /^-/){ $row[5] = ''; }
+								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+							}
+						}
+					} #end if region
+					else { # if only one chromosome is specified and no region
+						unless ($found) { # if no nosql output
+							$syntax = "call usp_vchrom(\"".$organism."\",\"".$chromosomes[0]."\")";
+							$sth = $dbh->prepare($syntax);
+							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							while (my @row = $sth->fetchrow_array() ) {
+								$count++;
+								if ($row[5] =~ /^-/){ $row[5] = ''; }
+								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+							}
+						}
 					}
-				} #end if region
+				} else { #to make sure only one chromosome is specified, or else
+					if ($found) { $syntax .= " and ("; }
+					$vcfsyntax .= " and (";
+					foreach (@chromosomes) {
+						if ($found) {
+							$syntax .= "chrom = '$_' or ";
+						} else {
+							$syntax = "call usp_vchrom(\"".$organism."\",\"".$_."\")";
+							$sth = $dbh->prepare($syntax);
+							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							while (my @row = $sth->fetchrow_array() ) {
+								$count++;
+								if ($row[5] =~ /^-/){ $row[5] = ''; }
+								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+							}
+						}
+						$vcfsyntax .= "chrom = '$_' or ";
+					}
+					$syntax = substr($syntax, 0, -3); $syntax .= ") ";
+					$vcfsyntax = substr($vcfsyntax, 0, -3); $vcfsyntax .= ") ";
+				}
 			} #end if chromosome
-			else { $verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n"; $chrheader="all chromosomes";}
-			$syntax .= "\" -o $nosql";
-			$vcfsyntax .= "\" -o $nosql";
-			if ($vcf) {
-				`$vcfsyntax 2>> $efile`;
-				open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
-				foreach (@nosqlcontent) {
-					chomp; $count++;
-					my @arraynosqlA = split (",",$_,9); foreach (@arraynosqlA[0..7]) { $_ =~ s/"//g; $_ =~ s/^\s+|\s+$//g;}
-					my @arraynosqlB = split("\", \"", $arraynosqlA[8]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/^\s+|\s+$//g; $_ =~ s/NULL//g;}
-					push my @row, (@arraynosqlA[0..6], @arraynosqlB[0..4], $arraynosqlA[7], @arraynosqlB[5..$#arraynosqlB]);
-					PROCESS(@row);
+			else {
+				$verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n"; $chrheader="all chromosomes";
+				$syntax = "call usp_vall(\"".$organism."\")";
+				$sth = $dbh->prepare($syntax);
+				$sth->execute or die "SQL Error: $DBI::errstr\n";
+				while (my @row = $sth->fetchrow_array() ) {
+					$count++;
+					if ($row[5] =~ /^-/){ $row[5] = ''; }
+					$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+				}
+			}
+			if ($found) {
+				$syntax .= "\" -o $nosql";
+				$vcfsyntax .= "\" -o $nosql";
+				if ($vcf) {
+					`$vcfsyntax 2>> $efile`;
+					open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+					foreach (@nosqlcontent) {
+						chomp; $count++; 
+						my @arraynosqlA = split (",",$_,6); foreach (@arraynosqlA[0..4]) { $_ =~ s/"//g; $_ =~ s/^\s+|\s+$//g; } 
+						if ($arraynosqlA[4] == 0) {$arraynosqlA[4] = ""};
+						my @arraynosqlB = split("\", \"", $arraynosqlA[$#arraynosqlA]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/^\s+|\s+$//g; $_ =~ s/NULL//g;}
+						push my @row, (@arraynosqlA[0..2], @arraynosqlB[0..1], $arraynosqlA[3], $arraynosqlB[2], @arraynosqlB[3..7], $arraynosqlA[4],@arraynosqlB[8..$#arraynosqlB]);
+						PROCESS(@row);
+					}
+				} else {
+					`$syntax 2>> $efile`;
+					open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+					foreach (@nosqlcontent) {
+						chomp; $count++;
+						my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+						my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+						my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+						my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+						push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+						$SAMPLE{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+					}
 				}
 			} else {
-				`$syntax 2>> $efile`;
-				open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
-				foreach (@nosqlcontent) {
-					chomp; $count++;
-					my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-					my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-					my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-					my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
-					push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-					$SAMPLE{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				if ($vcf) {
+					$sth = $dbh->prepare($vcfsyntax);
+					$sth->execute or die "SQL Error: $DBI::errstr\n";
+					while (my @row = $sth->fetchrow_array() ) {
+						$count++;
+						no warnings 'uninitialized';
+						foreach (@row) { if ($_ =~ /^-/){ $row[6] = ''; } }
+						PROCESS(@row);
+					}
 				}
+			} #toggle between mysql and fastbit
+			unless ($vcf) {
 				foreach my $aa (sort {$a cmp $b || $a <=> $b} keys %SAMPLE){
 					foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
 						foreach my $cc (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa}{$bb} }){
@@ -462,19 +527,31 @@ if ($dbdata){ #if db 2 data mode selected
 			foreach (@genes){ $_ =~ s/^\s+|\s+$//g; $gene .= $_.","; } chop $gene;
 			$verbose and printerr "NOTICE:\t Gene(s) selected: '$gene'\n";
 			foreach (@genes) {
-				my $gsyntax = $syntax." and genename like '%".uc($_)."%'\" -o $nosql";
-				`$gsyntax 2>> $efile`;
-				open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
-				if ($#nosqlcontent < 0) {$status .= "NOTICE:\t No variants are associated with gene '$_' \n";}
-				else {
-					foreach (@nosqlcontent) {
-						chomp; $count++;
-						my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-						my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-						push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-						$SAMPLE{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				#if ($found) { 
+				#	my $gsyntax = $syntax." and genename like '%".uc($_)."%'\" -o $nosql";
+				#	`$gsyntax 2>> $efile`; print $gsyntax;
+				#	open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+				#	if ($#nosqlcontent < 0) {$status .= "NOTICE:\t No variants are associated with gene '$_' \n";}
+				#	else {
+				#		foreach (@nosqlcontent) {
+				#			chomp; $count++;
+				#			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+				#			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+				#			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+				#			$SAMPLE{$_}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				#		}
+				#	}
+				#} else {
+					my $newcount = 0;
+					$syntax = "call usp_vgene(\"".$organism."\",\"".$_."\")"; 
+					$sth = $dbh->prepare($syntax);
+					$sth->execute or die "SQL Error: $DBI::errstr\n";
+					while (my @row = $sth->fetchrow_array() ) {
+					 	$count++; $newcount++;
+						$SAMPLE{$_}{$row[0]}{$row[1]}{$row[5]} = [@row];
 					}
-				}
+					unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with gene '$_'\n"; } #if gene is in the database
+				#} #if not in nosql
 			}
 			foreach my $aa (keys %SAMPLE){ #getting content to output
 				foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
@@ -510,8 +587,9 @@ if ($dbdata){ #if db 2 data mode selected
 						foreach my $position (sort {$a<=> $b} keys %{$NEWREF{$chrom}}) {
 							foreach my $ref (sort {$a cmp $b} keys %{$NEWREF{$chrom}{$position}}) {
 								print OUT "chr",$chrom,"\t",$position,"\t",$NEWDBSNP{$chrom}{$position}{$ref},"\t",$NEWREF{$chrom}{$position}{$ref},"\t";
-								print OUT $NEWALT{$chrom}{$position}{$ref},"\t",$NEWQUAL{$chrom}{$position}{$ref},"\tPASS\tCSQ=",$NEWCSQ{$chrom}{$position}{$ref};
-								print OUT ";MTD=",$MTD{$chrom}{$position}{$ref},"\tGT\t",$NEWGT{$chrom}{$position}{$ref};
+								print OUT $NEWALT{$chrom}{$position}{$ref},"\t",$NEWQUAL{$chrom}{$position}{$ref},"\tPASS\t";
+								if (exists $NEWCSQ{$chrom}{$position}{$ref}) { print OUT "CSQ=",$NEWCSQ{$chrom}{$position}{$ref}, ";"; }
+								print OUT "MTD=",$MTD{$chrom}{$position}{$ref},"\tGT\t",$NEWGT{$chrom}{$position}{$ref};
 								print OUT "\n";
 							}
 						}
@@ -659,35 +737,39 @@ sub VERDICT {
 
 sub HEADER {
 #header information
+	no warnings 'uninitialized';
 	my ($organism, $chrheader) = (@_);
   my $headerinfo = <<"ENDOFFILE";
 ##fileformat=VCFv4.1
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##organism="$organism" chromosome="$chrheader"
+##DBmodel="TransAtlasDB vcf export" organism="$organism" chromosome="$chrheader"
 ##INFO=<ID=MTD,Number=.,Type=String,Description="Metadata information from TransAtlasDB. Format:Library|Tissue|Quality|Genotype">
-##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations from Ensembl VEP. Format:Consequence|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|Protein_position|Amino_acids|Codons|Existing_variation|VARIANT_CLASS">
-#CHROM    POS    ID    REF    ALT    QUAL    FILTER    INFO    FORMAT    Label
+$consequenceheader#CHROM    POS    ID    REF    ALT    QUAL    FILTER    INFO    FORMAT    Label
 ENDOFFILE
   return $headerinfo;
 }
 
 sub PROCESS {
-	my @line = @_;
-	my $joint = "$line[6]|$line[7]|$line[8]|$line[9]|$line[10]|$line[11]|$line[12]|$line[13]|$line[14]|$line[15]|$line[16]";
+	my @line = @_; 
 	$line[1] = substr($line[1],3);
 	$TISSUE{$line[0]} = lc($line[18]);
 	$REF{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[3];
 	$ALT{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[4];
 	$QUAL{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[5];
-	if (exists $CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}) {
+	if ($line[6]) {
+		$consequenceheader = '##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations.'."\n".'Format:Consequence|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|Protein_position|Amino_acids|Codons|Existing_variation|VARIANT_CLASS">'."\n";
+		no warnings 'uninitialized';
+		my $joint = "$line[6]|$line[7]|$line[8]|$line[9]|$line[10]|$line[11]|$line[12]|$line[13]|$line[14]|$line[15]|$line[16]";
+		if (exists $CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}) {
 		$number{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $number{$line[1]}{$line[2]}{$line[3]}{$line[0]}++;
 		$ODACSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}{$number{$line[1]}{$line[2]}{$line[3]}{$line[0]}} = $joint;
 		$CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]} =  "$CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]},$joint";
-	}
-	else {
-		$number{$line[1]}{$line[2]}{$line[3]}{$line[0]}= 1;
-		$ODACSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}{1} = $joint;
-		$CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]} =  $joint;
+		}
+		else {
+			$number{$line[1]}{$line[2]}{$line[3]}{$line[0]}= 1;
+			$ODACSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}{1} = $joint;
+			$CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]} =  $joint;
+		}
 	}
 	my $verdict = undef;
 	if ($line[17] =~ /^homozygous/){
@@ -708,7 +790,9 @@ sub PROCESS {
 	else {
 		$GT{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $verdict;
 	}
-	if (length($line[15])<1){$line[15]='.';}
+	no warnings 'uninitialized';
+	if (length $line[15] < 1){ $line[15] = '.' ;}
+	#if ($line[15]) { if (length $line[15] < 1){ $line[15] = '.' ;} } else { $line[15] = '.' ; }
 	if (exists $DBSNP{$line[1]}{$line[2]}{$line[3]}{$line[0]}) {
 		unless ($DBSNP{$line[1]}{$line[2]}{$line[3]}{$line[0]} =~ $line[15]){
 			die "DBSNPs information is different: $line[15] is not ",$DBSNP{$line[1]}{$line[2]}{$line[3]}{$line[0]},"contact $AUTHOR\n";
@@ -757,12 +841,12 @@ sub SORTER {
         my @refarray = split(",", $subref{$chrom}{$position}{$ref});
         foreach (sort {$a cmp $b} @refarray) {$refhash{$_} = $_;}
         foreach (sort {$a cmp $b} keys %refhash){ $refkey .= $_.","; } 
-        $NEWREF{$chrom}{$position}{$ref} = substr ($refkey, 1, -1); 
+        $NEWREF{$chrom}{$position}{$ref} = substr ($refkey, 0, -1);
         
         my @altarray = split(",", $subalt{$chrom}{$position}{$ref});
         foreach (sort {$a cmp $b} @altarray) {$althash{$_} = $_;}
         foreach (sort {$a cmp $b} keys %althash){ $altkey .= $_.","; }
-        $NEWALT{$chrom}{$position}{$ref} = substr ($altkey, 1,-1);
+        $NEWALT{$chrom}{$position}{$ref} = substr ($altkey, 0,-1);
       }
     }
   }
@@ -901,7 +985,7 @@ sub MTD {
 
 =head1 SYNOPSIS
 
- tad-export.pl [arguments] [-o [-vcf] output-filename]
+ tad-export.pl [arguments] [-o <-vcf> output-filename]
 
  Optional arguments:
         -h, --help                      print help message
@@ -909,37 +993,61 @@ sub MTD {
         -v, --verbose                   use verbose output
 
 	Arguments to retrieve database information
-            --query			import metadata file provided
-            --db2data                	import data files from gene expression profiling and/or variant analysis
+            --query			perform sql queries directly to the mysql database
+            --db2data                	perform configured modules 
 
         Arguments for db2data
-    	    -x, --excel         	metadata will import the faang excel file provided (default)
-	    -t, --tab         		metadata will import the tab-delimited file provided
+    	    --avgfpkm			average expression (fpkm) values of specified genes
+	    --genexp			expression (fpkm) values of genes across selected samples
+	    --chrvar			chromosomal vriant distribution across selected samples
+	    --varanno			variants with annotation information in genes or chromosomal region. 
  
-        Arguments to export
-            -o, --output	     		data2db will import only the alignment file [TopHat2] and expression profiling files [Cufflinks] (default)
-            --vcf           	data2db will import only the alignment file [TopHat2] and variant analysis files [.vcf]
-
-
+        More Arguments for db2data
+	    --species			Organism Name (required)
+	    --gene			Gene Name(s)
+	    --tissue			Tissue Name(s) [ multiple tissues should be separated by comma ]
+	    -sample, --samples		Sample ID(s) [ multiple sample(s) should be separated by comma ]
+	    --chromosome		Chromosome(s) [ multiple chromosome(s) should be separated by comma ]
+	    --region			Chromosomal region (e.g 1-1000000 or 1000000)
+			
+	Arguments to export
+            -o, --output	     	output results in file name specified
+            --vcf           		output 'varanno' results in vcf format 
 
  Function: export data from the database
 
- Example: #import metadata files
-          tad-export.pl --db2data --varanno --species 'Gallus gallus' -o output.txt
-					tad-export.pl --db2data --varanno --species 'Gallus gallus' -o -vcf output.txt
-					tad-import.pl -metadata -v example/metadata/FAANG/FAANG_GGA_UD.xlsx
-          tad-import.pl -metadata -v -t example/metadata/TEMPLATE/metadata_GGA_UD.txt
- 	   
-	  #import transcriptome analysis data files
-	  tad-import.pl -data2db example/sample_sxt/GGA_UD_1004/
-	  tad-import.pl -data2db -all -v example/sample_sxt/GGA_UD_1014/
-	  tad-import.pl -data2db -variant -annovar example/sample_sxt/GGA_UD_1004/
-		
-		#delete previously imported data data
-	  tad-import.pl -delete GGA_UD_1004
+ Example: #execute "show tables" using -query
+	  tad-export.pl -query 'show tables'
+	  tad-export.pl -query 'show tables' -o tables.txt
+					
+	  #execute "select * from VarSummary" using -query
+	  tad-export.pl -query 'select * from VarSummary'
+	  tad-export.pl -query 'select * from VarSummary' -o output.txt
+					
+	  #all variants for organism Gallus Gallus
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus'
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus' -o output.txt
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus' -o -vcf output.vcf
+					
+	  #variants and annotation information of genes 'OPTN' and 'GDF' in Gallus gallus organism
+          tad-export.pl --db2data --varanno --species 'Gallus gallus' --gene 'OPTN,GDF'
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus' --gene 'OPTN,GDF' -o output.txt
+					
+	  #variants and annotation information of chromosomes 'chr1,chr2' in Gallus gallus organism
+          tad-export.pl --db2data --varanno --species 'Gallus gallus' --chromosome 'chr1'
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus' --chromosome 'chr1' -o output.txt
+	  tad-export.pl --db2data --varanno --species 'Gallus gallus' --chromosome 'chr1' -o -vcf vcfoutput.vcf
+					
+	  #average fpkm values for genes 'OPTN' and 'GDF' in all tissues of Gallus gallus organism
+          tad-export.pl --db2data --avgfpkm --species 'Gallus gallus' --gene 'OPTN,GDF'
+	  tad-export.pl --db2data --avgfpkm --species 'Gallus gallus' --gene 'OPTN,GDF' -o output.txt
+					
+	  #average fpkm values for genes 'OPTN' and 'GDF' in the pituitary gland of Gallus gallus organism
+	  tad-export.pl --db2data --avgfpkm --species 'Gallus gallus' --gene 'OPTN,GDF' --tissue 'pituitary gland'
+	  tad-export.pl --db2data --avgfpkm --species 'Gallus gallus' --gene 'OPTN,GDF' --tissue 'pituitary gland' -o output.txt
 
 
- Version: $Date: 2016-10-28 15:50:08 (Fri, 28 Oct 2016) $
+ Version: $Date: 2016-12-05 15:50:08 (Mon, 05 Dec 2016) $
 
 =head1 OPTIONS
 
@@ -956,51 +1064,67 @@ print the complete manual of the program.
 =item B<--verbose>
 
 use verbose output.
+						
+=item B<--query>
 
-=item B<--metadata>
+perform sql queries directly to the mysql database.
 
-import metadata file provided.
-Metadata files accepted is either a tab-delmited (suffix: '.txt') file 
-or FAANG biosamples excel (suffix: '.xls') file
+=item B<--db2data>
 
-=item B<--tab>
+perform pre-configured query modules.
 
-specify the file provided is in tab-delimited format (suffix: '.txt'). (default)
+=item B<--avgfpkm>
 
-=item B<--excel>
+view average, maximum and minumum expression fpkm values of genes specified.
 
-specify the file provided is an excel spreadsheet (suffix: '.xls'/'.xlsx')
+=item B<--genexp>
 
-=item B<--data2db>
+view gene expression fpkm values of genes across selected samples.
 
-import data files from gene expression profiling analysis 
-derived from using TopHat2 and Cufflinks. Optionally 
-import variant file (see: variant file format) and 
-variant annotation file from annovar or vep.
+=item B<--chrvar>
+
+provides summary counts of the different variant types per chromosome for each sample.
+
+=item B<--varanno>
+
+provides variants with respective annotation information based on genes or chromosomes.
+
+=item B<--species>
+
+species or organism name.(required)
 
 =item B<--gene>
 
-specify only expression files will be imported. (default)
+gene name, multiple gene names can be specified (separated by commas).
 
-=item B<--variant>
+=item B<--tissue>
 
-specify only variant files will be imported.
+tissue name, multiple tissues can be specified (separated by commas).
 
-=item B<--all>
+=item B<--sample>
 
-specify both expression and variant files will be imported.
+sample id name, multiple samples can be specified (separated by commas).
 
-=item B<--vep>
+=item B<--chromosome>
 
-specify annotation file provided was generated using Ensembl Variant Effect Predictor (VEP).
+chromosome name, multiple chromosomes can be specified (separated by commas).
 
-=item B<--annovar>
+=item B<--region>
 
-specify annotation file provided was predicted using ANNOVAR.
+chromosomal location. Chromosomal location can either be a position and a
+3000bp region around that position will be provided, or a region range.
+(e.g specifying 1000000 will provide results from 985000-1015000 or
+specifying '985000-1015000' will provide results from the specified region)
 
-=item B<--delete>
+=item B<--output>
 
-delete previously imported information based on sampleid.
+output results in tab-delimited format to filename provided.
+Suffix of filename is changed to .txt where applicable.
+
+=item B<--vcf>
+
+output file will be in variant call format. Suffix of filename is
+changed to .vcf where applicable. The vcf file can be visualized using UCSC genome browser. 
 
 =back
 
@@ -1052,13 +1176,13 @@ start, end, reference allele, observed allele, other information. The other
 information can be anything (for example, it may contain sample identifiers for
 the corresponding variant.) An example is shown below:
 
-        16      49303427        49303427        C       T       rs2066844       R702W (NOD2)
-        16      49314041        49314041        G       C       rs2066845       G908R (NOD2)
-        16      49321279        49321279        -       C       rs2066847       c.3016_3017insC (NOD2)
-        16      49290897        49290897        C       T       rs9999999       intronic (NOD2)
-        16      49288500        49288500        A       T       rs8888888       intergenic (NOD2)
-        16      49288552        49288552        T       -       rs7777777       UTR5 (NOD2)
-        18      56190256        56190256        C       T       rs2229616       V103I (MC4R)
+        chr16      49303427        C       T       rs2066844       R702W (NOD2)
+        chr16      49314041        G       C       .       G908R (NOD2)
+        chr16      49321279        -       C       rs2066847       c.3016_3017insC (NOD2)
+        chr16      49290897        C       T       rs9999999       intronic (NOD2)
+        chr16      49288500        A       T       rs8888888       intergenic (NOD2)
+        chr16      49288552        T       -       rs7777777       UTR5 (NOD2)
+        chr18      56190256        C       T       .       V103I (MC4R)
 
 =item * B<invalid input>
 

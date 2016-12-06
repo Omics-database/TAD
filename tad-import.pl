@@ -477,7 +477,7 @@ if ($datadb) {
       			#toggle options
 	      		unless ($variant) {
 		        	GENE_INFO($dataid);
-			        $sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
+			        $sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid' and status ='done'"); $sth->execute(); $found = $sth->fetch();
 							unless ($found) {
 								my $genecount = 0; $genecount = $dbh->selectrow_array("select count(*) from GenesFpkm where sampleid = '$dataid'");
 				        unless ($genes == $genecount) { # processing for GenesFpkm
@@ -503,7 +503,7 @@ if ($datadb) {
 				  			$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
 							}
 							if ($all){
-          				my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid'");
+          				my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
           				unless ($variantstatus){ #checking if completed in VarSummary table
             					$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
 					        $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
@@ -556,7 +556,7 @@ if ($datadb) {
         			} #end if "all" option
 	      		} #end unless default option is specified 
       			else { #variant option selected
-        			my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid'");
+        			my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
         			unless ($variantstatus){ #checking if completed in VarSummary table
 					$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
 			          	$sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
@@ -642,7 +642,7 @@ if ($delete){
 		print "--------------------------------------------------------------------------\n";
 		print "Choose which details you want removed from the database (multiple option separated by comma) ? ";
 		chomp (my $decision = (<>)); print "\n";
-		if ($decision >=0) {
+		if (length $decision >=0) {
 			my @allverdict = split(",",$decision);
 			foreach my $verdict (sort {$b<=>$a} @allverdict) {
 				if (exists $KEYDELETE{$verdict}) {
@@ -655,7 +655,7 @@ if ($delete){
 						$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						printerr " Done\n";
 					}
-					if ($KEYDELETE{$verdict} =~ /^Genes/ || $alldelete ==1 ) {
+					if ($KEYDELETE{$verdict} =~ /^Gene/ || $alldelete ==1 ) {
 						printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
 						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						$sth = $dbh->prepare("delete from IsoformsFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
@@ -786,8 +786,8 @@ sub GENE_INFO { #subroutine for getting gene information
 		$sth ->execute($_[0], $deletions, $insertions, $junctions, $isoforms, $genes, $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";; 
 	} else {
 		printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on \n";
-		$sth = $dbh->prepare("select status from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
-		if ($found) {
+		$sth = $dbh->prepare("select status from GeneStats where sampleid = '$_[0]' and status ='done'"); $sth->execute(); $found = $sth->fetch();
+		if ($found) { 
 			$additional .=  "Optional: To delete $_[0] from GeneStats table ; Execute: tad-import.pl -delete $_[0] \n";
 		}
 	}

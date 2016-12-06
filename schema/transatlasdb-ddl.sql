@@ -165,19 +165,33 @@ CREATE PROCEDURE `usp_gdtissue`(in gname varchar(45), in tissue varchar(45), in 
 /* Create a stored procedure to get fpkm details of a gene based on tissue and organism */
 /* call usp_gdtissue("ASB6", "pituitary gland", "Gallus gallus"); */
 -- -----------------------------------------------------
+-- procedure usp_vchrposition
+-- -----------------------------------------------------
+DROP procedure IF EXISTS `usp_vchrposition`;
+CREATE PROCEDURE `usp_vchrposition`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select `a`.`chrom` `chrom`, `a`.`position` `position`, `a`.`refallele` `refallele`, `a`.`altallele` `altallele`, group_concat(distinct `a`.`variantclass`) `variantclass`,`a`.`consequence` `consequence`, group_concat(distinct `a`.`genename`) `genename`, group_concat(distinct `a`.`dbsnpvariant`) `dbsnpvariant`, group_concat(distinct `a`.`sampleid`) AS `sampleid`  from `vw_vanno` `a` join `vw_sampleinfo` `b` on `a`.`sampleid` = `b`.`sampleid` where `b`.`organism` = specie and `a`.`chrom` = chrom and `a`.`position` between vstart and vend group by `a`.`chrom`, `a`.`position`, `a`.`consequence` order by `a`.`chrom`, `a`.`position`, `a`.`consequence`, `a`.`genename`, `a`.`sampleid`;
+/* Create a stored procedure to get variant info after specifying chromosomal location */
+/* call usp_vchrposition("Gallus gallus", "chr1", "57800", "60000"); */
+-- -----------------------------------------------------
 -- procedure usp_vchrom
 -- -----------------------------------------------------
 DROP procedure IF EXISTS `usp_vchrom`;
-CREATE PROCEDURE `usp_vchrom`(in specie varchar(45), in chrom varchar(45), in vstart int(20), in vend int(20)) select `a`.`chrom` `chrom`, `a`.`position` `position`, `a`.`refallele` `refallele`, `a`.`altallele` `altallele`, group_concat(distinct `a`.`variantclass`) `variantclass`,`a`.`consequence` `consequence`, group_concat(distinct `a`.`genename`) `genename`, group_concat(distinct `a`.`dbsnpvariant`) `dbsnpvariant`, group_concat(distinct `a`.`sampleid`) AS `sampleid`  from `vw_vanno` `a` join `vw_sampleinfo` `b` on `a`.`sampleid` = `b`.`sampleid` where `b`.`organism` = specie and `a`.`chrom` = chrom and `a`.`position` between vstart and vend group by `a`.`chrom`, `a`.`position`, `a`.`consequence` order by `a`.`chrom`, `a`.`position`, `a`.`consequence`, `a`.`genename`, `a`.`sampleid`;
-/* Create a stored procedure to get variant info after specifying chromosomal location */
-/* call usp_vchrom("Gallus gallus", "chr1", "57800", "60000"); */
+CREATE PROCEDURE `usp_vchrom`(in specie varchar(45), in chrom varchar(45)) select `a`.`chrom` `chrom`, `a`.`position` `position`, `a`.`refallele` `refallele`, `a`.`altallele` `altallele`, group_concat(distinct `a`.`variantclass`) `variantclass`,`a`.`consequence` `consequence`, group_concat(distinct `a`.`genename`) `genename`, group_concat(distinct `a`.`dbsnpvariant`) `dbsnpvariant`, group_concat(distinct `a`.`sampleid`) AS `sampleid`  from `vw_vanno` `a` join `vw_sampleinfo` `b` on `a`.`sampleid` = `b`.`sampleid` where `b`.`organism` = specie and `a`.`chrom` = chrom group by `a`.`chrom`, `a`.`position`, `a`.`consequence` order by `a`.`chrom`, `a`.`position`, `a`.`consequence`, `a`.`genename`, `a`.`sampleid`;
+/* Create a stored procedure to get variant info after specifying chromosome */
+/* call usp_vchrom("Gallus gallus", "chr1"); */
 -- -----------------------------------------------------
 -- procedure usp_vgene
 -- -----------------------------------------------------
 DROP procedure IF EXISTS `usp_vgene`;
 CREATE PROCEDURE `usp_vgene`(in specie varchar(45), in gname varchar(45)) select `a`.`chrom` `chrom`, `a`.`position` `position`, `a`.`refallele` `refallele`, `a`.`altallele` `altallele`, group_concat(distinct `a`.`variantclass`) `variantclass`,`a`.`consequence` `consequence`, group_concat(distinct `a`.`genename`) `genename`, group_concat(distinct `a`.`dbsnpvariant`) `dbsnpvariant`, group_concat(distinct `a`.`sampleid`) AS `sampleid`  from `vw_vanno` `a` join `vw_sampleinfo` `b` on `a`.`sampleid` = `b`.`sampleid` where `b`.`organism` = specie and `a`.`genename` like CONCAT('%', TRIM(IFNULL(gname, '')), '%')  group by `a`.`chrom`, `a`.`position`, `a`.`consequence` order by `a`.`chrom`, `a`.`position`, `a`.`consequence`, `a`.`genename`, `a`.`sampleid`;
 /* Create a stored procedure to get variant info after specifying genename */
-/* call usp_vgene("Gallus gallus", "ND"); */ 
+/* call usp_vgene("Gallus gallus", "ND"); */
+-- -----------------------------------------------------
+-- procedure usp_vall
+-- -----------------------------------------------------
+DROP procedure IF EXISTS `usp_vall`;
+CREATE PROCEDURE `usp_vall`(in specie varchar(45)) select `a`.`chrom` `chrom`, `a`.`position` `position`, `a`.`refallele` `refallele`, `a`.`altallele` `altallele`, group_concat(distinct `a`.`variantclass`) `variantclass`,`a`.`consequence` `consequence`, group_concat(distinct `a`.`genename`) `genename`, group_concat(distinct `a`.`dbsnpvariant`) `dbsnpvariant`, group_concat(distinct `a`.`sampleid`) AS `sampleid`  from `vw_vanno` `a` join `vw_sampleinfo` `b` on `a`.`sampleid` = `b`.`sampleid` where `b`.`organism` = specie group by `a`.`chrom`, `a`.`position`, `a`.`consequence` order by `a`.`chrom`, `a`.`position`, `a`.`consequence`, `a`.`genename`, `a`.`sampleid`;
+/* Create a stored procedure to get variant info after only species */
+/* call usp_vall("Gallus gallus"); */
 -- -----------------------------------------------------
 -- View `vw_sampleinfo`
 -- -----------------------------------------------------
@@ -214,3 +228,12 @@ CREATE TABLE `vw_vanno` (`chrom` INT, `position` INT, `refallele` INT, `altallel
 DROP VIEW IF EXISTS `vw_vanno` ;
 DROP TABLE IF EXISTS `vw_vanno`;
 CREATE VIEW `vw_vanno` AS select `a`.sampleid, `a`.`chrom` AS `chrom`,`a`.`position` AS `position`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`a`.`variantclass` AS `variantclass`,ifnull(`b`.`consequence`,'-') AS `consequence`,`b`.`genename` AS `genename`,`a`.`dbsnpvariant` AS `dbsnpvariant` from (`varresult` `a` left outer join `varanno` `b` on(((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) group by `a`.`sampleid`, `a`.`chrom`,`a`.`position`,`b`.`consequence`,`b`.`genename`;
+-- -----------------------------------------------------
+-- View `vw_vvcf`
+-- -----------------------------------------------------
+DROP VIEW IF EXISTS `vw_vvcf`;
+DROP TABLE IF EXISTS `vw_vvcf`;
+CREATE TABLE `vw_vvcf` (`sampleid` INT, `chrom` INT, `position` INT, `refallele` INT, `altallele` INT, `quality` INT, `consequence` INT, `genename` INT, `geneid` INT, `feature` INT, `transcript` INT, `genetype` INT, `proteinposition` INT, `aachange` INT, `codonchange` INT, `dbnpvariant` INT, `variantclass` INT, `zygosity` INT, `tissue` INT, `organism` INT);
+DROP VIEW IF EXISTS `vw_vvcf` ;
+DROP TABLE IF EXISTS `vw_vvcf`;
+CREATE VIEW `vw_vvcf` AS select `a`.`sampleid` as `sampleid`, `a`.`chrom` AS `chrom`,`a`.`position` AS `position`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`a`.`quality` as `quality`, `b`.`consequence` as `consequence`, `b`.`genename` AS `genename`,`b`.`geneid` AS `geneid`,`b`.`feature` AS `feature`,`b`.`transcript` AS `transcript`,`b`.`genetype` AS `genetype`,`b`.`proteinposition` AS `proteinposition`,`b`.`aachange` AS `aachange`,`b`.`codonchange` AS `codonchange`,`a`.`dbsnpvariant` AS `dbsnpvariant`,`a`.`variantclass` AS `variantclass`,`a`.`zygosity` AS `zygosity`,`c`.`tissue` AS `tissue`, `c`.`organism` AS `organism` from ((`varresult` `a` left outer join `varanno` `b` on (((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) join `vw_sampleinfo` `c` on ((`a`.`sampleid` = `c`.`sampleid`))) order by `a`.`sampleid`, `a`.`chrom`,`a`.`position`, `b`.`consequence`;

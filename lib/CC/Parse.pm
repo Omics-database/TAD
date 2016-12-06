@@ -678,14 +678,14 @@ sub VARANNO {
 	printerr colored("G.\tGENE ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
 	$dbh = $_[0];
 	$fastbit = $_[1];	
-	my ($genes, %ORGANISM, %GENEVAR, @genes, $indent, $species);
+	my ($genes, $genes2, %ORGANISM, %GENEVAR, @genes, $indent, $species, $vfound);
 
 	$count = 0;
-	$sth = $dbh->prepare("select distinct a.organism from vw_sampleinfo a join VarSummary b on a.sampleid = b.sampleid where b.annversion is not null"); #get organism with annotation information
+	$sth = $dbh->prepare("select distinct a.organism from vw_sampleinfo a join VarSummary b on a.sampleid = b.sampleid"); #get organism with annotation information
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
 	my $number = 0;
 	while (my $row = $sth->fetchrow_array() ) {
-		$number++;
+		$number++; #print "myrow $row\n\n";
 		$ORGANISM{$number} = $row;
 	}
 	if ($number > 1) {
@@ -711,37 +711,49 @@ sub VARANNO {
 		$genes = undef;
 		printerr "\nGENE(S) selected : $verdict\n";
 		@genes = split(",", $verdict);
-		foreach my $gene (@genes){
-			
-			#using fastbit
-			my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
-			`$syntax 2>> $_[2]`;
-			open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
-			if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with gene '$gene' \n";}
-			else {
-				foreach (@nosqlcontent) {
-					chomp;
-					$count++;
-					my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-					my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-					my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-					my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
-					push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-					$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
-				}
-				$genes .= $gene.",";
-			}
-			
-			##using mysql
-			# my $syntax = "call usp_vgene(\"".$species."\",\"".$gene."\")"; 
-			# $sth = $dbh->prepare($syntax);
-			# $sth->execute or die "SQL Error: $DBI::errstr\n";
-			# while (my @row = $sth->fetchrow_array() ) {
-			# 	$count++;
-			# 	$GENEVAR{$gene}{$row[0]}{$row[1]} = [@row];
-			# }
-			
-		} chop $genes;
+		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null order by a.date desc limit 1");$sth->execute(); my $found =$sth->fetch();
+		$sth = $dbh->prepare("select annversion from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where annversion is not null and b.organism = '$species' order by a.date desc limit 1");
+		$sth->execute(); $vfound =$sth->fetch();
+		unless ($vfound) {
+			printerr "NOTICE:\t There are no gene-associated variant annotation for '$species', import using using tad-import.pl\n";
+		} else {
+			foreach my $gene (@genes){
+				# this doesnt work for like statements.
+				#if ($found) {
+				#	#using fastbit
+				#	my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), 	group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
+				#	`$syntax 2>> $_[2]`;
+				#	open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
+				#	if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with gene '$gene'\n";}
+				#	else {
+				#		foreach (@nosqlcontent) {
+				#			chomp;
+				#			$count++;
+				#			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+				#			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+				#			my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+				#			my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+				#			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+				#			$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				#		}
+				#		$genes2 .= $gene.",";
+				#	}
+				#	$genes .= $gene.",";
+				#} else {
+					#using mysql
+					my $newcount = 0;
+					my $syntax = "call usp_vgene(\"".$species."\",\"".$gene."\")"; 
+					$sth = $dbh->prepare($syntax);
+					$sth->execute or die "SQL Error: $DBI::errstr\n";
+					while (my @row = $sth->fetchrow_array() ) {
+						$count++; $newcount++;
+					 	$GENEVAR{$gene}{$row[0]}{$row[1]}{$row[5]} = [@row];
+					}
+					if ($newcount > 0) { $genes2 .= $gene.","; } else { printerr "NOTICE:\t No variants are associated with gene '$gene'\n"; } #if gene is in the database
+					$genes .= $gene.",";
+				#}
+			} chop $genes; chop $genes2;
+		}
 	} elsif ($number == 0){
 		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
 	} else {
@@ -778,36 +790,36 @@ sub VARANNO {
 	} else {
 		$indent = "Only";
 	}
-
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print display
-	
-	if ($count >0 ) {
-		printerr color('bright_black'); #additional procedure
-		printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes' \n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes' --output output.txt\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr color('reset'); printerr "\n\n";
-	} else {
-		printerr "NOTICE:\t No Results based on search criteria: $genes\n";
+	if ($vfound) {
+		printerr colored("$precount out of $count results displayed", 'underline'), "\n";
+		printerr $t-> render, "\n\n"; #print display
+		
+		if ($count >0 ) {
+			printerr color('bright_black'); #additional procedure
+			printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+			printerr "--------------------------------------------------------------------------\n";
+			printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
+			printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+			printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' \n";
+			printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' --output output.txt\n";
+			printerr "--------------------------------------------------------------------------\n";
+			printerr "--------------------------------------------------------------------------\n";
+			printerr color('reset'); printerr "\n\n";
+		} else {
+			printerr "NOTICE:\t No Results based on search criteria: $genes\n";
+		}
 	}
 }
 
 sub CHRANNO {
 	open(LOG, ">>", $_[2]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n";
-	printerr colored("H.\tCHROMSOMAL REGION ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
+	printerr colored("H.\tCHROMSOMAL REGIONS WITH VARIANTS & ANNOTATION.", 'bright_red on_black'),"\n";
 	$dbh = $_[0];
 	$fastbit = $_[1];
 	my ($chromosome, %ORGANISM, %CHRVAR, %CHROM, @chromosomes, $species,$indent,$region);
-	
 	my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where ";
 	$count = 0;
-	$sth = $dbh->prepare("select distinct a.organism from vw_sampleinfo a join VarSummary b on a.sampleid = b.sampleid where b.annversion is not null"); #get organism with annotation information
+	$sth = $dbh->prepare("select distinct a.organism from vw_sampleinfo a join VarSummary b on a.sampleid = b.sampleid"); #get organism with annotation information
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
 	my $number = 0;
 	while (my $row = $sth->fetchrow_array() ) {
@@ -830,8 +842,9 @@ sub CHRANNO {
 		$species = $ORGANISM{$verdict};
 		$syntax .= "organism='$species'";
 		printerr "\nORGANISM : $species\n";
+		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null order by a.date desc limit 1");$sth->execute(); my $found =$sth->fetch();
 		$verdict = undef;
-		$sth = $dbh->prepare("select distinct chrom from VarAnno where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
+		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
 		$number = 0;
 		while (my $row = $sth->fetchrow_array() ) {
@@ -863,15 +876,28 @@ sub CHRANNO {
 				} chop $chromosome;
 				printerr "\nCHROMOSOME(S) selected : $chromosome\n";
 				@chromosomes = split(",", $chromosome);
-				foreach (@chromosomes) { $syntax .= "chrom = '$_' or "; } $syntax = substr($syntax, 0, -3);
+				if ($found) {foreach (@chromosomes) { $syntax .= "chrom = '$_' or "; } $syntax = substr($syntax, 0, -3); } # if the content has nosql component
+				else {
+					foreach (@chromosomes) {
+						$syntax = "call usp_vchrom(\"".$species."\",\"".$_."\")";
+						$sth = $dbh->prepare($syntax);
+						$sth->execute or die "SQL Error: $DBI::errstr\n";
+						while (my @row = $sth->fetchrow_array() ) {
+							$count++;
+							if ($row[5] =~ /^-/){ $row[5] = ''; }
+							$CHRVAR{$row[0]}{$row[1]}{$row[5]} = [@row];
+						}
+						unless ($count>0) {printerr "NOTICE:\t No variants are associated with chromosome '$_' \n";}
+					}	
+				}
 			} else {
+				my ($start, $stop) = (0,0);
 				$_ = int($chromosomes[0]);
 				if ($_ >= 1 && $_ <= $number) {
-					$chromosome .= $CHROM{$_};
+					$chromosome = $CHROM{$_};
 				} else {
 					printerr "ERROR:\tChromosome  number was not valid \n"; next MAINMENU;
 				}
-				#$chromosome = $CHROM{$chromosomes[0]};
 				printerr "\nCHROMOSOME(S) selected : $chromosome\n";
 				$syntax .= "chrom = '$chromosome' and ";
 				print "\nSpecify region of interest (eg: 10000-500000) or 0 for the entire chromosome. ? "; #ask for region
@@ -879,37 +905,71 @@ sub CHRANNO {
 				$verdict =~ s/\s+//g;
 				if ($verdict) {
 					if ($verdict =~ /\-/) {
-						my @region = split("-", $verdict);
-						$syntax .= "position between $region[0] and $region[1] ";
-						$region = "--region ".$region[0]."-".$region[1];
-						printerr "\nREGION specified : between $region[0] and $region[1]\n";
+						($start, $stop) = split("-", $verdict);
+						$syntax .= "position between $start and $stop ";
+						$region = "--region ".$start."-".$stop;
+						printerr "\nREGION specified : between $start and $stop\n";
 					} else {
-						my $start = $verdict-1500;
-						my $stop = $verdict+1500;
+						$start = $verdict-1500; $stop = $verdict+1500;
 						$syntax .= "position between ". $start." and ". $stop;
 						$region = "--region ".$start."-".$stop;
 						printerr "\nREGION specified : 3000bp region of $verdict\n";
 					}
-				}
+					unless($found) {
+						$syntax = "call usp_vchrposition(\"".$species."\",\"".$chromosome."\",\"".$start."\",\"".$stop."\")";
+						$sth = $dbh->prepare($syntax);
+						$sth->execute or die "SQL Error: $DBI::errstr\n";
+						while (my @row = $sth->fetchrow_array() ) {
+							$count++;
+							if ($row[5] =~ /^-/){ $row[5] = ''; }
+							$CHRVAR{$row[0]}{$row[1]}{$row[5]} = [@row];
+						}
+						unless ($count>0) {printerr "NOTICE:\t No variants are associated with chromosomal location '$chromosome:$start\-$stop' \n";}
+					}
+				} else {
+					unless($found) {
+						$syntax = "call usp_vchrom(\"".$species."\",\"".$chromosome."\")";
+						$sth = $dbh->prepare($syntax);
+						$sth->execute or die "SQL Error: $DBI::errstr\n";
+						while (my @row = $sth->fetchrow_array() ) {
+							$count++;
+							if ($row[5] =~ /^-/){ $row[5] = ''; }
+							$CHRVAR{$row[0]}{$row[1]}{$row[5]} = [@row];
+						}
+						unless ($count>0) {printerr "NOTICE:\t No variants are associated with chromosome '$chromosome'\n";}
+					}
+				}# end region specified
 			}
 		} else {
 			printerr "\nCHROMOSOME(S) selected : 'all chromosomes'\n";
+			unless($found) {
+				$syntax = "call usp_vall(\"".$species."\")";
+				$sth = $dbh->prepare($syntax);
+				$sth->execute or die "SQL Error: $DBI::errstr\n";
+				while (my @row = $sth->fetchrow_array() ) {
+					$count++;
+					if ($row[5] =~ /^-/){ $row[5] = ''; }
+					$CHRVAR{$row[0]}{$row[1]}{$row[5]} = [@row];
+				}
+				if ($count >0) {printerr "NOTICE:\t No variants are associated with '$species'\n";}		
+			}
 		}
-		
-		$syntax .= "\" -o $_[3]"; 
-		`$syntax 2>> $_[2]`;
-		open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
-		if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with chromosomal location \n";}
-		else {
-			foreach (@nosqlcontent) {
-				chomp;
-				$count++;
-				my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-				my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-				my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-				my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
-				push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-				$CHRVAR{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+		if ($found) {
+			$syntax .= "\" -o $_[3]"; 
+			`$syntax 2>> $_[2]`;
+			open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
+			if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with chromosomal location \n";}
+			else {
+				foreach (@nosqlcontent) {
+					chomp;
+					$count++;
+					my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+					my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+					my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+					my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+					push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+					$CHRVAR{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+				}
 			}
 		}
 	} elsif ($number == 0){
@@ -964,7 +1024,7 @@ sub CHRANNO {
 		printerr "--------------------------------------------------------------------------\n";
 		printerr color('reset'); printerr "\n\n";
 	} else {
-		printerr "NOTICE:\t No Results based on search criteria: $chromosome\n";
+		printerr "NOTICE:\t No Results based on search criteria: $chromosome:".substr($region,9,-1)."\n";
 	}
 }
 1;
