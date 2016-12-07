@@ -26,7 +26,9 @@ our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
 #creating or using databases
-$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database$
+$dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database
+`which ardea` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit executable 'ardea'. Download fastbit software and add to PATH.");
+`which ibis` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit query 'ibis'. Download fastbit software and add to PATH");
 $verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n";
 $sth = $dbh-> prepare("show databases"); $sth->execute;
 my %HashDB = ();
@@ -40,6 +42,7 @@ if ($dbverdict) {
   $verbose and printerr "EXECUTED: Created SCHEMA $dbname\n";
 }
 
+#using database created or existing database
 $dbh->disconnect();
 $dbh = mysql($dbname, $username, $password); #connect to mysql
 #Check if tables already exist in database
@@ -70,6 +73,7 @@ $dbh->disconnect();
 
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
+#check if ibis and ardea can be found
 `mkdir -p $ffastbit`;
 my $check = `ls $ffastbit`;
 $verdict = "no";
