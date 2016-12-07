@@ -153,7 +153,7 @@ sub OPTIONS {
         -h, --help                      print help message
         -m, --man                       print complete documentation
 
-	Interactive Arguments 
+	Single Interactive Arguments 
 	    -a, --summary               summary of samples in the database
             -b, --metadata              metadata details of samples
             -c, --transummary           transcriptome analysis summary of samples
@@ -168,7 +168,7 @@ sub OPTIONS {
  Example: #enter default interactive module
 	  tad-interact.pl
 
-	  #view summary of samples in the database
+	  #view only summary of samples in the database
           tad-interact.pl -a
 	  tad-interact.pl -summary
 
