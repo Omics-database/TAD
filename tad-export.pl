@@ -387,7 +387,7 @@ if ($dbdata){ #if db 2 data mode selected
 		unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is not found in database. Consult 'tad-interact.pl -f' for more information"); }
 		$verbose and printerr "NOTICE:\t Organism selected: $organism\n";
 		my $number = 0;
-		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$organism' and a.nosql = 'done' order by a.date desc limit 1");$sth->execute(); $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$organism' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); $found =$sth->fetch();
 		unless ($found) {
 			$vcfsyntax = "select sampleid, chrom, position, refallele, altallele, quality, consequence, genename, geneid, feature, transcript, genetype, proteinposition, aachange, codonchange, dbsnpvariant, variantclass, zygosity, tissue from vw_vvcf where organism='$organism'";
 		} else {

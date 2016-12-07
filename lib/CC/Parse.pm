@@ -711,8 +711,8 @@ sub VARANNO {
 		$genes = undef;
 		printerr "\nGENE(S) selected : $verdict\n";
 		@genes = split(",", $verdict);
-		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null order by a.date desc limit 1");$sth->execute(); my $found =$sth->fetch();
-		$sth = $dbh->prepare("select annversion from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where annversion is not null and b.organism = '$species' order by a.date desc limit 1");
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); my $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct annversion) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where annversion is not null and b.organism = '$species' order by a.date desc");
 		$sth->execute(); $vfound =$sth->fetch();
 		unless ($vfound) {
 			printerr "NOTICE:\t There are no gene-associated variant annotation for '$species', import using using tad-import.pl\n";
@@ -842,7 +842,7 @@ sub CHRANNO {
 		$species = $ORGANISM{$verdict};
 		$syntax .= "organism='$species'";
 		printerr "\nORGANISM : $species\n";
-		$sth = $dbh->prepare("select a.nosql from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null order by a.date desc limit 1");$sth->execute(); my $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); my $found =$sth->fetch();
 		$verdict = undef;
 		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
