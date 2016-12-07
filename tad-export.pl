@@ -420,23 +420,27 @@ if ($dbdata){ #if db 2 data mode selected
 							$syntax = "call usp_vchrposition(\"".$organism."\",\"".$chromosomes[0]."\",\"".$start."\",\"".$stop."\")";
 							$sth = $dbh->prepare($syntax);
 							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							my $newcount= 0;
 							while (my @row = $sth->fetchrow_array() ) {
-								$count++;
+								$count++; $newcount++;
 								if ($row[5] =~ /^-/){ $row[5] = ''; }
 								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
 							}
+							unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with chromosomal region '$chrheader'\n"; } #if gene is in the database	 
 						}
 					} #end if region
 					else { # if only one chromosome is specified and no region
-						unless ($found) { # if no nosql output
+						unless ($found) { # if no nosql output 
 							$syntax = "call usp_vchrom(\"".$organism."\",\"".$chromosomes[0]."\")";
 							$sth = $dbh->prepare($syntax);
 							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							my $newcount= 0;
 							while (my @row = $sth->fetchrow_array() ) {
-								$count++;
+								$count++; $newcount++;
 								if ($row[5] =~ /^-/){ $row[5] = ''; }
 								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
 							}
+							unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with chromosome '$chromosomes[0]'\n"; } #if gene is in the database	 
 						} else {
 							$syntax .= " and chrom = '$chromosomes[0]'";
 							$vcfsyntax .= " and chrom = '$chromosomes[0]'";
@@ -452,11 +456,13 @@ if ($dbdata){ #if db 2 data mode selected
 							$syntax = "call usp_vchrom(\"".$organism."\",\"".$_."\")";
 							$sth = $dbh->prepare($syntax);
 							$sth->execute or die "SQL Error: $DBI::errstr\n";
+							my $newcount=0;
 							while (my @row = $sth->fetchrow_array() ) {
-								$count++;
+								$count++; $newcount++;
 								if ($row[5] =~ /^-/){ $row[5] = ''; }
 								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
 							}
+							unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with chromosome '$_'\n"; } #if gene is in the database	 
 						}
 						$vcfsyntax .= "chrom = '$_' or ";
 					}
@@ -579,6 +585,7 @@ if ($dbdata){ #if db 2 data mode selected
 				unless ($vcf) {
 					print OUT join("\t", @header),"\n";
 					foreach my $a (sort {$a <=> $b} keys %ARRAYQUERY){
+						no warnings 'uninitialized';
 						print OUT join("\t", @{$ARRAYQUERY{$a}}),"\n";
 					} 
 				} else {
