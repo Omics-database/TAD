@@ -708,8 +708,8 @@ if ($datadb){
 } #end if completed RNASeq data2db
 printerr $additional;
 printerr ("NOTICE:\t Summary in log file $efile\n");
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 #--------------------------------------------------------------------------------
 

@@ -387,7 +387,7 @@ if ($dbdata){ #if db 2 data mode selected
 		unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is not found in database. Consult 'tad-interact.pl -f' for more information"); }
 		$verbose and printerr "NOTICE:\t Organism selected: $organism\n";
 		my $number = 0;
-		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$organism' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$organism' and a.nosql is not null group by a.nosql");$sth->execute(); $found =$sth->fetch();
 		unless ($found) {
 			$vcfsyntax = "select sampleid, chrom, position, refallele, altallele, quality, consequence, genename, geneid, feature, transcript, genetype, proteinposition, aachange, codonchange, dbsnpvariant, variantclass, zygosity, tissue from vw_vvcf where organism='$organism'";
 		} else {
@@ -437,6 +437,9 @@ if ($dbdata){ #if db 2 data mode selected
 								if ($row[5] =~ /^-/){ $row[5] = ''; }
 								$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
 							}
+						} else {
+							$syntax .= " and chrom = '$chromosomes[0]'";
+							$vcfsyntax .= " and chrom = '$chromosomes[0]'";
 						}
 					}
 				} else { #to make sure only one chromosome is specified, or else
@@ -512,8 +515,8 @@ if ($dbdata){ #if db 2 data mode selected
 				}
 			} #toggle between mysql and fastbit
 			unless ($vcf) {
-				foreach my $aa (sort {$a cmp $b || $a <=> $b} keys %SAMPLE){
-					foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
+				foreach my $aa (natsort keys %SAMPLE){
+					foreach my $bb (sort {$a <=> $b} keys % {$SAMPLE{$aa} }){
 						foreach my $cc (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa}{$bb} }){
 							$number++;
 							$ARRAYQUERY{$number} = [@{ $SAMPLE{$aa}{$bb}{$cc} }];
@@ -526,35 +529,35 @@ if ($dbdata){ #if db 2 data mode selected
 			my @genes = split(",", $gene); undef $gene;
 			foreach (@genes){ $_ =~ s/^\s+|\s+$//g; $gene .= $_.","; } chop $gene;
 			$verbose and printerr "NOTICE:\t Gene(s) selected: '$gene'\n";
-			foreach (@genes) {
-				#if ($found) { 
-				#	my $gsyntax = $syntax." and genename like '%".uc($_)."%'\" -o $nosql";
-				#	`$gsyntax 2>> $efile`; print $gsyntax;
-				#	open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
-				#	if ($#nosqlcontent < 0) {$status .= "NOTICE:\t No variants are associated with gene '$_' \n";}
-				#	else {
-				#		foreach (@nosqlcontent) {
-				#			chomp; $count++;
-				#			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-				#			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-				#			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-				#			$SAMPLE{$_}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
-				#		}
-				#	}
-				#} else {
+			foreach my $subgene (@genes) {
+				if ($found) { 
+					my $gsyntax = $syntax." and genename like '%".uc($subgene)."%'\" -o $nosql";
+					`$gsyntax 2>> $efile`;
+					open(IN,'<',$nosql); my @nosqlcontent = <IN>; close IN; `rm -rf $nosql`;
+					if ($#nosqlcontent < 0) {$status .= "NOTICE:\t No variants are associated with gene '$subgene' \n";}
+					else {
+						foreach (@nosqlcontent) {
+							chomp; $count++;
+							my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+							my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+							push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+							$SAMPLE{$subgene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+						}
+					}
+				} else {
 					my $newcount = 0;
-					$syntax = "call usp_vgene(\"".$organism."\",\"".$_."\")"; 
+					$syntax = "call usp_vgene(\"".$organism."\",\"".$subgene."\")"; 
 					$sth = $dbh->prepare($syntax);
 					$sth->execute or die "SQL Error: $DBI::errstr\n";
 					while (my @row = $sth->fetchrow_array() ) {
 					 	$count++; $newcount++;
-						$SAMPLE{$_}{$row[0]}{$row[1]}{$row[5]} = [@row];
+						$SAMPLE{$subgene}{$row[0]}{$row[1]}{$row[5]} = [@row];
 					}
-					unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with gene '$_'\n"; } #if gene is in the database
-				#} #if not in nosql
+					unless ($newcount > 0) { printerr "NOTICE:\t No variants are associated with gene '$subgene'\n"; } #if gene is in the database
+				} #if not in nosql
 			}
 			foreach my $aa (keys %SAMPLE){ #getting content to output
-				foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$SAMPLE{$aa} }){
+				foreach my $bb (natsort keys % {$SAMPLE{$aa} }){
 					foreach my $cc (sort {$a <=> $b} keys % {$SAMPLE{$aa}{$bb} }) {
 						foreach my $dd (sort keys % {$SAMPLE{$aa}{$bb}{$cc} }) {
 							$number++;
@@ -575,7 +578,7 @@ if ($dbdata){ #if db 2 data mode selected
 				open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
 				unless ($vcf) {
 					print OUT join("\t", @header),"\n";
-					foreach my $a (sort keys %ARRAYQUERY){
+					foreach my $a (sort {$a <=> $b} keys %ARRAYQUERY){
 						print OUT join("\t", @{$ARRAYQUERY{$a}}),"\n";
 					} 
 				} else {
@@ -583,7 +586,7 @@ if ($dbdata){ #if db 2 data mode selected
 					MTD();
 					#our $headerinfo = HEADER();
 					print OUT HEADER($organism, $chrheader); #$headerinfo;
-					foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %NEWREF) {
+					foreach my $chrom (natsort keys %NEWREF) {
 						foreach my $position (sort {$a<=> $b} keys %{$NEWREF{$chrom}}) {
 							foreach my $ref (sort {$a cmp $b} keys %{$NEWREF{$chrom}{$position}}) {
 								print OUT "chr",$chrom,"\t",$position,"\t",$NEWDBSNP{$chrom}{$position}{$ref},"\t",$NEWREF{$chrom}{$position}{$ref},"\t";
@@ -596,7 +599,7 @@ if ($dbdata){ #if db 2 data mode selected
 					}	
 				} close OUT;
 			} else {
-				foreach my $a (sort keys %ARRAYQUERY){
+				foreach my $a (sort {$a <=> $b} keys %ARRAYQUERY){
 					$table->add(@{$ARRAYQUERY{$a}});
 				}
 				printerr $table-> render, "\n"; #print display
@@ -610,8 +613,8 @@ printerr "-----------------------------------------------------------------\n";
 printerr $status;
 unless ($count == 0) { if ($output) { printerr "NOTICE:\t Successful export of user report to '$outfile'\n"; } }
 printerr ("NOTICE:\t Summary in log file $efile\n");
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 
 #--------------------------------------------------------------------------------
@@ -806,7 +809,7 @@ sub PROCESS {
 
 sub SORTER {
   #SORT ALLELES
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %REF) {
+  foreach my $chrom (natsort keys %REF) {
     foreach my $position (sort {$a <=> $b} keys %{$REF{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$REF{$chrom}{$position}}) {
         foreach my $library (sort {$a cmp $b || $a <=> $b } keys %{$REF{$chrom}{$position}{$ref}}) {
@@ -834,7 +837,7 @@ sub SORTER {
   }
   
   #sub sort REF & ALT alleles
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %subref) {
+  foreach my $chrom (natsort keys %subref) {
     foreach my $position (sort {$a<=> $b} keys %{$subref{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$subref{$chrom}{$position}}) {
         my (%refhash, %althash,$refkey,$altkey);
@@ -852,7 +855,7 @@ sub SORTER {
   }
   
   #SORT CONSEQUENCE
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %CSQ) {
+  foreach my $chrom (natsort keys %CSQ) {
     foreach my $position (sort {$a<=> $b} keys %{$CSQ{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$CSQ{$chrom}{$position}}) {
         foreach my $library (sort {$a cmp $b || $a <=> $b} keys %{$CSQ{$chrom}{$position}{$ref}}) {
@@ -870,7 +873,7 @@ sub SORTER {
   }
   
   #SORT QUALITY
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %QUAL) {
+  foreach my $chrom (natsort keys %QUAL) {
     foreach my $position (sort {$a<=> $b} keys %{$QUAL{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$QUAL{$chrom}{$position}}) {
         my @quality = undef;
@@ -885,7 +888,7 @@ sub SORTER {
   }
   
   #SORT DBSNP
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %DBSNP) {
+  foreach my $chrom (natsort keys %DBSNP) {
     foreach my $position (sort {$a<=> $b} keys %{$DBSNP{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$DBSNP{$chrom}{$position}}) {
         foreach my $library (sort {$a cmp $b || $a <=> $b} keys %{$DBSNP{$chrom}{$position}{$ref}}) {
@@ -903,7 +906,7 @@ sub SORTER {
   }
   
   #SORT GENOTYPE
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %GT) {
+  foreach my $chrom (natsort keys %GT) {
     foreach my $position (sort {$a<=> $b} keys %{$GT{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$GT{$chrom}{$position}}) {
         foreach my $library (sort {$a cmp $b || $a <=> $b} keys %{$GT{$chrom}{$position}{$ref}}) {
@@ -924,7 +927,7 @@ sub SORTER {
 	
   #order genotype
   my %odagt;
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %subgt) {
+  foreach my $chrom (natsort keys %subgt) {
     foreach my $position (sort {$a<=> $b} keys %{$subgt{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$subgt{$chrom}{$position}}) {
         if ( (exists $subgt{$chrom}{$position}{$ref}{'0/1'}) && (exists $subgt{$chrom}{$position}{$ref}{'1/2'}) ){
@@ -953,7 +956,7 @@ sub SORTER {
       }
     }
   }
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b } keys %odagt) {
+  foreach my $chrom (natsort keys %odagt) {
     foreach my $position (sort {$a <=> $b} keys %{$odagt{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$odagt{$chrom}{$position}}) {
         my $newpost = (sort {$a <=> $b} keys %{$odagt{$chrom}{$position}{$ref}})[0];
@@ -965,7 +968,7 @@ sub SORTER {
 
 sub MTD {
   #get metadata information
-  foreach my $chrom (sort {$a cmp $b || $a <=> $b} keys %QUAL) {
+  foreach my $chrom (natsort keys %QUAL) {
     foreach my $position (sort {$a<=> $b} keys %{$QUAL{$chrom}}) {
       foreach my $ref (sort {$a cmp $b} keys %{$QUAL{$chrom}{$position}}) {
         foreach my $library (sort {$a cmp $b || $a <=> $b} keys %{$QUAL{$chrom}{$position}{$ref}}) {

@@ -34,32 +34,42 @@ my $count =0;
 MAINMENU:
 while ($choice < 1){
 	$verdict = undef;
-	$verdict = "a" if ($opa); undef $opa; #process command line options
-	$verdict = "b" if ($opb); undef $opb;
-	$verdict = "c" if ($opc); undef $opc;
-	$verdict = "d" if ($opd); undef $opd;
-	$verdict = "e" if ($ope); undef $ope;
-	$verdict = "f" if ($opf); undef $opf;
-	$verdict = "g" if ($opg); undef $opg;
-	$verdict = "h" if ($opj); undef $opj;
+	#process command line options
+	if ($opa) { $choice = 1; $verdict = "a"; undef $opa; }
+	if ($opb) { $choice = 1; $verdict = "b"; undef $opb; }
+	if ($opc) { $choice = 1; $verdict = "c"; undef $opc; }
+	if ($opd) { $choice = 1; $verdict = "d"; undef $opd; }
+	if ($ope) { $choice = 1; $verdict = "e"; undef $ope; }
+	if ($opf) { $choice = 1; $verdict = "f"; undef $opf; }
+	if ($opg) { $choice = 1; $verdict = "g"; undef $opg; }
+	if ($opj) { $choice = 1; $verdict = "h"; undef $opj; }
+
+	#$verdict = "a" if ($opa); undef $opa; 
+	#$verdict = "b" if ($opb); undef $opb;
+	#$verdict = "c" if ($opc); undef $opc;
+	#$verdict = "d" if ($opd); undef $opd;
+	#$verdict = "e" if ($ope); undef $ope;
+	#$verdict = "f" if ($opf); undef $opf;
+	#$verdict = "g" if ($opg); undef $opg;
+	#$verdict = "h" if ($opj); undef $opj;
 	
 	unless ($verdict) {
-	print color ('bold');
-	print "\n--------------------------------MAIN  MENU--------------------------------\n";
-	print "--------------------------------------------------------------------------\n";
-	print color('reset');
-	print "Choose from the following options : \n";
-	foreach (sort {$a cmp $b} keys %MAINMENU) { print "  ", uc($_),"\.  $MAINMENU{$_}\n";}
-	print color('bold');
-	print "--------------------------------------------------------------------------\n";
-	print "--------------------------------------------------------------------------\n";
-	print color('reset');
-	print "\nSelect an option ? ";
-	chomp ($verdict = lc (<>)); print "\n";
+		print color ('bold');
+		print "\n--------------------------------MAIN  MENU--------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "Choose from the following options : \n";
+		foreach (sort {$a cmp $b} keys %MAINMENU) { print "  ", uc($_),"\.  $MAINMENU{$_}\n";}
+		print color('bold');
+		print "--------------------------------------------------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "\nSelect an option ? ";
+		chomp ($verdict = lc (<>)); print "\n";
 	}
 	if ($verdict =~ /^[a-h]/){
 		if ($verdict =~ /^exit/) { $choice = 1; next; }
-		$choice = 0;
+		#$choice = 0;
 		$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
 		$fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 		SUMMARY($dbh, $efile) if $verdict =~ /^a/;
@@ -80,12 +90,13 @@ while ($choice < 1){
 		printerr "NOTICE:\t No Option selected\n";
 	}
 }
+print color('reset');
 #output: the end
 printerr "-----------------------------------------------------------------\n";
 printerr ("SUCCESS: Clean exit from TransAtlasDB interaction module\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 
 #--------------------------------------------------------------------------------

@@ -6,6 +6,8 @@ use Spreadsheet::Read;
 use Text::TabularDisplay;
 use Term::ANSIColor;
 use List::MoreUtils qw(uniq);
+use Sort::Key::Natural qw(natsort);
+
 
 my ($sth, $dbh, $t, $fastbit);
 my ($precount, $count, $verdict);
@@ -54,7 +56,9 @@ sub tabcontent { #read tadcontent
 }
 
 sub SUMMARY {
-	printerr colored("A.\tSUMMARY OF SAMPLES IN THE DATABASE.", 'bright_red on_black'),"\n";
+	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
+	print colored("A.\tSUMMARY OF SAMPLES IN THE DATABASE.", 'bright_red on_black'),"\n";
+	print LOG "A.\tSUMMARY OF SAMPLES IN THE DATABASE.\n";
 	$dbh = $_[0];	
 	#first: Total number of animals (organism, count)
 		$t = Text::TabularDisplay->new(qw(Organism Count));
@@ -68,8 +72,10 @@ sub SUMMARY {
 		while (my @row = $sth->fetchrow_array() ) {
 			$t->add("Total", @row);
 		}
-		printerr colored("Summary of Organisms.", 'bold red'), "\n";
-		printerr color('red');printerr $t-> render, "\n\n";printerr color('reset');
+		print colored("Summary of Organisms.", 'bold red'), "\n";
+		print color('red');print $t-> render, "\n\n";print color('reset');
+		print LOG "Summary of Organisms.\n";
+		print LOG $t-> render, "\n\n";
 	
 	#second: Total number of samples (organism, tissue, count)
 		$t = Text::TabularDisplay->new(qw(Organism Tissue Count));
@@ -78,8 +84,10 @@ sub SUMMARY {
 		while (my @row = $sth->fetchrow_array() ) {
 			$t->add(@row);
 		}
-		printerr colored("Summary of Samples.", 'bold green'), "\n";
-		printerr color('green');printerr $t-> render, "\n\n";printerr color('reset');
+		print colored("Summary of Samples.", 'bold green'), "\n";
+		print color('green');print $t-> render, "\n\n";print color('reset');
+		print LOG "Summary of Samples.\n";
+		print LOG $t-> render,"\n\n";
 	
 	#third: Summary of libraries processed (organism, sample, processed samples)
 		$sth = $dbh->prepare("select a.organism, format(count(b.sampleid),0), format(count(c.sampleid),0), format(count(d.sampleid),0), format(count(e.sampleid),0) from Animal a join Sample b on a.animalid = b.derivedfrom left outer join vw_sampleinfo c on b.sampleid = c.sampleid left outer join GeneStats d on c.sampleid = d.sampleid left outer join VarSummary e on c.sampleid = e.sampleid group by a.organism");
@@ -93,8 +101,10 @@ sub SUMMARY {
 		while (my @row = $sth->fetchrow_array() ) {
 			$t->add("Total", @row);
 		}
-		printerr colored("Summary of Samples processed.", 'bold magenta'), "\n";
-		printerr color('magenta');printerr $t-> render, "\n\n";printerr color('reset');
+		print colored("Summary of Samples processed.", 'bold magenta'), "\n";
+		print color('magenta');print $t-> render, "\n\n";print color('reset');
+		print LOG "Summary of Samples processed.\n";
+		print LOG $t-> render, "\n\n";
 		
 	##fourth: Summary of database content
 		$sth = $dbh->prepare("select organism Species, format(sum(genes),0) Genes, format(sum(totalvariants),0) Variants from vw_sampleinfo group by species");
@@ -108,13 +118,16 @@ sub SUMMARY {
 		while (my @row = $sth->fetchrow_array() ) {
 			$t->add("Total", @row);
 		}
-		printerr colored("Summary of Database Content.", 'bold blue'), "\n";
-		printerr color('blue');printerr $t-> render, "\n\n";printerr color('reset');
+		print colored("Summary of Database Content.", 'bold blue'), "\n";
+		print color('blue'); print $t-> render, "\n\n"; print color('reset');
+		print LOG "Summary of Database Content.\n";
+		print LOG $t-> render, "\n\n";
 }
 
 sub METADATA {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
-	printerr colored("B.\tMETADATA OF SAMPLES.", 'bright_red on_black'),"\n";
+	print colored("B.\tMETADATA OF SAMPLES.", 'bright_red on_black'),"\n";
+	print LOG "B.\tMETADATA OF SAMPLES.\n";
 	$dbh = $_[0]; 
 	$t = Text::TabularDisplay->new(qw(SampleID	AnimalID Organism Tissue Scientist Organization AnimalDescription SampleDescription DateImported)); #header
 	$precount = 0; $precount = $dbh->selectrow_array("select count(*) from vw_metadata"); #count all info in metadata
@@ -130,24 +143,40 @@ sub METADATA {
 		$t->add(@row);
 	}
 	$count = 0; $count = $dbh->selectrow_array("select count(*) from Sample");
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print results
 	
-	printerr color('bright_black'); #additional procedure
-	printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "NOTICE:\t $indent $precount samples are displayed.\n";
-	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	printerr "\ttad-export.pl --query 'select * from vw_metadata'\n";
-	printerr "\ttad-export.pl --query 'select * from vw_metadata' --output output.txt\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr color('reset'); printerr "\n\n";
+	if ($count > 0 ) {
+		print colored("$precount out of $count results displayed.", 'underline'), "\n";
+		print LOG "$precount out of $count results displayed.\n";
+		printerr $t-> render, "\n\n"; #print results
+
+		print color('bright_black'); #additional procedure
+		print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print "NOTICE:\t $indent $precount samples are displayed.\n";
+		print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print "\ttad-export.pl --query 'select * from vw_metadata'\n";
+		print "\ttad-export.pl --query 'select * from vw_metadata' --output output.txt\n";
+		print "--------------------------------------------------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "NOTICE:\t $indent $precount samples are displayed.\n";
+		print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print LOG "\ttad-export.pl --query 'select * from vw_metadata'\n";
+		print LOG "\ttad-export.pl --query 'select * from vw_metadata' --output output.txt\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		printerr "\n\n";
+	} else {
+		printerr "ERROR:\tEmpty dataset, import Sample Information using tad-import.pl -metadata\n"; next MAINMENU;
+	} 
 }
 
 sub TRANSCRIPT {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
-	printerr colored("C.\tTRANSCRIPTOME ANALYSIS SUMMARY OF SAMPLES.", 'bright_red on_black'),"\n";
+	print colored("C.\tTRANSCRIPTOME ANALYSIS SUMMARY OF SAMPLES.", 'bright_red on_black'),"\n";
+	print LOG "C.\tTRANSCRIPTOME ANALYSIS SUMMARY OF SAMPLES.\n";
 	$dbh = $_[0]; 
 	$t = Text::TabularDisplay->new(qw(SampleID	Organism Tissue TotalReads MappedReads	Genes(total) Isoforms(total) Variants(total) SNVs(total) InDELs(total))); #header
 	$precount = 0; $precount = $dbh->selectrow_array("select count(*) from vw_sampleinfo"); #count all info in processed samples
@@ -161,26 +190,42 @@ sub TRANSCRIPT {
 	}
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
 	while (my @row = $sth->fetchrow_array() ) {
+		foreach (@row){unless($_){$_ = 0;}}
 		$t->add(@row);
 	}
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print results
-	
-	printerr color('bright_black'); #additional procedure
-	printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "NOTICE:\t $indent $precount samples are displayed.\n";
-	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	printerr "\ttad-export.pl --query 'select * from vw_sampleinfo'\n";
-	printerr "\ttad-export.pl --query 'select * from vw_sampleinfo' --output output.txt\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr color('reset'); printerr "\n\n";
+	if ($count > 0 ) {
+		print colored("$precount out of $count results displayed.", 'underline'), "\n";
+		print LOG "$precount out of $count results displayed.\n";
+		printerr $t-> render, "\n\n"; #print results
+		
+		print color('bright_black'); #additional procedure
+		print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print "NOTICE:\t $indent $precount samples are displayed.\n";
+		print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print "\ttad-export.pl --query 'select * from vw_sampleinfo'\n";
+		print "\ttad-export.pl --query 'select * from vw_sampleinfo' --output output.txt\n";
+		print "--------------------------------------------------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "NOTICE:\t $indent $precount samples are displayed.\n";
+		print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print LOG "\ttad-export.pl --query 'select * from vw_sampleinfo'\n";
+		print LOG "\ttad-export.pl --query 'select * from vw_sampleinfo' --output output.txt\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		printerr "\n\n";
+	} else {
+		printerr "ERROR:\tEmpty dataset, import Sample Information using tad-import.pl -metadata\n"; next MAINMENU;
+	} 
 }
 
 sub AVERAGE {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
-	printerr colored("D.\tAVERAGE FPKM VALUES OF INDIVIDUAL GENES.", 'bright_red on_black'),"\n";
+	print colored("D.\tAVERAGE FPKM VALUES OF INDIVIDUAL GENES.", 'bright_red on_black'),"\n";
+	print LOG "D.\tAVERAGE FPKM VALUES OF INDIVIDUAL GENES.\n";
 	$dbh = $_[0];
 	my (%TISSUE, %GENES, %AVGFPKM, $tissue, $genes , $species, %ORGANISM);
 	$count = 0;
@@ -224,7 +269,7 @@ sub AVERAGE {
 			print color ('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
-			foreach (sort {$a <=> $b || $a cmp $b} keys %TISSUE) { print "  ", $_," :  $TISSUE{$_}\n";}
+			foreach (sort {$a <=> $b} keys %TISSUE) { print "  ", $_," :  $TISSUE{$_}\n";}
 			print color('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
@@ -262,7 +307,7 @@ sub AVERAGE {
 		}
 		$count = scalar keys %AVGFPKM;
 	} elsif ($number == 0){
-		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
+		printerr "\nERROR:\tEmpty dataset, import Gene Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
@@ -286,20 +331,30 @@ sub AVERAGE {
 		$indent = "Only";
 	}
 
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print display
-	
-	if ($count >0 ) {
-		printerr color('bright_black'); #additional procedure
-		printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		printerr "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
-		printerr "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr color('reset'); printerr "\n\n";
+	if ($count > 0 ) {
+		print colored("$precount out of $count results displayed.", 'underline'), "\n";
+		print LOG "$precount out of $count results displayed.\n";
+		printerr $t-> render, "\n\n"; #print results
+		
+		print color('bright_black'); #additional procedure
+		print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print "NOTICE:\t $indent $precount sample(s) displayed.\n";
+		print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
+		print "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
+		print "--------------------------------------------------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
+		print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print LOG "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
+		print LOG "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		printerr "\n\n";
 	} else {
 		printerr "NOTICE:\t No Results based on search criteria: $genes\n";
 	}
@@ -307,7 +362,8 @@ sub AVERAGE {
 
 sub GENEXP {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; # open log file
-	printerr colored("E.\tGENE EXPRESSION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
+	print colored("E.\tGENE EXPRESSION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
+	print LOG "E.\tGENE EXPRESSION ACROSS SAMPLES.\n";
 	$dbh = $_[0];
 	my (%FPKM, %POSITION, %ORGANISM, %SAMPLE, %REALPOST, %CHROM, $species, $sample, $finalsample, $genes, $syntax, @row, $indent);
 	$count = 0;
@@ -346,7 +402,7 @@ sub GENEXP {
 			print color ('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
-			foreach (sort {$a <=> $b || $a cmp $b} keys %SAMPLE) { print "  ", $_," :  $SAMPLE{$_}\n";}
+			foreach (sort {$a <=> $b} keys %SAMPLE) { print "  ", $_," :  $SAMPLE{$_}\n";}
 			print color('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
@@ -456,32 +512,43 @@ sub GENEXP {
 			} 
 		}
 	} elsif ($number == 0){
-		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
+		printerr "\nERROR:\tEmpty dataset, import Gene Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
 
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print display
+	print colored("$precount out of $count results displayed.", 'underline'), "\n";
+	print LOG "$precount out of $count results displayed.\n";
+	printerr $t-> render, "\n\n"; #print results
 	
 	my ($dgenes, $dsamples);
 	if ($genes) {$dgenes = "--gene '$genes'";}
 	if ($finalsample) {$dsamples = " --samples '$sample'";}
-	printerr color('bright_black'); #additional procedure
-	printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	printerr "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
-	printerr "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr color('reset'); printerr "\n\n";
+	print color('bright_black'); #additional procedure
+	print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+	print "--------------------------------------------------------------------------\n";
+	print "NOTICE:\t $indent $precount sample(s) displayed.\n";
+	print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+	print "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
+	print "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
+	print "--------------------------------------------------------------------------\n";
+	print "--------------------------------------------------------------------------\n";
+	print color('reset');
+	print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
+	print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+	print LOG "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
+	print LOG "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	printerr "\n\n";
 }
 
 sub CHRVAR {
 	open(LOG, ">>", $_[1]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n"; #open log file
-	printerr colored("F.\tVARIANT CHROMOSOMAL DISTRIBUTION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
+	print colored("F.\tVARIANT CHROMOSOMAL DISTRIBUTION ACROSS SAMPLES.", 'bright_red on_black'),"\n";
+	print LOG "F.\tVARIANT CHROMOSOMAL DISTRIBUTION ACROSS SAMPLES.\n";
 	$dbh = $_[0];
 	my (%VARIANTS, %SNPS, %INDELS, %ORGANISM, %SAMPLE, %CHROM, $species, $chromsyntax, $sample, $chromosome, $syntax, @row, @newsample, @sample, $indent);
 	
@@ -521,7 +588,7 @@ sub CHRVAR {
 			print color ('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
-			foreach (sort {$a <=> $b || $a cmp $b} keys %SAMPLE) { print "  ", $_," :  $SAMPLE{$_}\n";}
+			foreach (sort {$a <=> $b} keys %SAMPLE) { print "  ", $_," :  $SAMPLE{$_}\n";}
 			print color('bold');
 			print "--------------------------------------------------------------------------\n";
 			print color('reset');
@@ -568,7 +635,7 @@ sub CHRVAR {
 		print color ('bold');
 		print "--------------------------------------------------------------------------\n";
 		print color('reset');
-		foreach (sort {$a <=> $b || $a cmp $b} keys %CHROM) { print "  ", $_," :  $CHROM{$_}\n";}
+		foreach (sort {$a <=> $b} keys %CHROM) { print "  ", $_," :  $CHROM{$_}\n";}
 		print color('bold');
 		print "--------------------------------------------------------------------------\n";
 		print color('reset');
@@ -650,32 +717,44 @@ sub CHRVAR {
 			}
 		}
 	} elsif ($number == 0){
-		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
+		printerr "\nERROR:\tEmpty dataset, import Variant Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
 
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n";
+	print colored("$precount out of $count results displayed.", 'underline'), "\n";
+	print LOG "$precount out of $count results displayed.\n";
+	printerr $t-> render, "\n\n"; #print results
 	
 	my ($dchromosome, $dsamples);
 	if ($chromosome) {$dchromosome = "--chromosome '$chromosome'";}
 	if ($sample) {$dsamples = " --samples '$sample'";}
-	printerr color('bright_black');
-	printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-	printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	printerr "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples\n";
-	printerr "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples --output output.txt\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr "--------------------------------------------------------------------------\n";
-	printerr color('reset'); printerr "\n\n";
+	print color('bright_black');
+	print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+	print "--------------------------------------------------------------------------\n";
+	print "NOTICE:\t $indent $precount sample(s) displayed.\n";
+	print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+	print "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples\n";
+	print "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples --output output.txt\n";
+	print "--------------------------------------------------------------------------\n";
+	print "--------------------------------------------------------------------------\n";
+	print color('reset');
+	print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
+	print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+	print LOG "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples\n";
+	print LOG "\ttad-export.pl --db2data --chrvar --species '$species' $dchromosome$dsamples --output output.txt\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	print LOG "--------------------------------------------------------------------------\n";
+	printerr "\n\n";
 }
 
 sub VARANNO {
 	open(LOG, ">>", $_[2]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n";
-	printerr colored("G.\tGENE ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
+	print colored("G.\tGENE ASSOCIATED VARIANTS ANNOTATION.", 'bright_red on_black'),"\n";
+	print LOG "G.\tGENE ASSOCIATED VARIANTS ANNOTATION.\n";
+	
 	$dbh = $_[0];
 	$fastbit = $_[1];	
 	my ($genes, $genes2, %ORGANISM, %GENEVAR, @genes, $indent, $species, $vfound);
@@ -711,35 +790,34 @@ sub VARANNO {
 		$genes = undef;
 		printerr "\nGENE(S) selected : $verdict\n";
 		@genes = split(",", $verdict);
-		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); my $found =$sth->fetch();
-		$sth = $dbh->prepare("select group_concat(distinct annversion) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where annversion is not null and b.organism = '$species' order by a.date desc");
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql");$sth->execute(); my $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct annversion) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where annversion is not null and b.organism = '$species' group by annversion");
 		$sth->execute(); $vfound =$sth->fetch();
 		unless ($vfound) {
 			printerr "NOTICE:\t There are no gene-associated variant annotation for '$species', import using using tad-import.pl\n";
 		} else {
 			foreach my $gene (@genes){
-				# this doesnt work for like statements.
-				#if ($found) {
-				#	#using fastbit
-				#	my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), 	group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
-				#	`$syntax 2>> $_[2]`;
-				#	open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
-				#	if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with gene '$gene'\n";}
-				#	else {
-				#		foreach (@nosqlcontent) {
-				#			chomp;
-				#			$count++;
-				#			my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
-				#			my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
-				#			my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
-				#			my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
-				#			push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
-				#			$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
-				#		}
-				#		$genes2 .= $gene.",";
-				#	}
-				#	$genes .= $gene.",";
-				#} else {
+				if ($found) {
+					#using fastbit
+					my $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), 	group_concat(sampleid) where genename like '%".$gene."%' and organism='$species'\" -o $_[3]";
+					`$syntax 2>> $_[2]`;
+					open(IN,'<',$_[3]); my @nosqlcontent = <IN>; close IN; `rm -rf $_[3]`;
+					if ($#nosqlcontent < 0) {printerr "NOTICE:\t No variants are associated with gene '$gene'\n";}
+					else {
+						foreach (@nosqlcontent) {
+							chomp;
+							$count++;
+							my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
+							my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
+							my @arraynosqlC = uniq(sort(split(", ", $arraynosqlB[4]))); if ($#arraynosqlC > 0 && $arraynosqlC[0] =~ /^-/){ shift @arraynosqlC; }
+							my @arraynosqlD = uniq(sort(split(", ", $arraynosqlB[5]))); if ($#arraynosqlD > 0 && $arraynosqlD[0] =~ /^-/){ shift @arraynosqlD; }
+							push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", @arraynosqlC) , join(",", @arraynosqlD), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
+							$GENEVAR{$gene}{$arraynosqlA[0]}{$arraynosqlA[1]}{$arraynosqlB[3]} = [@row];
+						}
+						$genes2 .= $gene.",";
+					}
+					$genes .= $gene.",";
+				} else {
 					#using mysql
 					my $newcount = 0;
 					my $syntax = "call usp_vgene(\"".$species."\",\"".$gene."\")"; 
@@ -751,11 +829,11 @@ sub VARANNO {
 					}
 					if ($newcount > 0) { $genes2 .= $gene.","; } else { printerr "NOTICE:\t No variants are associated with gene '$gene'\n"; } #if gene is in the database
 					$genes .= $gene.",";
-				#}
+				}
 			} chop $genes; chop $genes2;
 		}
 	} elsif ($number == 0){
-		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
+		printerr "\nERROR:\tEmpty dataset, import Variant Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
@@ -766,7 +844,7 @@ sub VARANNO {
 	foreach my $aa (keys %GENEVAR){ #preset to 10 rows	
 		unless ($precount >= $endcount) {
 			if ($#genes >= 1) { if ($odacount == 5) {	$odacount = 0;} }
-			foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$GENEVAR{$aa} }){
+			foreach my $bb (natsort keys % {$GENEVAR{$aa} }){
 				unless ($precount >= $endcount) {
 					if ($#genes >= 1) { if ($odacount == 5) { last; } }		
 					foreach my $cc (sort {$a <=> $b} keys % {$GENEVAR{$aa}{$bb} }) {
@@ -791,20 +869,31 @@ sub VARANNO {
 		$indent = "Only";
 	}
 	if ($vfound) {
-		printerr colored("$precount out of $count results displayed", 'underline'), "\n";
+		print colored("$precount out of $count results displayed", 'underline'), "\n";
+		print LOG "$precount out of $count results displayed\n";
 		printerr $t-> render, "\n\n"; #print display
 		
 		if ($count >0 ) {
-			printerr color('bright_black'); #additional procedure
-			printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-			printerr "--------------------------------------------------------------------------\n";
-			printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-			printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-			printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' \n";
-			printerr "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' --output output.txt\n";
-			printerr "--------------------------------------------------------------------------\n";
-			printerr "--------------------------------------------------------------------------\n";
-			printerr color('reset'); printerr "\n\n";
+			print color('bright_black'); #additional procedure
+			print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+			print "--------------------------------------------------------------------------\n";
+			print "NOTICE:\t $indent $precount sample(s) displayed.\n";
+			print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+			print "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' \n";
+			print "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' --output output.txt\n";
+			print "--------------------------------------------------------------------------\n";
+			print "--------------------------------------------------------------------------\n";
+			print color('reset');
+			# print to log file
+			print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+			print LOG "--------------------------------------------------------------------------\n";
+			print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
+			print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+			print LOG "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' \n";
+			print LOG "\ttad-export.pl --db2data --varanno --species '$species' --gene '$genes2' --output output.txt\n";
+			print LOG "--------------------------------------------------------------------------\n";
+			print LOG "--------------------------------------------------------------------------\n";
+			printerr "\n\n";
 		} else {
 			printerr "NOTICE:\t No Results based on search criteria: $genes\n";
 		}
@@ -813,7 +902,8 @@ sub VARANNO {
 
 sub CHRANNO {
 	open(LOG, ">>", $_[2]) or die "\nERROR:\t cannot write LOG information to log file $_[1] $!\n";
-	printerr colored("H.\tCHROMSOMAL REGIONS WITH VARIANTS & ANNOTATION.", 'bright_red on_black'),"\n";
+	print colored("H.\tCHROMSOMAL REGIONS WITH VARIANTS & ANNOTATION.", 'bright_red on_black'),"\n";
+	print LOG "H.\tCHROMSOMAL REGIONS WITH VARIANTS & ANNOTATION.\n";
 	$dbh = $_[0];
 	$fastbit = $_[1];
 	my ($chromosome, %ORGANISM, %CHRVAR, %CHROM, @chromosomes, $species,$indent,$region);
@@ -842,7 +932,7 @@ sub CHRANNO {
 		$species = $ORGANISM{$verdict};
 		$syntax .= "organism='$species'";
 		printerr "\nORGANISM : $species\n";
-		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql order by a.date desc");$sth->execute(); my $found =$sth->fetch();
+		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql");$sth->execute(); my $found =$sth->fetch();
 		$verdict = undef;
 		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -854,7 +944,7 @@ sub CHRANNO {
 		print color ('bold');
 		print "--------------------------------------------------------------------------\n";
 		print color('reset');
-		foreach (sort {$a <=> $b || $a cmp $b} keys %CHROM) { print "  ", $_," :  $CHROM{$_}\n";}
+		foreach (sort {$a <=> $b} keys %CHROM) { print "  ", $_," :  $CHROM{$_}\n";}
 		print color('bold');
 		print "--------------------------------------------------------------------------\n";
 		print color('reset');
@@ -973,7 +1063,7 @@ sub CHRANNO {
 			}
 		}
 	} elsif ($number == 0){
-		pod2usage("ERROR:\tEmpty dataset, import data using tad-import.pl");
+		printerr "\nERROR:\tEmpty dataset, import Variant Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
@@ -981,10 +1071,10 @@ sub CHRANNO {
 	$precount = 0;
 	my ($odacount, $endcount) = (0,10);
 	if ($#chromosomes >= 1){ $endcount = 5*($#chromosomes+1);}
-	foreach my $aa (sort {$a cmp $b || $a <=> $b} keys %CHRVAR){ #preset to 10 rows	
+	foreach my $aa (natsort keys %CHRVAR){ #preset to 10 rows	
 		unless ($precount >= $endcount) {
 			if ($#chromosomes >= 1) { if ($odacount == 5) {	$odacount = 0;} }
-			foreach my $bb (sort {$a cmp $b || $a <=> $b} keys % {$CHRVAR{$aa} }){
+			foreach my $bb (sort {$a <=> $b} keys % {$CHRVAR{$aa} }){
 				unless ($precount >= $endcount) {
 					if ($#chromosomes >= 1) { if ($odacount == 5) { last; } }
 					foreach my $cc (sort {$a cmp $b || $a <=> $b} keys % {$CHRVAR{$aa}{$bb} }){
@@ -1004,8 +1094,9 @@ sub CHRANNO {
 		$indent = "Only";
 	}
 
-	printerr colored("$precount out of $count results displayed", 'underline'), "\n";
-	printerr $t-> render, "\n\n"; #print display
+	print colored("$precount out of $count results displayed", 'underline'), "\n";
+	print LOG "$precount out of $count results displayed.\n";
+	printerr $t-> render, "\n\n"; #print results
 	
 	my ($dchromosome);
 	if ($chromosome) {
@@ -1013,16 +1104,25 @@ sub CHRANNO {
 		if ($region) { $dchromosome .= " ".$region; }
 	}
 	if ($count >0 ) {
-		printerr color('bright_black'); #additional procedure
-		printerr "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "NOTICE:\t $indent $precount sample(s) displayed.\n";
-		printerr "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome \n";
-		printerr "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome --output output.txt\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr "--------------------------------------------------------------------------\n";
-		printerr color('reset'); printerr "\n\n";
+		print color('bright_black'); #additional procedure
+		print "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print "NOTICE:\t $indent $precount sample(s) displayed.\n";
+		print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome \n";
+		print "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome --output output.txt\n";
+		print "--------------------------------------------------------------------------\n";
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print LOG "---------------------------ADDITIONAL PROCEDURE---------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
+		print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
+		print LOG "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome \n";
+		print LOG "\ttad-export.pl --db2data --varanno --species '$species' $dchromosome --output output.txt\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		print LOG "--------------------------------------------------------------------------\n";
+		printerr "\n\n";
 	} else {
 		printerr "NOTICE:\t No Results based on search criteria: $chromosome:".substr($region,9,-1)."\n";
 	}

@@ -30,8 +30,8 @@ processArguments(); #Process input
 printerr ("NOTICE:\t Connection Details:\n\t\tUsername = $username\n\t\tPassword = $password\n\t\tMySQL database = $dbname\n");
 printerr ("\t\tFastBit folder = $ffastbit\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 
 #--------------------------------------------------------------------------------

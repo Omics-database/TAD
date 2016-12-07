@@ -174,3 +174,25 @@ C<EXE_FILES: >
 
 =back
 
+=head2 Wed Dec  7 13:41:03 2016: C<Module> L<Sort::Key|Sort::Key>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/modupeadetunji/Desktop/TAD/lib/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.33>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

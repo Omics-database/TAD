@@ -92,15 +92,15 @@ unless ($verdict =~ /clean/){
 	} else { die "ERROR:\t Response not provided\n"; }
 }
 
-$verbose and printerr "EXECUTED:Created Fastbit folder $ffastbit\n"; 
+$verbose and printerr "EXECUTED: Created Fastbit folder $ffastbit\n"; 
 
 #output 
 printerr "-----------------------------------------------------------------\n";
 printerr ("NOTICE:\t Successful creation of MySQL database ==> \"$dbname\"\n");
 printerr ("NOTICE:\t Successful creation of FastBit folder ==> \"".$ffastbit."\"\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 printerr "-----------------------------------------------------------------\n";
+print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);
 #--------------------------------------------------------------------------------
 
