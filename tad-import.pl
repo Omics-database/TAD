@@ -16,7 +16,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $efile, $help, $man, $nosql);
+our ($verbose, $efile, $help, $man, $nosql, $transaction);
 our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar, $delete); #command options
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
@@ -617,7 +617,7 @@ if ($delete){
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
 	if ($found) {
-		printerr "NOTICE:\t This module deletes records from only the MySQL database. Proceed with caution\n";
+		printerr "NOTICE:\t This module deletes records from ALL database systems for TransAtlasDB. Proceed with caution\n";
 		$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$delete'"); $sth->execute(); $found =$sth->fetch();
     		if ($found) {
 			$i++; $KEYDELETE{$i} = "Sample Information";
@@ -642,17 +642,20 @@ if ($delete){
 		print "--------------------------------------------------------------------------\n";
 		print "Choose which details you want removed from the database (multiple option separated by comma) ? ";
 		chomp (my $decision = (<>)); print "\n";
-		if (length $decision >=0) {
+		if (length $decision >0) {
 			my @allverdict = split(",",$decision);
 			foreach my $verdict (sort {$b<=>$a} @allverdict) {
 				if (exists $KEYDELETE{$verdict}) {
 					printerr "NOTICE:\t Deleting $KEYDELETE{$verdict}\n";
 					if ($verdict == 0) {$alldelete = 1;}
 					if ($KEYDELETE{$verdict} =~ /^Variant/ || $alldelete == 1) {
+						my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 						printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
 						$sth = $dbh->prepare("delete from VarAnno where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
+						my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
+						`$execute 2>> $efile`; printerr ".";
 						printerr " Done\n";
 					}
 					if ($KEYDELETE{$verdict} =~ /^Gene/ || $alldelete ==1 ) {
@@ -671,8 +674,8 @@ if ($delete){
 								$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
 								printerr " Done\n";
-							} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n"; exit;}
-						} else { printerr "ERROR:\t Gene Information Relating to '$delete' still present in the database. Delete Gene Information first\n"; exit;}
+							} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
+						} else { printerr "ERROR:\t Gene Information Relating to '$delete' still present in the database. Delete Gene Information first\n";}
 					}
 					if ($KEYDELETE{$verdict} =~ /^Sample/ || $alldelete ==1 ) {
 						$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
@@ -687,9 +690,9 @@ if ($delete){
 									$sth = $dbh->prepare("delete from SamplePerson where sampleid = '$delete'"); $sth->execute(); printerr ".";
 									$sth = $dbh->prepare("delete from Sample where sampleid = '$delete'"); $sth->execute();  printerr ".";
 									printerr " Done\n";
-								} else { die "ERROR:\t Variant Information for '$delete' is in the database. Delete Variant Information first\n"; }
-							} else { die "ERROR:\t Gene Information for '$delete' still present in the database. Delete Gene Information first\n"; }
-						} else { die "ERROR:\t Mapping Information for '$delete' is in the database. Delete Mapping Information first\n"; }
+								} else { printerr "ERROR:\t Variant Information for '$delete' is in the database. Delete Variant Information first\n"; }
+							} else { printerr "ERROR:\t Gene Information for '$delete' still present in the database. Delete Gene Information first\n"; }
+						} else { printerr "ERROR:\t Mapping Information for '$delete' is in the database. Delete Mapping Information first\n"; }
 					}
 				} else { printerr "ERROR:\t $verdict is an INVALID OPTION\n"; }
 			}
@@ -707,7 +710,10 @@ if ($datadb){
   	printerr ("SUCCESS: Import of RNA Seq analysis information in \"$file2consider\"\n");
 } #end if completed RNASeq data2db
 printerr $additional;
-printerr ("NOTICE:\t Summary in log file $efile\n");
+$transaction = "data to database import" if $datadb;
+$transaction = "METADATA IMPORT(s)" if $metadata;
+$transaction = "DELETE '$delete' activity" if $delete;
+printerr ("NOTICE:\t Summary of $transaction in log file $efile\n");
 printerr "-----------------------------------------------------------------\n";
 print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
 close (LOG);

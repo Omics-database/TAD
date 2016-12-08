@@ -90,8 +90,8 @@ while ($choice < 1){
 		printerr "NOTICE:\t No Option selected\n";
 	}
 }
-print color('reset');
 #output: the end
+printerr color('reset');
 printerr "-----------------------------------------------------------------\n";
 printerr ("SUCCESS: Clean exit from TransAtlasDB interaction module\n");
 printerr ("NOTICE:\t Summary in log file $efile\n");
