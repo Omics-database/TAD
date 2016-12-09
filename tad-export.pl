@@ -472,13 +472,15 @@ if ($dbdata){ #if db 2 data mode selected
 			} #end if chromosome
 			else {
 				$verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n"; $chrheader="all chromosomes";
-				$syntax = "call usp_vall(\"".$organism."\")";
-				$sth = $dbh->prepare($syntax);
-				$sth->execute or die "SQL Error: $DBI::errstr\n";
-				while (my @row = $sth->fetchrow_array() ) {
-					$count++;
-					if ($row[5] =~ /^-/){ $row[5] = ''; }
-					$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+				unless ($found){
+					$syntax = "call usp_vall(\"".$organism."\")";
+					$sth = $dbh->prepare($syntax);
+					$sth->execute or die "SQL Error: $DBI::errstr\n";
+					while (my @row = $sth->fetchrow_array() ) {
+						$count++;
+						if ($row[5] =~ /^-/){ $row[5] = ''; }
+						$SAMPLE{$row[0]}{$row[1]}{$row[5]} = [@row];
+					}
 				}
 			}
 			if ($found) {
@@ -767,7 +769,7 @@ sub PROCESS {
 	$ALT{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[4];
 	$QUAL{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[5];
 	if ($line[6]) {
-		$consequenceheader = '##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations.'."\n".'Format:Consequence|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|Protein_position|Amino_acids|Codons|Existing_variation|VARIANT_CLASS">'."\n";
+		$consequenceheader = '##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations. Format:Consequence|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|Protein_position|Amino_acids|Codons|Existing_variation|VARIANT_CLASS">'."\n";
 		no warnings 'uninitialized';
 		my $joint = "$line[6]|$line[7]|$line[8]|$line[9]|$line[10]|$line[11]|$line[12]|$line[13]|$line[14]|$line[15]|$line[16]";
 		if (exists $CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}) {
