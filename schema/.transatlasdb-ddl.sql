@@ -121,17 +121,17 @@ CREATE TABLE `SampleStats` (`sampleid` VARCHAR(150) NOT NULL, `collectionprotoco
 -- Table structure for table `MapStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `MapStats`;
-CREATE TABLE `MapStats` (`sampleid` VARCHAR(150) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `unmappedreads` INT(11) NULL DEFAULT NULL, `infoprepreads` TEXT NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `MapStats` (`sampleid` VARCHAR(150) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `alignmentrate` VARCHAR(50) NULL DEFAULT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `GeneStats`;
-CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `isoforms` INT(11) NULL DEFAULT NULL, `genes` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL,PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `isoforms` INT(11) NULL DEFAULT NULL, `genes` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL,PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `Metadata`;
-CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, `diffexpresstool` VARCHAR(100) NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `GenesFpkm`
 -- -----------------------------------------------------
@@ -197,10 +197,10 @@ CREATE PROCEDURE `usp_vall`(in specie varchar(45)) select `a`.`chrom` `chrom`, `
 -- -----------------------------------------------------
 DROP VIEW IF EXISTS `vw_sampleinfo`;
 DROP TABLE IF EXISTS `vw_sampleinfo`;
-CREATE TABLE `vw_sampleinfo` (`sampleid` INT, `organism` INT, `tissue` INT, `totalreads` INT, `mappedreads` INT, `genes` INT, `isoforms` INT, `totalvariants` INT, `totalsnps` INT, `totalindels` INT);
+CREATE TABLE `vw_sampleinfo` (`sampleid` INT, `organism` INT, `tissue` INT, `totalreads` INT, `mappedreads` INT, `alignmentrate` INT,`genes` INT, `isoforms` INT, `totalvariants` INT, `totalsnps` INT, `totalindels` INT);
 DROP VIEW IF EXISTS `vw_sampleinfo` ;
 DROP TABLE IF EXISTS `vw_sampleinfo`;
-CREATE VIEW `vw_sampleinfo` AS select `a`.`sampleid` AS `sampleid`, `e`.`organism` AS `organism`,`a`.`tissue` AS `tissue`, `b`.`totalreads` AS `totalreads`, `b`.`mappedreads` AS `mappedreads`,`c`.`genes` AS `genes`,`c`.`isoforms` AS `isoforms`,`d`.`totalvariants` AS `totalvariants`,`d`.`totalsnps` AS `totalsnps`,`d`.`totalindels` AS `totalindels` from ((((`Sample` `a` join `Animal` `e` on ((`a`.`derivedfrom` = `e`.`animalid`))) join `MapStats` `b` on((`a`.`sampleid` = `b`.`sampleid`))) left outer join `GeneStats` `c` on ((`b`.`sampleid` = `c`.`sampleid`))) left outer join `VarSummary` `d` on ((`a`.`sampleid` = `d`.`sampleid`)));
+CREATE VIEW `vw_sampleinfo` AS select `a`.`sampleid` AS `sampleid`, `e`.`organism` AS `organism`,`a`.`tissue` AS `tissue`, `b`.`totalreads` AS `totalreads`, `b`.`mappedreads` AS `mappedreads`, `b`.`alignmentrate` AS `alignmentrate`,`c`.`genes` AS `genes`,`c`.`isoforms` AS `isoforms`,`d`.`totalvariants` AS `totalvariants`,`d`.`totalsnps` AS `totalsnps`,`d`.`totalindels` AS `totalindels` from ((((`Sample` `a` join `Animal` `e` on ((`a`.`derivedfrom` = `e`.`animalid`))) join `MapStats` `b` on((`a`.`sampleid` = `b`.`sampleid`))) left outer join `GeneStats` `c` on ((`b`.`sampleid` = `c`.`sampleid`))) left outer join `VarSummary` `d` on ((`a`.`sampleid` = `d`.`sampleid`)));
 -- -----------------------------------------------------
 -- View `vw_nosql`
 -- -----------------------------------------------------
