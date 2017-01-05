@@ -5,6 +5,7 @@ use Pod::Usage;
 use Getopt::Long;
 use File::Spec;
 use File::Basename;
+use POSIX;
 use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
@@ -30,8 +31,8 @@ my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
 my ($refgenome, $stranded, $sequences, $annotation, $annotationfile); #for annotation file
 my $additional;
 #genes import
-our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $prepfile, $logfile, $variantfile, $vepfile, $annofile);
-our ($total, $mapped, $unmapped, $deletions, $insertions, $junctions, $genes, $isoforms,$prep);
+our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
+our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $isoforms, $mappingtool);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
 our ($varianttool, $verd, $variantclass);
@@ -374,14 +375,12 @@ if ($datadb) {
   	`find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
   	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample location"); close (DIR);
   	my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
-  	$acceptedbam = (grep /accepted_hits.bam/, @foldercontent)[0];
-  	$alignfile = (grep /align_summary.txt/, @foldercontent)[0];
+  	$alignfile = (grep /summary.txt/, @foldercontent)[0];
   	$genesfile = (grep /genes.fpkm/, @foldercontent)[0];
   	$isoformsfile = (grep /isoforms.fpkm/, @foldercontent)[0];
   	$deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
   	$insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
   	$junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
-  	$prepfile = (grep /prep_reads.info/,@foldercontent)[0];
   	$logfile = (grep /logs\/run.log/, @foldercontent)[0];
   	$variantfile = (grep /.vcf$/, @foldercontent)[0]; 
   	$vepfile = (grep /.vep.txt$/, @foldercontent)[0];
@@ -390,29 +389,36 @@ if ($datadb) {
   	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
   	if ($found) { # if sample is not in the database    
     		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
-    		unless ($found) { 
-      			LOGFILE(); #parse logfile details
-      			#open alignment summary file
+    		LOGFILE();
+				unless ($found) {
+      			undef $mappingtool;
+						#open alignment summary file
       			if ($alignfile) {
-        			open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
+							open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
         			while (<ALIGN>){
           				chomp;
           				if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
- 			         	if (/Mapped/){my $line = $_; $line =~ /Mapped.*:\s+(\d+).*$/;$mapped = $1;}
-        			} close ALIGN;
-        			$unmapped = $total-$mapped;
-        			$prep = `cat $prepfile`;
+								 	if (/overall/) { my $line = $_; $line =~ /^(\d+.\d+)%\s/; $alignrate = $1;}
+									if (/overall read mapping rate/) { $mappingtool = "TopHat";}
+									if (/overall alignment rate/) { $mappingtool = "HISAT";}
+							} close ALIGN;
+							$mapped = ceil($total * $alignrate/100);
+							$alignrate .= "%";
       			} else {die "\nFAILED:\t Can not find Alignment summary file '$alignfile'\n";}
-      			#INSERT INTO DATABASE:
+     				$deletions = undef; $insertions = undef; $junctions = undef;
+						if ($deletionsfile){ $deletions = `cat $deletionsfile | wc -l`; $deletions--; } 
+						if ($insertionsfile){ $insertions = `cat $insertionsfile | wc -l`; $insertions--; }
+						if ($junctionsfile){ $junctions = `cat $junctionsfile | wc -l`; $junctions--; }
+	#INSERT INTO DATABASE:
       			#MapStats table
       			printerr "NOTICE:\t Importing $dataid to MapStats table ..."; 
-      			$sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, unmappedreads, infoprepreads, date ) values (?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $total, $mapped, $unmapped, $prep, $date) or die "\nERROR:\t Complication in MapStats table, contact $AUTHOR\n";
+      			$sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, alignmentrate, deletions, insertions, junctions, date ) values (?,?,?,?,?,?,?,?)");
+      			$sth ->execute($dataid, $total, $mapped, $alignrate, $deletions, $insertions, $junctions, $date) or die "\nERROR:\t Complication in MapStats table, contact $AUTHOR\n";
       			printerr " Done\n";
       			#metadata table
       			printerr "NOTICE:\t Importing $dataid to Metadata table ...";
-      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename ) values (?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
+      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
+      			$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
       			printerr " Done\n";
       
 		     	#toggle options
@@ -468,12 +474,12 @@ if ($datadb) {
       			printerr "NOTICE:\t $dataid already in MapStats table... Moving on \n";
 						$additional .=  "Optional: To delete $dataid from MapStats table ; Execute: tad-import.pl -delete $dataid \n";
       			$sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
-	      		unless ($found) {
-        			printerr "NOTICE:\t Importing $dataid to MapStats table ...";
- 			        $sth = $dbh->prepare("insert into Metadata (sampleid,refgenome, annfile, stranded, sequencename ) values (?,?,?,?,?)");
-	        		$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences) or die "\nERROR:\t Complication in Metadata table\n";
-        			printerr " Done\n";
-      			} #end else found in MapStats table
+						unless ($found) {
+        			printerr "NOTICE:\t Importing $dataid to Metadata table ...";
+ 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
+							$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
+							printerr " Done\n";
+						} #end else found in MapStats table
       			#toggle options
 	      		unless ($variant) {
 		        	GENE_INFO($dataid);
@@ -624,11 +630,11 @@ if ($delete){
 		}
 		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
     		if ($found) {
-			$i++; $KEYDELETE{$i} = "Mapping Information";
+			$i++; $KEYDELETE{$i} = "Alignment Information";
 		}
 		$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
     		if ($found) {
-			$i++; $KEYDELETE{$i} = "Gene Information";
+			$i++; $KEYDELETE{$i} = "Expression Information";
 		}
 		$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
     		if ($found) {
@@ -753,6 +759,7 @@ sub LOGFILE { #subroutine for getting metadata
 	if ($logfile){
 		@allgeninfo = split('\s',`head -n 1 $logfile`);
 		#also getting metadata info
+		if ($allgeninfo[0] =~ /tophat/){ $mappingtool = "TopHat";} else { $mappingtool = "HISAT"; }
 		if ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*no-coverage-search$/){$str = 2; $ann = 5; $ref = 10; $seq = 11; $allstart = 4; $allend = 7;}
 		elsif ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*G$/ ){$str = 2; $ann = 4; $ref = 9; $seq = 10; $allstart = 3; $allend = 6;}
 		elsif($allgeninfo[3] =~ /\-o$/){$str=99; $ann=99; $ref = 5; $seq = 6; $allstart = 3; $allend = 6;}
@@ -778,18 +785,17 @@ sub LOGFILE { #subroutine for getting metadata
 }
 
 sub GENE_INFO { #subroutine for getting gene information
-	$deletions = `cat $deletionsfile | wc -l`; $deletions--;
-	$insertions = `cat $insertionsfile | wc -l`; $insertions--;
-	$junctions = `cat $junctionsfile | wc -l`; $junctions--;
 	$genes = `cat $genesfile | wc -l`; $genes--;
 	$isoforms = `cat $isoformsfile | wc -l`; $isoforms--;
-
+  my $diffexpress = "Cufflinks";
 	#INSERT INTO DATABASE: #GeneStats table
 	$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
 	unless ($found) { 
 		printerr "NOTICE:\t Importing $_[0] to GeneStats table\n";
-		$sth = $dbh->prepare("insert into GeneStats (sampleid,deletions, insertions, junctions, isoforms, genes,date) values (?,?,?,?,?,?,?)");
-		$sth ->execute($_[0], $deletions, $insertions, $junctions, $isoforms, $genes, $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";; 
+		$sth = $dbh->prepare("insert into GeneStats (sampleid,isoforms, genes,date) values (?,?,?,?)");
+		$sth ->execute($_[0], $isoforms, $genes, $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
+		$sth = $dbh->prepare("update Metadata set diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); #updating Metadata table.
+		$sth ->execute();
 	} else {
 		printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on \n";
 		$sth = $dbh->prepare("select status from GeneStats where sampleid = '$_[0]' and status ='done'"); $sth->execute(); $found = $sth->fetch();
