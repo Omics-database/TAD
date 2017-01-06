@@ -28,10 +28,10 @@ our ($sheetid, %NAME, %ORGANIZATION);
 our ($found);
 our (@allgeninfo);
 my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
-my ($refgenome, $stranded, $sequences, $annotation, $annotationfile); #for annotation file
+my ($refgenome, $stranded, $sequences, $annotationfile); #for annotation file
 my $additional;
 #genes import
-our ($acceptedbam, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
+our ($samfile, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
 our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $isoforms, $mappingtool);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
@@ -382,6 +382,7 @@ if ($datadb) {
   	$insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
   	$junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
   	$logfile = (grep /logs\/run.log/, @foldercontent)[0];
+		$samfile = (grep /.sam$/, @foldercontent)[0];
   	$variantfile = (grep /.vcf$/, @foldercontent)[0]; 
   	$vepfile = (grep /.vep.txt$/, @foldercontent)[0];
   	$annofile = (grep /anno.txt$/, @foldercontent)[0];
@@ -391,7 +392,6 @@ if ($datadb) {
     		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
     		LOGFILE();
 				unless ($found) {
-      			undef $mappingtool;
 						#open alignment summary file
       			if ($alignfile) {
 							open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
@@ -399,12 +399,24 @@ if ($datadb) {
           				chomp;
           				if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
 								 	if (/overall/) { my $line = $_; $line =~ /^(\d+.\d+)%\s/; $alignrate = $1;}
-									if (/overall read mapping rate/) { $mappingtool = "TopHat";}
-									if (/overall alignment rate/) { $mappingtool = "HISAT";}
+									if (/overall read mapping rate/) {
+										if ($mappingtool){
+											unless ($mappingtool =~ /TopHat/i){
+												die "\nERROR:\t Inconsistent Directory Structure, $mappingtool SAM file with TopHat align_summary.txt file found\n";
+											}
+										} else { $mappingtool = "TopHat"; }
+									}
+									if (/overall alignment rate/) {
+										if ($mappingtool){
+											unless ($mappingtool =~ /hisat/i){
+												die "\nERROR:\t Inconsistent Directory Structure, $mappingtool LOG file with HISAT align_summary.txt file found\n";
+											}
+										} else { $mappingtool = "HISAT";}
+									}
 							} close ALIGN;
 							$mapped = ceil($total * $alignrate/100);
 							$alignrate .= "%";
-      			} else {die "\nFAILED:\t Can not find Alignment summary file '$alignfile'\n";}
+      			} else {die "\nFAILED:\t Can not find Alignment summary file as 'align_summary.txt'\n";}
      				$deletions = undef; $insertions = undef; $junctions = undef;
 						if ($deletionsfile){ $deletions = `cat $deletionsfile | wc -l`; $deletions--; } 
 						if ($insertionsfile){ $insertions = `cat $insertionsfile | wc -l`; $insertions--; }
@@ -664,14 +676,14 @@ if ($delete){
 						`$execute 2>> $efile`; printerr ".";
 						printerr " Done\n";
 					}
-					if ($KEYDELETE{$verdict} =~ /^Gene/ || $alldelete ==1 ) {
+					if ($KEYDELETE{$verdict} =~ /^Expression/ || $alldelete ==1 ) {
 						printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
 						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						$sth = $dbh->prepare("delete from IsoformsFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
 						printerr " Done\n";
 					}
-					if ($KEYDELETE{$verdict} =~ /^Map/ || $alldelete ==1 ) {
+					if ($KEYDELETE{$verdict} =~ /^Alignment/ || $alldelete ==1 ) {
 						$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
 						unless ($found) {
 							$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
@@ -756,34 +768,61 @@ sub processArguments {
 }
 
 sub LOGFILE { #subroutine for getting metadata
-	if ($logfile){
-		@allgeninfo = split('\s',`head -n 1 $logfile`);
-		#also getting metadata info
-		if ($allgeninfo[0] =~ /tophat/){ $mappingtool = "TopHat";} else { $mappingtool = "HISAT"; }
-		if ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*no-coverage-search$/){$str = 2; $ann = 5; $ref = 10; $seq = 11; $allstart = 4; $allend = 7;}
-		elsif ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*G$/ ){$str = 2; $ann = 4; $ref = 9; $seq = 10; $allstart = 3; $allend = 6;}
-		elsif($allgeninfo[3] =~ /\-o$/){$str=99; $ann=99; $ref = 5; $seq = 6; $allstart = 3; $allend = 6;}
-		$refgenome = (split('\/', $allgeninfo[$ref]))[-1]; #reference genome name
-	}
-	else {
-		($str, $ann, $ref, $seq,$allstart, $allend) = (99,99,99,99,99,99); #defining calling variables
-	}
-	unless ($ann == 99){
-		$annotation = $allgeninfo[$ann];
-		$annotationfile = uc ( (split('\.',((split("\/", $allgeninfo[$ann]))[-1])))[-1] ); #(annotation file)
-	}
-	else { $annotation = undef; $annotationfile = undef; }
-	if ($str == 99){ $stranded = undef; } else { $stranded = $allgeninfo[$str]; } # (stranded or not)	
-	if ($seq == 99) { $sequences = undef;} else {
-		my $otherseq = $seq++;
-		unless(length($allgeninfo[$otherseq])<1){ #sequences 
-			$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]).",". ( ( split('\/', $allgeninfo[$otherseq]) ) [-1]);
+	if ($samfile){
+		@allgeninfo = split('\s',`grep -m 1 "ID:hisat" $samfile | head -1`,5);
+		
+		#getting metadata info
+		if ($#allgeninfo > 1){
+			if ($allgeninfo[1] =~ /(hisat.*)$/){ $mappingtool = $1." v".(split(':',$allgeninfo[3]))[-1]; } #mapping tool name and version
+			$allgeninfo[4] =~ /\-x\s(\w+)\s/;
+			$refgenome = (split('\/', $1))[-1]; #reference genome name
+			if ($allgeninfo[4] =~ /-1/){
+				$allgeninfo[4] =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
+				my @nseq = split(",",$1); my @pseq = split(",",$2);
+				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
+				foreach (@pseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
+				chop $sequences;
+			}
+			elsif ($allgeninfo[4] =~ /-U/){
+				$allgeninfo[4] =~ /\-U\s(\S+)"$/;
+				my @nseq = split(",",$1);
+				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
+				chop $sequences;
+			} #end if toggle for sequences
+			$stranded = undef;
+			$annotationfile = undef;
 		} else {
-			$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]);
+			$annotationfile = undef;
+			$stranded = undef; $sequences = undef;
 		}
-	} #end if seq
+	}
+	elsif ($logfile){
+		@allgeninfo = split('\s',`head -n 1 $logfile`);
+		
+		($str, $ann, $ref, $seq,$allstart, $allend) = (99,99,99,99,99,99);
+		#getting metadata info
+		if ($#allgeninfo > 1){
+			if ($allgeninfo[0] =~ /tophat/){ $mappingtool = "TopHat";}
+			if ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*no-coverage-search$/){$str = 2; $ann = 5; $ref = 10; $seq = 11; $allstart = 4; $allend = 7;}
+			elsif ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*G$/ ){$str = 2; $ann = 4; $ref = 9; $seq = 10; $allstart = 3; $allend = 6;}
+			elsif($allgeninfo[3] =~ /\-o$/){$str=99; $ann=99; $ref = 5; $seq = 6; $allstart = 3; $allend = 6;}
+			$refgenome = (split('\/', $allgeninfo[$ref]))[-1]; #reference genome name
+			unless ($ann == 99){
+				$annotationfile = uc ( (split('\.',((split("\/", $allgeninfo[$ann]))[-1])))[-1] ); #(annotation file)
+			}
+			else { $annotationfile = undef; }
+			if ($str == 99){ $stranded = undef; } else { $stranded = $allgeninfo[$str]; } # (stranded or not)	
+			if ($seq == 99) { $sequences = undef;} else {
+				my $otherseq = $seq++;
+				unless(length($allgeninfo[$otherseq])<1){ #sequences 
+					$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]).",". ( ( split('\/', $allgeninfo[$otherseq]) ) [-1]);
+				} else {
+					$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]);
+				}
+			} #end if seq
+		}
+	}
 }
-
 sub GENE_INFO { #subroutine for getting gene information
 	$genes = `cat $genesfile | wc -l`; $genes--;
 	$isoforms = `cat $isoformsfile | wc -l`; $isoforms--;
