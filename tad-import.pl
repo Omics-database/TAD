@@ -31,8 +31,9 @@ my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
 my ($refgenome, $stranded, $sequences, $annotationfile); #for annotation file
 my $additional;
 #genes import
+my $transcriptsgtf;
 our ($samfile, $alignfile, $genesfile,$isoformsfile, $deletionsfile, $insertionsfile, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
-our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $isoforms, $mappingtool);
+our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $isoforms, $mappingtool, $diffexpress);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
 our ($varianttool, $verd, $variantclass);
@@ -375,9 +376,10 @@ if ($datadb) {
   	`find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
   	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample location"); close (DIR);
   	my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
-  	$alignfile = (grep /summary.txt/, @foldercontent)[0];
+  	foreach (grep /\.gtf/, @foldercontent) { unless (`head -n 3 $_ | wc -l` <= 0 && $_ =~ /skipped/) { $transcriptsgtf = $_; } }
+		$alignfile = (grep /summary.txt/, @foldercontent)[0];
   	$genesfile = (grep /genes.fpkm/, @foldercontent)[0];
-  	$isoformsfile = (grep /isoforms.fpkm/, @foldercontent)[0];
+		$isoformsfile = (grep /isoforms.fpkm/, @foldercontent)[0];
   	$deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
   	$insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
   	$junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
@@ -824,9 +826,23 @@ sub LOGFILE { #subroutine for getting metadata
 	}
 }
 sub GENE_INFO { #subroutine for getting gene information
-	$genes = `cat $genesfile | wc -l`; $genes--;
-	$isoforms = `cat $isoformsfile | wc -l`; $isoforms--;
-  my $diffexpress = "Cufflinks";
+	if ($transcriptsgtf){
+		# stringtie eg555.sorted.bam -G /home/modupe/.big_ten/chicken/chicken.gff
+		#differential expression tool names
+		if (`head -n 1 $transcriptsgtf` =~ /cufflinks/i) {
+			$diffexpress = "Cufflinks";
+			$genes = `cat $genesfile | wc -l`; if ($genes >=2){ $genes--;} else {$genes = 0;}
+			$isoforms = `cat $isoformsfile | wc -l`; if ($isoforms >=2) { $isoforms--; } else {$isoforms = 0; }
+		}
+		elsif (`head -n 1 $transcriptsgtf` =~ /stringtie/i) {
+				$diffexpress = substr( `head -n 2 $genesfile | tail -1`,2,-1);
+				$genes = `cat $genesfile | wc -l`; if ($genes >=3){ $genes = $genes-2;} else {$genes = 0;}
+		} else {
+			die "FAILED:\tCan not identify source of Genes Expression File '$transcriptsgtf', consult documentation.\n";
+		}
+	} else {
+		die "ERROR:\t Can not find gene expression file, making sure transcript files are present or appropriately named for StringTie ends with .gtf, 'e.g. <xxx>.gtf'.\n";
+	}
 	#INSERT INTO DATABASE: #GeneStats table
 	$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
 	unless ($found) { 
@@ -846,19 +862,39 @@ sub GENE_INFO { #subroutine for getting gene information
 
 sub FPKM { #subroutine for  importing the FPKM values
 	open(FPKM, "<", $_[1]) or die "\nERROR:\t Can not open file $_[1]\n";
-	my $syntax = "insert into $_[0] (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-	my $sth = $dbh->prepare($syntax);
-	while (<FPKM>){
-		chomp;
-		my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
-		unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
-			if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
-			if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
-			my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
-			$sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
-		}
-	} close FPKM;
-	$sth->finish();
+	if ($diffexpress =~ /Cuff/i){
+		my $syntax = "insert into $_[0] (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		my $sth = $dbh->prepare($syntax);
+		while (<FPKM>){
+			chomp;
+			my @columns = split /\t/;
+			print "$#columns\n"; die;
+			my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
+			unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
+				if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
+				if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
+				my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
+				$sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
+			}
+		} close FPKM;
+		$sth->finish();
+	} elsif ($diffexpress =~ /stringtie/i){
+		my $syntax = "insert into $_[0] (sampleid, trackingid, classcode, nearestrefid, geneid, geneshortname, tssid, chromnumber, chromstart, chromstop, length, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		my $sth = $dbh->prepare($syntax);
+		while (<FPKM>){
+			chomp;
+			my ($track, $class, $ref_id, $gene, $gene_name, $tss, $locus, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) = split /\t/;
+			unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
+				if($class =~ /-/){$class = undef;} if ($ref_id =~ /-/){$ref_id = undef;}
+				if ($length =~ /-/){$length = undef;} if($coverage =~ /-/){$coverage = undef;}
+				my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/;
+				$sth ->execute($_[2], $track, $class, $ref_id, $gene, $gene_name, $tss, $chrom_no, $chrom_start, $chrom_stop, $length, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
+			}
+		} close FPKM;
+		$sth->finish();
+	} else {
+		die "FAILED:\tCan not identify source of Genes Expression File '$genesfile', consult documentation.\n";
+	}
 }
 
 sub DBVARIANT {
