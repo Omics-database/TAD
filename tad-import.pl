@@ -1349,11 +1349,11 @@ sub NOSQL {
 	  tad-import.pl -data2db -all -v example/sample_sxt/GGA_UD_1014/
 	  tad-import.pl -data2db -variant -annovar example/sample_sxt/GGA_UD_1004/
 		
-		#delete previously imported data data
+	  #delete previously imported data data
 	  tad-import.pl -delete GGA_UD_1004
 
 
- Version: $Date: 2016-10-28 15:50:08 (Fri, 28 Oct 2016) $
+ Version: $ Date: 2017-01-04 15:52:40 (Fri, 04 Jan 2017) $
 
 =head1 OPTIONS
 
@@ -1432,6 +1432,12 @@ successful processing.
 Detailed documentation for TransAtlasDB should be viewed on https://modupeore.github.io/TransAtlasDB/.
 
 =over 8
+
+=item * B<invalid input>
+
+If any of the files input contain invalid arguments or format, TransAtlasDB 
+will terminate the program and the invalid input with the outputted. 
+Users should manually examine this file and identify sources of error.
 
 =back
 
@@ -1523,14 +1529,7 @@ TransAtlasDB accepts variants file from GATK and SAMtools (BCFtools)
 
 =over 8
 
-=item * B<invalid input>
-
-If any of the files input contain invalid arguments or format, TransAtlas 
-will terminate the program and the invalid input with the outputted. 
-Users should manually examine this file and identify sources of error.
-
 =back
-
 
 --------------------------------------------------------------------------------
 
