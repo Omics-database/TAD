@@ -392,9 +392,10 @@ if ($datadb) {
   	if ($found) { # if sample is not in the database    
     		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
     		LOGFILE();
-				unless ($found) {
+				unless ($found) { 
 						#open alignment summary file
       			if ($alignfile) {
+							`head -n 1 $alignfile` =~ /^(\d+)\sreads/; $total = $1;
 							open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
         			while (<ALIGN>){
           				chomp;
@@ -416,7 +417,6 @@ if ($datadb) {
 									}
 							} close ALIGN;
 							$mapped = ceil($total * $alignrate/100);
-							$alignrate .= "%";
       			} else {die "\nFAILED:\t Can not find Alignment summary file as 'align_summary.txt'\n";}
      				$deletions = undef; $insertions = undef; $junctions = undef;
 						if ($deletionsfile){ $deletions = `cat $deletionsfile | wc -l`; $deletions--; } 
