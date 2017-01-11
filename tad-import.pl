@@ -32,7 +32,7 @@ my ($refgenome, $stranded, $sequences, $annotationfile); #for annotation file
 my $additional;
 #genes import
 our ($samfile, $alignfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
-our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $diffexpress);
+our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress);
 my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
@@ -427,19 +427,18 @@ if ($datadb) {
       			#MapStats table
       			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to MapStats table ..."; 
       			$sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, alignmentrate, deletions, insertions, junctions, date ) values (?,?,?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $total, $mapped, $alignrate, $deletions, $insertions, $junctions, $date) or die "\nERROR:\t Complication in MapStats table, contact $AUTHOR\n";
+      			$sth ->execute($dataid, $total, $mapped, $alignrate, $deletions, $insertions, $junctions, $date) or die "\nERROR:\t Complication in MapStats table, consult documentation\n";
       			printerr " Done\n";
       			#metadata table
       			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
       			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
+      			$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
       			printerr " Done\n";
       
 		     	#toggle options
       			unless ($variant) {
         			GENES_FPKM($dataid);
         			if ($all){
-          				printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
           				DBVARIANT($variantfile, $dataid);
           				printerr " Done\n";
           				#variant annotation specifications
@@ -458,8 +457,7 @@ if ($datadb) {
         			}
       			}
       			else { #variant option selected
-		        	printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
-			        DBVARIANT($variantfile, $dataid);
+		        	DBVARIANT($variantfile, $dataid);
 			        printerr " Done\n";
 			        #variant annotation specifications
 		        	if ($vep) {
@@ -482,7 +480,7 @@ if ($datadb) {
 						unless ($found) {
         			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
  			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-							$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, contact $AUTHOR\n";
+							$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
 							printerr " Done\n";
 						} #end else found in MapStats table
       			#toggle options
@@ -496,8 +494,7 @@ if ($datadb) {
 					        $sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
 	            				$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
             					$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
-            					printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
-            					DBVARIANT($variantfile, $dataid);
+											DBVARIANT($variantfile, $dataid);
             					printerr " Done\n";
         	    				#variant annotation specifications
 	            				if ($vep) {
@@ -549,7 +546,6 @@ if ($datadb) {
 			          	$sth = $dbh->prepare("delete from VarAnno where sampleid = '$dataid'"); $sth->execute();
 		          		$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
 		        	  	$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
-			          	printerr "NOTICE:\t Importing $dataid - Variants to VarResult table ...";
 			          	DBVARIANT($variantfile, $dataid);
 			          	printerr " Done\n";
 		          		#variant annotation specifications
@@ -798,7 +794,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 	unless ($found) { 
 		printerr "NOTICE:\t Importing $_[0] to GeneStats table\n";
 		$sth = $dbh->prepare("insert into GeneStats (sampleid,date) values (?,?)");
-		$sth ->execute($_[0], $date) or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
+		$sth ->execute($_[0], $date) or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 	} else {
 		printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on \n";
 	}
@@ -816,7 +812,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 					$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
 		      $sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
 				}
-				printerr "NOTICE:\t Importing $diffexpress gene expression information for $_[0] to GenesFpkm table ...";
+				printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 				#import into FPKM table;
 				open(FPKM, "<", $genesfile) or die "\nERROR:\t Can not open file $genesfile\n";
 				my $syntax = "insert into GenesFpkm (sampleid, geneid, refgenename, chromnumber, chromstart, chromstop, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?)";
@@ -827,13 +823,13 @@ sub GENES_FPKM { #subroutine for getting gene information
 					unless ($track eq "tracking_id"){ #check & specifying undefined variables to null
 						if($coverage =~ /-/){$coverage = undef;}
 						my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/; $chrom_start++;
-						$sth ->execute($_[0], $gene, $gene_name, $chrom_no, $chrom_start, $chrom_stop, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in GenesFpkm table, contact $AUTHOR\n";
+						$sth ->execute($_[0], $gene, $gene_name, $chrom_no, $chrom_start, $chrom_stop, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in GenesFpkm table, consult documentation\n";
 					}
 				} close FPKM;
 				printerr " Done\n";
 				#set GeneStats to Done
 				$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
-				$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
+				$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 			} else {
 					$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
 					$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
@@ -912,18 +908,18 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
 						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
 					}
-					printerr "NOTICE:\t Importing $diffexpress gene expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
 					my $syntax = "insert into GenesFpkm (sampleid, geneid, chromnumber, chromstart, chromstop, coverage, fpkm, fpkmconflow, fpkmconfhigh ) values (?,?,?,?,?,?,?,?,?)";
 					my $sth = $dbh->prepare($syntax);
 					foreach my $a (keys %ARFPKM){
 						my @array = split(",",$ARFPKM{$a});
-						$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $dlfpkm{$a}, $dhfpkm{$a}) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
+						$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $dlfpkm{$a}, $dhfpkm{$a}) or die "\nERROR:\t Complication in $_[0] table, consult documentation\n";
 					}
 					printerr " Done\n";
 					#set GeneStats to Done
 					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
-					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
+					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
 						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";	
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
@@ -998,18 +994,18 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
 						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
 					}
-					printerr "NOTICE:\t Importing $diffexpress gene expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing StringTie expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
 					my $syntax = "insert into GenesFpkm (sampleid, geneid, refgenename, chromnumber, chromstart, chromstop, coverage, fpkm, tpm ) values (?,?,?,?,?,?,?,?,?)";
 					my $sth = $dbh->prepare($syntax);
 					foreach my $a (keys %ARFPKM){
 						my @array = split(",",$ARFPKM{$a});
-						$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $tpm{$a}) or die "\nERROR:\t Complication in $_[0] table, contact $AUTHOR\n";
+						$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $tpm{$a}) or die "\nERROR:\t Complication in $_[0] table, consult documentation\n";
 					}
 					printerr " Done\n";
 					#set GeneStats to Done
 					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
-					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, contact $AUTHOR\n";
+					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
 						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";	
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
@@ -1027,12 +1023,21 @@ sub GENES_FPKM { #subroutine for getting gene information
 }
 
 sub DBVARIANT {
-	open(VARVCF,$_[0]) or die ("\nERROR:\t Can not open variant file $_[0]\n");
-	$varianttool = "samtools";
+	my $toolvariant;
+	if($_[0]){ open(VARVCF,$_[0]) or die ("\nERROR:\t Can not open variant file $_[0]\n"); } else { die ("\nERROR:\t Can not find variant file. make sure variant file with suffix '.vcf' is present\n"); }
 	while (<VARVCF>) {
 		chomp;
-		if (/^\#/) { if (/^\#\#GATK/) { $varianttool = "GATK"; } }
-		else {
+		if (/^\#/) {
+			if (/^\#\#GATK/) {
+				$_ =~ /ID\=(.*)\,.*Version\=(.*)\,Date/;
+				$toolvariant = "GATK v.$2,$1";
+				$varianttool = "GATK";
+			} elsif (/^\#\#samtoolsVersion/){
+				$_ =~ /Version\=(.*)\+./;
+				$toolvariant = "samtools v.$1";
+				$varianttool = "samtools";
+			}
+		} else {
 			my @chrdetails = split "\t";
 			my @morechrsplit = split(';', $chrdetails[7]);
 			if (((split(':', $chrdetails[9]))[0]) eq '0/1'){$verd = "heterozygous";}
@@ -1042,9 +1047,11 @@ sub DBVARIANT {
 		}
 	} close VARVCF;
 	$sth = $dbh->prepare("insert into VarSummary ( sampleid, varianttool, date) values (?,?,?)");
-	$sth ->execute($_[1], $varianttool, $date) or die "\nERROR:\t Complication in VarSummary table, contact $AUTHOR\n";;
+	$sth ->execute($_[1], $toolvariant, $date) or die "\nERROR:\t Complication in VarSummary table, consult documentation\n";;
 
 	#VARIANT_RESULTS
+	printerr "NOTICE:\t Importing $varianttool variant information for $_[1] to VarResult table ...";
+			
 	foreach my $abc (sort keys %VCFhash) {
 		foreach my $def (sort {$a <=> $b} keys %{ $VCFhash{$abc} }) {
 			my @vcf = split('\|', $VCFhash{$abc}{$def});
@@ -1060,7 +1067,7 @@ sub DBVARIANT {
 
 			#to variant_result
 			$sth = $dbh->prepare("insert into VarResult ( sampleid, chrom, position, refallele, altallele, quality, variantclass, zygosity ) values (?,?,?,?,?,?,?,?)");
-			$sth ->execute($_[1], $abc, $def, $vcf[0], $vcf[1], $vcf[2], $variantclass, $vcf[3]) or die "\nERROR:\t Complication in VarResult table, contact $AUTHOR\n";
+			$sth ->execute($_[1], $abc, $def, $vcf[0], $vcf[1], $vcf[2], $variantclass, $vcf[3]) or die "\nERROR:\t Complication in VarResult table, consult documentation\n";
 		}
 	}
 	#update variantsummary with counts
@@ -1073,7 +1080,7 @@ sub DBVARIANT {
 
 sub VEPVARIANT {
 	my ($chrom, $position);
-	open(VEP,$_[0]) or die ("\nERROR:\t Can not open vep file $_[0]\n");
+	if($_[0]){ open(VEP,$_[0]) or die ("\nERROR:\t Can not open vep file $_[0]\n"); } else { die ("\nERROR:\t Can not find VEP file. make sure vep file with suffix '.vep.txt' is present\n"); }
 	while (<VEP>) {
 		chomp;
 		unless (/^\#/) {
@@ -1085,7 +1092,11 @@ sub VEPVARIANT {
 				if ($#indentation > 2) { $chrom = $indentation[0]."_".$indentation[1]; $position = $indentation[2]; }
 				else { $chrom = $indentation[0]; $position = $indentation[1]; }
 				$chrom = "chr".$chrom;
-				unless ($extra{'VARIANT_CLASS'} =~ "SNV" or $extra{'VARIANT_CLASS'} =~ "substitution"){ $position--; }
+				unless ( $extra{'VARIANT_CLASS'} =~ "SNV" or $extra{'VARIANT_CLASS'} =~ "substitution" ){ $position--; }
+				else {
+					my @poly = split("/",$indentation[$#indentation]);
+					unless ($#poly > 1){ unless (length ($poly[0]) == length($poly[1])){ $position--; } }
+				}
 				my $geneid = $veparray[3];
 				my $transcriptid = $veparray[4];
 				my $featuretype = $veparray[5];
@@ -1097,12 +1108,13 @@ sub VEPVARIANT {
 				my $dbsnp = $veparray[12];
 				my $locate = "$_[1],$chrom,$position,$consequence,$geneid,$pposition";
 				if ( exists $VEPhash{$locate} ) {
-					unless ( $VEPhash{$locate} eq $locate ){ die "\nERROR:\t Duplicate annotation in VEP file, contact $AUTHOR\n"; }
+					unless ( $VEPhash{$locate} eq $locate ){ die "\nERROR:\t Duplicate annotation in VEP file, consult documentation\n"; }
 				} else {
 					$VEPhash{$locate} = $locate;
 					$sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, genename, transcript, feature, genetype,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
 					if (exists $extra{'SYMBOL'}) { $extra{'SYMBOL'} = uc($extra{'SYMBOL'}); }
-					$sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+					$sth ->execute($_[1], $chrom, $position, $consequence, $extra{'SOURCE'}, $geneid, $extra{'SYMBOL'}, $transcriptid, $featuretype, $extra{'BIOTYPE'} , $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, consult documentation\n";
+					$sth = $dbh->prepare("update VarResult set variantclass = '$extra{'VARIANT_CLASS'}' where sampleid = '$_[1]' and chrom = '$chrom' and position = $position"); $sth ->execute() or die "\nERROR:\t Complication in updating VarResult table, consult documentation\n";
 					
 					#NOSQL portion
 					@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$chrom' and position = $position and consequence = '$consequence' and geneid = '$geneid' and proteinposition = '$pposition'");
@@ -1125,7 +1137,7 @@ sub VEPVARIANT {
 					$DBSNP{$chrom}{$position} = $dbsnp; #updating dbsnp	
 				}
 			}
-		}
+		} else { if (/API (version \d+)/){ $annversion = $1;} } #getting VEP version
 	}
 	close VEP;
 	foreach my $chrom (sort keys %DBSNP) {
@@ -1133,12 +1145,12 @@ sub VEPVARIANT {
 			$sth = $dbh->prepare("update VarResult set dbsnpvariant = '$DBSNP{$chrom}{$position}' where sampleid = '$_[1]' and chrom = '$chrom' and position = $position"); $sth ->execute();
 		}
 	}
-	$sth = $dbh->prepare("update VarSummary set annversion = 'VEP' where sampleid = '$_[1]'"); $sth ->execute();
+	$sth = $dbh->prepare("update VarSummary set annversion = 'VEP $annversion' where sampleid = '$_[1]'"); $sth ->execute();
 }
 
 sub ANNOVARIANT {
 	my (%REFGENE, %ENSGENE, %CONTENT);
-	open(ANNOVAR,$_[0]) or die ("\nERROR:\t Can not open annovar file $_[0]\n");
+	if($_[0]){ open(ANNOVAR,$_[0]) or die ("\nERROR:\t Can not open annovar file $_[0]\n"); } else { die ("\nERROR:\t Can not find annovar file. make sure annovar file with suffix '.multianno.txt' is present\n"); }
 	my @annocontent = <ANNOVAR>; close ANNOVAR; 
 	my @header = split("\t", lc($annocontent[0]));
 
@@ -1207,7 +1219,7 @@ sub ANNOVARIANT {
 			} else {
 				$ANNOhash{$locate} = $locate;
 				$sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?)");
-				$sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'Ensembl', $CONTENT{$newno}{$ENSGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+				$sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'Ensembl', $CONTENT{$newno}{$ENSGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, consult documentation \n";
 
 				#NOSQL portion
 				@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$CONTENT{$newno}{'chr'}' and position = $CONTENT{$newno}{'position'} and consequence = '$consequence' and geneid = '$CONTENT{$newno}{$ENSGENE{'gene'}}' and proteinposition = '$pposition'");
@@ -1255,7 +1267,7 @@ sub ANNOVARIANT {
 							$aminoacid = $_;
 						}
 					}
-				} else {next;}
+				} else { next; }
 			} else {
 				$consequence = $CONTENT{$newno}{$REFGENE{'func'}};
 			}
@@ -1272,7 +1284,7 @@ sub ANNOVARIANT {
 				$ANNOhash{$locate} = $locate;
 				$sth = $dbh->prepare("insert into VarAnno ( sampleid, chrom, position, consequence, source, genename, geneid, transcript,proteinposition, aachange, codonchange ) values (?,?,?,?,?,?,?,?,?,?,?)");
 				if (exists $CONTENT{$newno}{$REFGENE{'gene'}}) { $CONTENT{$newno}{$REFGENE{'gene'}} = uc($CONTENT{$newno}{$REFGENE{'gene'}}); }
-				$sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}}, $CONTENT{$newno}{$REFGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, contact $AUTHOR\n";
+				$sth ->execute($_[1], $CONTENT{$newno}{'chr'}, $CONTENT{$newno}{'position'}, $consequence, 'RefSeq', $CONTENT{$newno}{$REFGENE{'gene'}}, $CONTENT{$newno}{$REFGENE{'gene'}}, $transcript, $pposition, $aminoacid, $codons) or die "\nERROR:\t Complication in VarAnno table, consult documentation\n";
 
 				#NOSQL portion
 				@nosqlrow = $dbh->selectrow_array("select * from vw_nosql where sampleid = '$_[1]' and chrom = '$CONTENT{$newno}{'chr'}' and position = $CONTENT{$newno}{'position'} and consequence = '$consequence' and geneid = '$CONTENT{$newno}{$REFGENE{'gene'}}' and proteinposition = '$pposition'");
