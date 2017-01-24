@@ -19,7 +19,7 @@ our ($verbose, $efile, $help, $man);
 our ($sqlfile,$connect, $dbverdict, $schemaverdict, $verdict, $found);
 my ($dbname,$username,$password,$location,$fbname);
 my ($sth,$dbh,$schema); #connect to database;
-our @dbtables = qw|Sample Animal MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnno VarResult VarSummary|;
+our @dbtables = qw|Sample Animal MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnnotation VarResult VarSummary|;
 #--------------------------------------------------------------------------------
 sub printerr; #declare error routine
 our $default = DEFAULTS(); #default error contact
