@@ -1316,6 +1316,12 @@ sub NOSQL {
 	`$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
 	`rm -rf $nosql`;
 	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE
+	
+	#removing records from MySQL
+	$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$_[0]'"); $sth->execute();
+	$sth = $dbh->prepare("delete from VarResult where sampleid = '$_[0]'"); $sth->execute();
+  
+	#declare done
 	printerr " Done\n";
 }
 #--------------------------------------------------------------------------------
