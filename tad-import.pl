@@ -632,49 +632,106 @@ if ($delete){
 					printerr "NOTICE:\t Deleting $KEYDELETE{$verdict}\n";
 					if ($verdict == 0) {$alldelete = 1;}
 					if ($KEYDELETE{$verdict} =~ /^Variant/ || $alldelete == 1) {
-						my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-						printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
-						$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$delete'"); $sth->execute(); printerr ".";
-						$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
-						$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
-						my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
-						`$execute 2>> $efile`; printerr ".";
-						printerr " Done\n";
+						if ($alldelete == 1){
+							if ($KEYDELETE{$i} =~ /^Variant/) { $i--;
+								my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+								printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
+								$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
+								`$execute 2>> $efile`; printerr ".";
+								printerr " Done\n";
+							}
+						} else {
+							my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+							printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
+							$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
+							`$execute 2>> $efile`; printerr ".";
+							printerr " Done\n";
+						}
 					}
 					if ($KEYDELETE{$verdict} =~ /^Expression/ || $alldelete ==1 ) {
-						printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
-						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
-						$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
-						printerr " Done\n";
+						if ($alldelete == 1){
+							if ($KEYDELETE{$i} =~ /^Expression/) { $i--;
+								printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
+								$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								printerr " Done\n";
+							}
+						} else {
+							printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
+							$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							printerr " Done\n";
+						}
 					}
 					if ($KEYDELETE{$verdict} =~ /^Alignment/ || $alldelete ==1 ) {
-						$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
-						unless ($found) {
-							$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
-							unless ($found) {
-								printerr "NOTICE:\t Deleting records for $delete in Mapping tables .";
-								$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
-								$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
-								printerr " Done\n";
-							} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
-						} else { printerr "ERROR:\t Expression Information Relating to '$delete' still present in the database. Delete Expression Information first\n";}
-					}
-					if ($KEYDELETE{$verdict} =~ /^Sample/ || $alldelete ==1 ) {
-						$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
-						unless ($found) {
+						if ($alldelete == 1){
+							if ($KEYDELETE{$i} =~ /^Alignment/) { $i--;
+								$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) {
+									$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+									unless ($found) {
+										printerr "NOTICE:\t Deleting records for $delete in Mapping tables .";
+										$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
+										$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
+										printerr " Done\n";
+									} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
+								} else { printerr "ERROR:\t Expression Information Relating to '$delete' still present in the database. Delete Expression Information first\n";}
+							}
+						} else {
 							$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
 							unless ($found) {
 								$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
 								unless ($found) {
-									printerr "NOTICE:\t Deleting records for $delete in Sample tables ";
-									$sth = $dbh->prepare("delete from SampleStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
-									$sth = $dbh->prepare("delete from SampleOrganization where sampleid = '$delete'"); $sth->execute(); printerr ".";
-									$sth = $dbh->prepare("delete from SamplePerson where sampleid = '$delete'"); $sth->execute(); printerr ".";
-									$sth = $dbh->prepare("delete from Sample where sampleid = '$delete'"); $sth->execute();  printerr ".";
+									printerr "NOTICE:\t Deleting records for $delete in Mapping tables .";
+									$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
+									$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
 									printerr " Done\n";
-								} else { printerr "ERROR:\t Variant Information for '$delete' is in the database. Delete Variant Information first\n"; }
-							} else { printerr "ERROR:\t Expression Information for '$delete' still present in the database. Delete Expression Information first\n"; }
-						} else { printerr "ERROR:\t Alignment Information for '$delete' is in the database. Delete Alignment Information first\n"; }
+								} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
+							} else { printerr "ERROR:\t Expression Information Relating to '$delete' still present in the database. Delete Expression Information first\n";}
+						}
+					}
+					if ($KEYDELETE{$verdict} =~ /^Sample/ || $alldelete ==1 ) {
+						if ($alldelete == 1){
+							if ($KEYDELETE{$i} =~ /^Sample/) { $i--;
+								$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) {
+									$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+									unless ($found) {
+										$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+										unless ($found) {
+											printerr "NOTICE:\t Deleting records for $delete in Sample tables ";
+											$sth = $dbh->prepare("delete from SampleStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+											$sth = $dbh->prepare("delete from SampleOrganization where sampleid = '$delete'"); $sth->execute(); printerr ".";
+											$sth = $dbh->prepare("delete from SamplePerson where sampleid = '$delete'"); $sth->execute(); printerr ".";
+											$sth = $dbh->prepare("delete from Sample where sampleid = '$delete'"); $sth->execute();  printerr ".";
+											printerr " Done\n";
+										} else { printerr "ERROR:\t Variant Information for '$delete' is in the database. Delete Variant Information first\n"; }
+									} else { printerr "ERROR:\t Expression Information for '$delete' still present in the database. Delete Expression Information first\n"; }
+								} else { printerr "ERROR:\t Alignment Information for '$delete' is in the database. Delete Alignment Information first\n"; }
+							}
+						} else {
+							$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+							unless ($found) {
+								$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+								unless ($found) {
+									$sth = $dbh->prepare("select sampleid from VarSummary where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
+									unless ($found) {
+										printerr "NOTICE:\t Deleting records for $delete in Sample tables ";
+										$sth = $dbh->prepare("delete from SampleStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+										$sth = $dbh->prepare("delete from SampleOrganization where sampleid = '$delete'"); $sth->execute(); printerr ".";
+										$sth = $dbh->prepare("delete from SamplePerson where sampleid = '$delete'"); $sth->execute(); printerr ".";
+										$sth = $dbh->prepare("delete from Sample where sampleid = '$delete'"); $sth->execute();  printerr ".";
+										printerr " Done\n";
+									} else { printerr "ERROR:\t Variant Information for '$delete' is in the database. Delete Variant Information first\n"; }
+								} else { printerr "ERROR:\t Expression Information for '$delete' still present in the database. Delete Expression Information first\n"; }
+							} else { printerr "ERROR:\t Alignment Information for '$delete' is in the database. Delete Alignment Information first\n"; }
+						}
 					}
 				} else { printerr "ERROR:\t $verdict is an INVALID OPTION\n"; }
 			}
@@ -1312,15 +1369,14 @@ sub NOSQL {
 	printerr "TASK:\t Importing Variant annotation for $_[0] to NoSQL platform\n"; #status
 	my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 	printerr "NOTICE:\t Importing $_[0] - Variant Annotation to NoSQL '$ffastbit' ...";
-	my $execute = "ardea -d $ffastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codonchange:text,organism:key,sampleid:text,quality:double,position:int,proteinposition:int' -t $nosql";
+	my $execute = "ardea -d $ffastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,source:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codonchange:text,organism:key,sampleid:text,quality:double,position:int,proteinposition:int' -t $nosql";
 	`$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
 	`rm -rf $nosql`;
 	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE
 	
 	#removing records from MySQL
 	$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$_[0]'"); $sth->execute();
-	$sth = $dbh->prepare("delete from VarResult where sampleid = '$_[0]'"); $sth->execute();
-  
+
 	#declare done
 	printerr " Done\n";
 }
