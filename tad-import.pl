@@ -33,7 +33,7 @@ my $additional;
 #genes import
 our ($samfile, $alignfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
 our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress);
-my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm);
+my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm, %ALL);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
 our ($varianttool, $verd, $variantclass);
@@ -820,27 +820,40 @@ sub LOGFILE { #subroutine for getting metadata
 	elsif ($logfile){
 		@allgeninfo = split('\s',`head -n 1 $logfile`);
 		
-		($str, $ann, $ref, $seq,$allstart, $allend) = (99,99,99,99,99,99);
+		my $annotation;
 		#getting metadata info
 		if ($#allgeninfo > 1){
 			if ($allgeninfo[0] =~ /tophat/){ $mappingtool = "TopHat";}
-			if ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*no-coverage-search$/){$str = 2; $ann = 5; $ref = 10; $seq = 11; $allstart = 4; $allend = 7;}
-			elsif ($allgeninfo[1] =~ /.*library-type$/ && $allgeninfo[3] =~ /.*G$/ ){$str = 2; $ann = 4; $ref = 9; $seq = 10; $allstart = 3; $allend = 6;}
-			elsif($allgeninfo[3] =~ /\-o$/){$str=99; $ann=99; $ref = 5; $seq = 6; $allstart = 3; $allend = 6;}
-			$refgenome = (split('\/', $allgeninfo[$ref]))[-1]; #reference genome name
-			unless ($ann == 99){
-				$annotationfile = uc ( (split('\.',((split("\/", $allgeninfo[$ann]))[-1])))[-1] ); #(annotation file)
-			}
-			else { $annotationfile = undef; }
-			if ($str == 99){ $stranded = undef; } else { $stranded = $allgeninfo[$str]; } # (stranded or not)	
-			if ($seq == 99) { $sequences = undef;} else {
-				my $otherseq = $seq++;
-				unless(length($allgeninfo[$otherseq])<1){ #sequences 
-					$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]).",". ( ( split('\/', $allgeninfo[$otherseq]) ) [-1]);
-				} else {
-					$sequences = ( ( split('\/', $allgeninfo[$seq]) ) [-1]);
-				}
-			} #end if seq
+			undef %ALL;
+			my ($no, $number) = (0,1);
+      while ($number <= $#allgeninfo){
+        unless ($allgeninfo[$number] =~ /-no-coverage-search/){
+          if ($allgeninfo[$number] =~ /^\-/){
+            my $old = $number++;
+            $ALL{$allgeninfo[$old]} = $allgeninfo[$number];
+          } else {
+            unless (exists $ALL{$no}){
+              $ALL{$no} = $allgeninfo[$number];
+              $no++;
+            }
+          }
+        }
+        $number++;
+      }
+      unless ((exists $ALL{"-G"}) || (exists $ALL{"--GTF"})) {
+        $annotationfile = undef;
+      } else {
+        if (exists $ALL{"-G"}){ $annotation = $ALL{"-G"} ; } else { $annotation = $ALL{"--GTF"};}
+        $annotationfile = uc ( (split('\.',((split("\/", $annotation))[-1])))[-1] ); #(annotation file)
+      }
+      unless (exists $ALL{"--library-type"}) { $stranded = undef; } else { $stranded = $ALL{"--library-type"}; }
+			
+      $refgenome = $ALL{0}; my $seq = $ALL{1}; my $otherseq = $ALL{2};
+      unless(length($otherseq)<1){ #sequences
+        $sequences = ( ( split('\/', $seq) ) [-1]).",". ( ( split('\/', $otherseq) ) [-1]);
+      } else {
+        $sequences = ( ( split('\/', $seq) ) [-1]);
+      } #end if seq
 		}
 	}
 }
