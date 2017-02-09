@@ -28,7 +28,7 @@ our ($sheetid, %NAME, %ORGANIZATION);
 our ($found);
 our (@allgeninfo);
 my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
-my ($refgenome, $stranded, $sequences, $annotationfile); #for annotation file
+my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile); #for annotation file
 my $additional;
 #genes import
 our ($samfile, $alignfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
@@ -374,7 +374,7 @@ if ($datadb) {
   	$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   	my $dataid = (split("\/", $file2consider))[-1]; 
   	`find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
-  	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample location"); close (DIR);
+  	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample directory location "); close (DIR);
   	my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
   	foreach (grep /\.gtf/, @foldercontent) { unless (`head -n 3 $_ | wc -l` <= 0 && $_ =~ /skipped/) { $transcriptsgtf = $_; } }
 		$alignfile = (grep /summary.txt/, @foldercontent)[0];
@@ -432,7 +432,7 @@ if ($datadb) {
       			#metadata table
       			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
       			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
       			printerr " Done\n";
       
 		     	#toggle options
@@ -480,7 +480,7 @@ if ($datadb) {
 						unless ($found) {
         			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
  			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-							$sth ->execute($dataid, $refgenome, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
 							printerr " Done\n";
 						} #end else found in MapStats table
       			#toggle options
@@ -796,7 +796,8 @@ sub LOGFILE { #subroutine for getting metadata
 		if ($#allgeninfo > 1){
 			if ($allgeninfo[1] =~ /(hisat.*)$/){ $mappingtool = $1." v".(split(':',$allgeninfo[3]))[-1]; } #mapping tool name and version
 			$allgeninfo[4] =~ /\-x\s(\w+)\s/;
-			$refgenome = (split('\/', $1))[-1]; #reference genome name
+			$refgenome = $1; #reference genome name
+			$refgenomename = (split('\/', $refgenome))[-1]; 
 			if ($allgeninfo[4] =~ /-1/){
 				$allgeninfo[4] =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
 				my @nseq = split(",",$1); my @pseq = split(",",$2);
@@ -849,6 +850,7 @@ sub LOGFILE { #subroutine for getting metadata
       unless (exists $ALL{"--library-type"}) { $stranded = undef; } else { $stranded = $ALL{"--library-type"}; }
 			
       $refgenome = $ALL{0}; my $seq = $ALL{1}; my $otherseq = $ALL{2};
+			$refgenomename = (split('\/', $ALL{0}))[-1]; 
       unless(length($otherseq)<1){ #sequences
         $sequences = ( ( split('\/', $seq) ) [-1]).",". ( ( split('\/', $otherseq) ) [-1]);
       } else {
