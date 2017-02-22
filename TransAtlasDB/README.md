@@ -46,6 +46,6 @@ Please click the menu items to navigate through this repository. If you have que
 	```
 	INSTALL-tad.pl -password <mysql-password>
 	```
-Further details are provided at https://modupeore.github.io/TransAtlasDB/tutorial.html
+	* More details and instructions are provided at https://modupeore.github.io/TransAtlasDB/tutorial.html
 
 ---
