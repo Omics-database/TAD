@@ -35,17 +35,21 @@ Please click the menu items to navigate through this repository. If you have que
 	* Operating System :
 		* Linux / Mac (tested and verified)
 
+	
 	* Databases :
 		* MySQL
 		* FastBit
 
+	
 	* Perl Module :
 		* Perl-DBD module
+		
 - Quick Guide:
 	* To install [with root priviledges]
 	```
 	INSTALL-tad.pl -password <mysql-password>
 	```
+	
 	* More details and instructions are provided at https://modupeore.github.io/TransAtlasDB/tutorial.html
 
 ---
