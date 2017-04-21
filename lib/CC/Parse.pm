@@ -294,10 +294,11 @@ sub AVERAGE {
 			foreach my $ftissue (@tissue) {
 				my $syntax = "call usp_gdtissue(\"".$gene."\",\"".$ftissue."\",\"". $species."\")";
 				$sth = $dbh->prepare($syntax);
-				$sth->execute or die "SQL Error: $DBI::errstr\n";
+				$sth->execute() or die "SQL Error: $DBI::errstr\n";
 				my $found = $sth->fetch();
 				if ($found) {
-					while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) {
+					$sth->execute() or die "SQL Error: $DBI::errstr\n";
+					while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { 
 						$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
 					}
 					$genes .= $gene;

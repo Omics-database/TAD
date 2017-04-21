@@ -118,12 +118,13 @@ if ($dbdata){ #if db 2 data mode selected
 			foreach my $ftissue (@tissue) {
 				$syntax = "call usp_gdtissue(\"".$fgene."\",\"".$ftissue."\",\"". $organism."\")";
 				$sth = $dbh->prepare($syntax);
-				$sth->execute or die "SQL Error: $DBI::errstr\n";
+				$sth->execute() or die "SQL Error: $DBI::errstr\n";
 				@header = @{ $sth->{NAME_uc} }; #header
 				splice @header, 1, 0, 'TISSUE';
 				$table = Text::TabularDisplay->new( @header );
 				my $found = $sth->fetch();
-				if ($found) {	
+				if ($found) {
+					$sth->execute() or die "SQL Error: $DBI::errstr\n";
 					while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { #content
 						push my @row, ($genename, $ftissue, $max, $avg, $min);
 						$count++;
