@@ -665,6 +665,7 @@ sub processArguments {
 }
 
 sub main {
+    no warnings;
     foreach my $count (0..$#VAR) {
 		my $namefile = "tadtmp/tmp_".$tmpname."-".$count.".zzz";
 		push $VAR[$count], $namefile;
