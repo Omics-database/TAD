@@ -293,80 +293,82 @@ if ($dbdata){ #if db 2 data mode selected
 			} chop $sample;
 		} #checking sample options
 		@headers = split(",", $sample);
-		$syntax = "select sampleid, chrom, count(*) from VarResult where sampleid in ( ";
-		foreach (@headers) { $syntax .= "'$_',"; } chop $syntax; $syntax .= ")";			
-		if ($chromosome) {
-			my @chromosome = split(",", $chromosome); undef $chromosome;
-			$syntax .= " and (";
-			foreach (@chromosome) {
-				$_ =~ s/^\s+|\s+$//g;
-				$sth = $dbh->prepare("select distinct chrom from VarResult where chrom = '$_'");$sth->execute(); $found =$sth->fetch();
-				unless ($found) { pod2usage("ERROR:\t Chromosome '$_' is not in the database. Consult 'tad-interact.pl -f' for more information"); }
-				$syntax .= "chrom = '$_' or ";
-				$chromosome .= $_ .",";
-			} $syntax = substr($syntax,0, -3); $syntax .= ") "; chop $chromosome;
-			$verbose and printerr "NOTICE:\t Chromosome(s) selected: $chromosome\n";
-		} else {
-			$verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n";
-		}
-		my $endsyntax = "group by sampleid, chrom order by sampleid, length(chrom),chrom";
-		my $allsyntax = $syntax.$endsyntax; 
-		$sth = $dbh->prepare($allsyntax); 
-		$sth->execute or die "SQL Error:$DBI::errstr\n";
-		my $number = 0;
-		while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
-			$number++;
-			$CHROM{$sampleid}{$number} = $chrom;
-			$VARIANTS{$sampleid}{$chrom} = $counted;
-		}	
-		$allsyntax = $syntax."and variantclass = 'SNV' ".$endsyntax; #counting SNPS
-		$sth = $dbh->prepare($allsyntax); 
-		$sth->execute or die "SQL Error:$DBI::errstr\n";
-		while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
-			$SNPS{$sampleid}{$chrom} = $counted;
-		}
-		$allsyntax = $syntax."and (variantclass = 'insertion' or variantclass = 'deletion') ".$endsyntax; #counting INDELs
-		$sth = $dbh->prepare($allsyntax); 
-		$sth->execute or die "SQL Error:$DBI::errstr\n";
-		while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
-			$INDELS{$sampleid}{$chrom} = $counted;
-		}
-		@header = qw(SAMPLE CHROMOSOME VARIANTS SNPs INDELs);
-		$table = Text::TabularDisplay->new(@header);
-		my @content;
-		foreach my $ids (sort keys %VARIANTS){  
-			if ($ids =~ /^[0-9a-zA-Z]/) {
-				foreach my $no (sort {$a <=> $b} keys %{$CHROM{$ids} }) {
-					$count++;
-					my @row = ();
-					push @row, ($ids, $CHROM{$ids}{$no}, $VARIANTS{$ids}{$CHROM{$ids}{$no}});
-					if (exists $SNPS{$ids}{$CHROM{$ids}{$no}}){
-						push @row, $SNPS{$ids}{$CHROM{$ids}{$no}};
-					} else {
-						push @row, "0";
+		if ($#header >= 0) {
+			$syntax = "select sampleid, chrom, count(*) from VarResult where sampleid in ( ";
+			foreach (@headers) { $syntax .= "'$_',"; } chop $syntax; $syntax .= ")";			
+			if ($chromosome) {
+				my @chromosome = split(",", $chromosome); undef $chromosome;
+				$syntax .= " and (";
+				foreach (@chromosome) {
+					$_ =~ s/^\s+|\s+$//g;
+					$sth = $dbh->prepare("select distinct chrom from VarResult where chrom = '$_'");$sth->execute(); $found =$sth->fetch();
+					unless ($found) { pod2usage("ERROR:\t Chromosome '$_' is not in the database. Consult 'tad-interact.pl -f' for more information"); }
+					$syntax .= "chrom = '$_' or ";
+					$chromosome .= $_ .",";
+				} $syntax = substr($syntax,0, -3); $syntax .= ") "; chop $chromosome;
+				$verbose and printerr "NOTICE:\t Chromosome(s) selected: $chromosome\n";
+			} else {
+				$verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n";
+			}
+			my $endsyntax = "group by sampleid, chrom order by sampleid, length(chrom),chrom";
+			my $allsyntax = $syntax.$endsyntax; 
+			$sth = $dbh->prepare($allsyntax); 
+			$sth->execute or die "SQL Error:$DBI::errstr\n";
+			my $number = 0;
+			while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
+				$number++;
+				$CHROM{$sampleid}{$number} = $chrom;
+				$VARIANTS{$sampleid}{$chrom} = $counted;
+			}	
+			$allsyntax = $syntax."and variantclass = 'SNV' ".$endsyntax; #counting SNPS
+			$sth = $dbh->prepare($allsyntax); 
+			$sth->execute or die "SQL Error:$DBI::errstr\n";
+			while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
+				$SNPS{$sampleid}{$chrom} = $counted;
+			}
+			$allsyntax = $syntax."and (variantclass = 'insertion' or variantclass = 'deletion') ".$endsyntax; #counting INDELs
+			$sth = $dbh->prepare($allsyntax); 
+			$sth->execute or die "SQL Error:$DBI::errstr\n";
+			while (my ($sampleid, $chrom, $counted) = $sth->fetchrow_array() ) {
+				$INDELS{$sampleid}{$chrom} = $counted;
+			}
+			@header = qw(SAMPLE CHROMOSOME VARIANTS SNPs INDELs);
+			$table = Text::TabularDisplay->new(@header);
+			my @content;
+			foreach my $ids (sort keys %VARIANTS){  
+				if ($ids =~ /^[0-9a-zA-Z]/) {
+					foreach my $no (sort {$a <=> $b} keys %{$CHROM{$ids} }) {
+						$count++;
+						my @row = ();
+						push @row, ($ids, $CHROM{$ids}{$no}, $VARIANTS{$ids}{$CHROM{$ids}{$no}});
+						if (exists $SNPS{$ids}{$CHROM{$ids}{$no}}){
+							push @row, $SNPS{$ids}{$CHROM{$ids}{$no}};
+						} else {
+							push @row, "0";
+						}
+						if (exists $INDELS{$ids}{$CHROM{$ids}{$no}}){
+							push @row, $INDELS{$ids}{$CHROM{$ids}{$no}};
+						}
+						else {
+							push @row, "0";
+						}
+						$table->add(@row);
+						$ARRAYQUERY{$count} = [@row];
 					}
-					if (exists $INDELS{$ids}{$CHROM{$ids}{$no}}){
-						push @row, $INDELS{$ids}{$CHROM{$ids}{$no}};
-					}
-					else {
-						push @row, "0";
-					}
-					$table->add(@row);
-					$ARRAYQUERY{$count} = [@row];
 				}
 			}
-		}
-		unless ($count == 0) {
-			if ($output){
-				$outfile = @{ open_unique($output) }[1];
-				open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
-				print OUT join("\t", @header),"\n";
-				foreach (sort keys %ARRAYQUERY) { print OUT join("\t",@{$ARRAYQUERY{$_}}), "\n"; }
-				close OUT;
-			} else {
-				printerr $table-> render, "\n"; #print display
-			}
-			$verbose and printerr "NOTICE:\t Summary: $count rows in result\n";
+			unless ($count == 0) {
+				if ($output){
+					$outfile = @{ open_unique($output) }[1];
+					open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
+					print OUT join("\t", @header),"\n";
+					foreach (sort keys %ARRAYQUERY) { print OUT join("\t",@{$ARRAYQUERY{$_}}), "\n"; }
+					close OUT;
+				} else {
+					printerr $table-> render, "\n"; #print display
+				}
+				$verbose and printerr "NOTICE:\t Summary: $count rows in result\n";
+			} else { printerr "\nNOTICE:\t No Results based on search criteria \n"; }
 		} else { printerr "\nNOTICE:\t No Results based on search criteria \n"; }
 	} #end of chrvar module
 	
