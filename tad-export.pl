@@ -48,7 +48,7 @@ if ($query) { #if user query mode selected
     $verbose and printerr "NOTICE:\t User query module selected\n";
     undef %ARRAYQUERY;
     $dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-  $sth = $dbh->prepare($query); $sth->execute();
+  $sth = $dbh->prepare($query); $sth->execute() or exit;
 
     $table = Text::TabularDisplay->new( @{ $sth->{NAME_uc} } );#header
   @header = @{ $sth->{NAME_uc} };
@@ -73,6 +73,7 @@ if ($query) { #if user query mode selected
 } #end of user query module
 
 if ($dbdata){ #if db 2 data mode selected
+    no warnings 'uninitialized';
     if ($avgfpkm){ #looking at average fpkms
         $count = 0;
         undef %ARRAYQUERY;
@@ -293,7 +294,7 @@ if ($dbdata){ #if db 2 data mode selected
                 $sample .= $row.",";
             } chop $sample;
         } #checking sample options
-        @headers = split(",", $sample); print $sample,"\n2", @header,"\n number $#header\n\n";
+        @headers = split(",", $sample);
         if ($#headers >= 0) {
             $syntax = "select sampleid, chrom, count(*) from VarResult where sampleid in ( ";
             foreach (@headers) { $syntax .= "'$_',"; } chop $syntax; $syntax .= ")";            
@@ -643,7 +644,10 @@ sub processArguments {
   pod2usage(-msg=>"ERROR:\t Invalid syntax specified, choose -query or -db2data.") unless ( $query || $dbdata);
   pod2usage(-msg=>"ERROR:\t Invalid syntax specified @commandline") if (($query && $dbdata)|| ($avgfpkm && $genexp) || ($gene && $chromosome));
     if ($dbdata) { pod2usage(-msg=>"ERROR:\t Invalid syntax specified @commandline, choose -avgfpkm or -genexp or -chrvar or -varanno") unless ($avgfpkm || $genexp || $chrvar || $varanno); }
-    if ($vcf) { pod2usage(-msg=>"ERROR:\t VCF output is not configured for @commandline") unless ($varanno && ! $gene); }
+    if ($vcf) {
+        pod2usage(-msg=>"ERROR:\t VCF output is not configured for specific genes, remove -gene option") if ($varanno && $gene);
+        pod2usage(-msg=>"ERROR:\t VCF output is not configured @commandline") unless ($varanno && ! $gene);
+    }
     if ($vcf) { pod2usage("ERROR:\t Syntax error. Specify -output <filename>") unless ($output); }
   @ARGV<=1 or pod2usage("Syntax error");
     if ($output) {
