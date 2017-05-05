@@ -74,7 +74,7 @@ $dbh->disconnect();
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
 #check if ibis and ardea can be found
-`mkdir -p $ffastbit`;
+`mkdir -p $ffastbit/variant-information $ffastbit/gene-information`;
 my $check = `ls $ffastbit`;
 $verdict = "no";
 if (length $check > 0){

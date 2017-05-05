@@ -593,7 +593,7 @@ if ($datadb) {
       		pod2usage("FAILED: \"$dataid\" sample information is not in the database. Make sure the metadata has be previously imported using '-metadata'");
   	} #end if data in sample table
 }
-if ($delete){
+if ($delete){ #delete section
 	my (%KEYDELETE);
 	my ($i,$alldelete) = (0,0);
 	printerr "JOB:\t Deleting Existing Records in Database\n"; #status
@@ -635,39 +635,55 @@ if ($delete){
 						if ($alldelete == 1){
 							if ($KEYDELETE{$i} =~ /^Variant/) { $i--;
 								my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+								my $vfastbit = $ffastbit."/variant-information"; # specifying the variant section.
 								printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
 								$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
-								my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
+								my $execute = "ibis -d $vfastbit -y \"sampleid = '$delete'\" -z";
 								`$execute 2>> $efile`; printerr ".";
-								`rm -rf $ffastbit/*sp $ffastbit/*old $ffastbit/*idx $ffastbit/*dic $ffastbit/*int `; #removing old indexes
+								`rm -rf $vfastbit/*sp $vfastbit/*old $vfastbit/*idx $vfastbit/*dic $vfastbit/*int `; #removing old indexes
 								printerr " Done\n";
 							}
 						} else {
 							my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+							my $vfastbit = $ffastbit."/variant-information"; # specifying the variant section.
 							printerr "NOTICE:\t Deleting records for $delete in Variant tables ";
 							$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from VarResult where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from VarSummary where sampleid = '$delete'"); $sth->execute(); printerr ".";
-							my $execute = "ibis -d $ffastbit -y \"sampleid = '$delete'\" -z";
+							my $execute = "ibis -d $vfastbit -y \"sampleid = '$delete'\" -z";
 							`$execute 2>> $efile`; printerr ".";
-							`rm -rf $ffastbit/*sp $ffastbit/*old $ffastbit/*idx $ffastbit/*dic $ffastbit/*int `; #removing old indexes
+							`rm -rf $vfastbit/*sp $vfastbit/*old $vfastbit/*idx $vfastbit/*dic $vfastbit/*int `; #removing old indexes
 							printerr " Done\n";
 						}
 					}
 					if ($KEYDELETE{$verdict} =~ /^Expression/ || $alldelete ==1 ) {
 						if ($alldelete == 1){
 							if ($KEYDELETE{$i} =~ /^Expression/) { $i--;
+								my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+								my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
+								
 								printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
 								$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+								
+								my $execute = "ibis -d $gfastbit -y \"sampleid = '$delete'\" -z";
+								`$execute 2>> $efile`; printerr ".";
+								`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 								printerr " Done\n";
 							}
 						} else {
+							my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+							my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
+							
 							printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
 							$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
+							
+							my $execute = "ibis -d $gfastbit -y \"sampleid = '$delete'\" -z";
+							`$execute 2>> $efile`; printerr ".";
+							`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 							printerr " Done\n";
 						}
 					}
@@ -1386,8 +1402,9 @@ sub ANNOVARIANT {
 sub NOSQL {
 	printerr "TASK:\t Importing Variant annotation for $_[0] to NoSQL platform\n"; #status
 	my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+	my $vfastbit = $ffastbit."/variant-information"; # specifying the variant section.
 	printerr "NOTICE:\t Importing $_[0] - Variant Annotation to NoSQL '$ffastbit' ...";
-	my $execute = "ardea -d $ffastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,source:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codonchange:text,organism:key,sampleid:text,quality:double,position:int,proteinposition:int' -t $nosql";
+	my $execute = "ardea -d $vfastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,source:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codonchange:text,organism:key,sampleid:text,quality:double,position:int,proteinposition:int' -t $nosql";
 	`$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
 	`rm -rf $nosql`;
 	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE

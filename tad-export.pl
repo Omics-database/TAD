@@ -387,6 +387,7 @@ if ($dbdata){ #if db 2 data mode selected
         if ($chromosome) { $verbose and printerr "SUBTASK: Chromosomal region-associated Variants and Annotation Information\n"; }
         $dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
         $fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+        my $vfastbit = $fastbit."/variant-information";
         $organism =~ s/^\s+|\s+$//g;
         $sth = $dbh->prepare("select organism from Animal where organism = '$organism'");$sth->execute(); $found =$sth->fetch();
         unless ($found) { pod2usage("ERROR:\t Organism name '$organism' is not found in database. Consult 'tad-interact.pl -f' for more information"); }
@@ -396,8 +397,8 @@ if ($dbdata){ #if db 2 data mode selected
         unless ($found) {
             $vcfsyntax = "select sampleid, chrom, position, refallele, altallele, quality, consequence, genename, geneid, feature, transcript, genetype, proteinposition, aachange, codonchange, dbsnpvariant, variantclass, zygosity, tissue from vw_vvcf where organism='$organism'";
         } else {
-            $syntax = "ibis -d $fastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
-            $vcfsyntax = "ibis -d $fastbit -q \"select sampleid, chrom, position, quality, proteinposition, refallele, altallele, consequence, genename, geneid, feature, transcript, genetype, aachange,  codonchange, dbsnpvariant, variantclass, zygosity, tissue where organism='$organism'";
+            $syntax = "ibis -d $vfastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
+            $vcfsyntax = "ibis -d $vfastbit -q \"select sampleid, chrom, position, quality, proteinposition, refallele, altallele, consequence, genename, geneid, feature, transcript, genetype, aachange,  codonchange, dbsnpvariant, variantclass, zygosity, tissue where organism='$organism'";
         } #the toggle between mysql and fastbit
         unless ($gene) {
             if ($chromosome){
