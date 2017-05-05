@@ -889,7 +889,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 				printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 				#import into FPKM table;
 				open(FPKM, "<", $genesfile) or die "\nERROR:\t Can not open file $genesfile\n";
-				my $syntax = "insert into GenesFpkm (sampleid, geneid, refgenename, chromnumber, chromstart, chromstop, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?)";
+				my $syntax = "insert into GenesFpkm (sampleid, geneid, genename, chrom, start, stop, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?)";
 				my $sth = $dbh->prepare($syntax);
 				while (<FPKM>){
 					chomp;
@@ -984,7 +984,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
-					my $syntax = "insert into GenesFpkm (sampleid, geneid, chromnumber, chromstart, chromstop, coverage, fpkm, fpkmconflow, fpkmconfhigh ) values (?,?,?,?,?,?,?,?,?)";
+					my $syntax = "insert into GenesFpkm (sampleid, geneid, chrom, start, stop, coverage, fpkm, fpkmconflow, fpkmconfhigh ) values (?,?,?,?,?,?,?,?,?)";
 					my $sth = $dbh->prepare($syntax);
 					foreach my $a (keys %ARFPKM){
 						my @array = split(",",$ARFPKM{$a});
@@ -1070,7 +1070,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					printerr "NOTICE:\t Importing StringTie expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
-					my $syntax = "insert into GenesFpkm (sampleid, geneid, refgenename, chromnumber, chromstart, chromstop, coverage, fpkm, tpm ) values (?,?,?,?,?,?,?,?,?)";
+					my $syntax = "insert into GenesFpkm (sampleid, geneid, genename, chrom, start, stop, coverage, fpkm, tpm ) values (?,?,?,?,?,?,?,?,?)";
 					my $sth = $dbh->prepare($syntax);
 					foreach my $a (keys %ARFPKM){
 						my @array = split(",",$ARFPKM{$a});

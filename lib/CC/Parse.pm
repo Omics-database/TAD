@@ -441,15 +441,15 @@ sub GENEXP {
 		unless ($verdict) { $verdict = 0; }
 		if ($verdict =~ /^0/) { 
 			printerr "GENE(S) selected : 'all genes'\n";
-			$syntax = "select refgenename, fpkm, sampleid, chromnumber, chromstart, chromstop from GenesFpkm where sampleid in ("; #syntax
+			$syntax = "select genename, fpkm, sampleid, chrom, start, stop from GenesFpkm where sampleid in ("; #syntax
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") order by geneid desc";
 		}else {
 			my @genes = split(",", $verdict);
 			$genes = $verdict;
 			printerr "GENE(S) selected : $verdict\n";
-			$syntax = "select refgenename, fpkm, sampleid, chromnumber, chromstart, chromstop from GenesFpkm where sampleid in (";
+			$syntax = "select genename, fpkm, sampleid, chrom, start, stop from GenesFpkm where sampleid in (";
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") and (";
-			foreach (@genes) { $syntax .= " refgenename like '%$_%' or"; } $syntax = substr($syntax, 0, -2); $syntax .= ") order by geneid desc";
+			foreach (@genes) { $syntax .= " genename like '%$_%' or"; } $syntax = substr($syntax, 0, -2); $syntax .= ") order by geneid desc";
 		}
 		$sth = $dbh->prepare($syntax);
 		$sth->execute or die "SQL Error:$DBI::errstr\n";

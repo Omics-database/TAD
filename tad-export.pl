@@ -195,13 +195,13 @@ if ($dbdata){ #if db 2 data mode selected
             } chop $sample;
         } #checking sample options
         @headers = split(",", $sample);
-        $syntax = "select refgenename, fpkm, sampleid, chromnumber, chromstart, chromstop from GenesFpkm where";
+        $syntax = "select genename, fpkm, sampleid, chrom, start, stop from GenesFpkm where";
         if ($gene) {
             $syntax .= " (";
             my @genes = split(",", $gene); undef $gene;
             foreach (@genes){
                 $_ =~ s/^\s+|\s+$//g;
-                $syntax .= " refgenename like '%$_%' or";
+                $syntax .= " genename like '%$_%' or";
                 $gene .= $_.",";
             } chop $gene;
             $verbose and printerr "NOTICE:\t Gene(s) selected: '$gene'\n";
