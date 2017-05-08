@@ -12,8 +12,8 @@ use Thread::Queue;
 use CC::Create;
 use CC::Parse;
 
-our $VERSION = '$ Version: 1 $';
-our $DATE = '$ Date: 2016-11-28 15:14:00 (Thu, 28 Nov 2016) $';
+our $VERSION = '$ Version: 3 $';
+our $DATE = '$ Date: 2017-05-05 05:14:00 (Fri, 05 May 2017) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
@@ -75,6 +75,8 @@ if ($query) { #if user query mode selected
 if ($dbdata){ #if db 2 data mode selected
     no warnings 'uninitialized';
     if ($avgfpkm){ #looking at average fpkms
+        $fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+        my $gfastbit = $fastbit."/gene-information";
         $count = 0;
         undef %ARRAYQUERY;
         #making sure required attributes are specified.
@@ -117,23 +119,42 @@ if ($dbdata){ #if db 2 data mode selected
         foreach my $fgene (@genes){
             $fgene =~ s/^\s+|\s+$//g;
             foreach my $ftissue (@tissue) {
-                $syntax = "call usp_gdtissue(\"".$fgene."\",\"".$ftissue."\",\"". $organism."\")";
-                $sth = $dbh->prepare($syntax);
-                $sth->execute() or die "SQL Error: $DBI::errstr\n";
-                @header = @{ $sth->{NAME_uc} }; #header
-                splice @header, 1, 0, 'TISSUE';
+                @header = ("GENENAME","TISSUE", "MAXIMUM FPKM", "AVERAGE FPKM", "MINIMUMFPKM");
                 $table = Text::TabularDisplay->new( @header );
-                my $found = $sth->fetch();
-                if ($found) {
-                    $sth->execute() or die "SQL Error: $DBI::errstr\n";
-                    while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { #content
-                        push my @row, ($genename, $ftissue, $max, $avg, $min);
+                `ibis -d $gfastbit -q 'select genename, max(fpkm), avg(fpkm), min(fpkm) where genename like "%$fgene%" and tissue = "$ftissue" and organism = "$organism"' -o $nosql 2>>$efile`;
+				my $found = `head -n 1 $nosql`;
+				if (length($found) > 1) {
+					open(IN,"<",$nosql);
+					while (<IN>){
+                        chomp;
+						my ($genename,$max,$avg,$min) = split (/\, /, $_, 4);
+						$genename =~ s/^'|'$|^"|"$//g; #removing the quotation marks from the words
+						push my @row, ($genename,$ftissue,$max, $avg, $min);
                         $count++;
                         $ARRAYQUERY{$genename}{$ftissue} = [@row];
-                    }
+                    } close (IN); `rm -rf $nosql`;
                 } else {
                     printerr "NOTICE:\t No Results found with gene '$fgene'\n";
                 }
+
+        #$syntax = "call usp_gdtissue(\"".$fgene."\",\"".$ftissue."\",\"". $organism."\")";
+        #        $sth = $dbh->prepare($syntax);
+        #        $sth->execute() or die "SQL Error: $DBI::errstr\n";
+        #        @header = @{ $sth->{NAME_uc} }; #header
+        #        splice @header, 1, 0, 'TISSUE';
+        #        $table = Text::TabularDisplay->new( @header );
+        #        my $found = $sth->fetch();
+        #        if ($found) {
+        #            $sth->execute() or die "SQL Error: $DBI::errstr\n";
+        #            while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { #content
+        #                push my @row, ($genename, $ftissue, $max, $avg, $min);
+        #                $count++;
+        #                $ARRAYQUERY{$genename}{$ftissue} = [@row];
+        #            }
+        #        } else {
+        #            printerr "NOTICE:\t No Results found with gene '$fgene'\n";
+        #        }
+        
             }
         }
         unless ($count == 0) {
@@ -168,6 +189,8 @@ if ($dbdata){ #if db 2 data mode selected
             pod2usage("ERROR:\t Details for -genexp are missing. Review 'tad-interact.pl -e' for more information");
         }
         $dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+        $fastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+        my $gfastbit = $fastbit."/gene-information";
         #checking if the organism is in the database
         $organism =~ s/^\s+|\s+$//g;
         $sth = $dbh->prepare("select organism from Animal where organism = '$organism'");$sth->execute(); $found =$sth->fetch();
@@ -194,8 +217,8 @@ if ($dbdata){ #if db 2 data mode selected
                 $sample .= $row.",";
             } chop $sample;
         } #checking sample options
-        @headers = split(",", $sample);
-        $syntax = "select genename, fpkm, sampleid, chrom, start, stop from GenesFpkm where";
+        @headers = split(",", $sample); 
+        $syntax = "select genename, fpkm, sampleid, chrom, start, stop where";
         if ($gene) {
             $syntax .= " (";
             my @genes = split(",", $gene); undef $gene;
@@ -213,14 +236,27 @@ if ($dbdata){ #if db 2 data mode selected
         foreach (@headers){ 
             printerr ".";
             my $newsyntax = $syntax." sampleid = '$_' ORDER BY geneid desc;";
-            $sth = $dbh->prepare($newsyntax);
-            $sth->execute or die "SQL Error:$DBI::errstr\n";
-            while (my ($gene_id, $fpkm, $library_id, $chrom, $start, $stop) = $sth->fetchrow_array() ) {
-                $FPKM{"$gene_id|$chrom"}{$library_id} = $fpkm;
-                $CHROM{"$gene_id|$chrom"} = $chrom;
-                $POSITION{"$gene_id|$chrom"}{$library_id} = "$start|$stop";
-            }
-        } #end foreach extracting information from th database    
+            #$sth = $dbh->prepare($newsyntax);
+            #$sth->execute or die "SQL Error:$DBI::errstr\n";
+            
+            `ibis -d $gfastbit -q "$newsyntax" -o $nosql 2>>$efile`;
+            open(IN,"<",$nosql);
+            while (<IN>){
+            	chomp;
+            	my ($geneid, $fpkm, $library, $chrom, $start, $stop) = split /\, /; 
+            	$geneid =~ s/^'|'$|^"|"$//g; $library =~ s/^'|'$|^"|"$//g; $chrom =~ s/^'|'$|^"|"$//g; #removing quotation marks if applicable
+            	$FPKM{"$geneid|$chrom"}{$library} = $fpkm;
+            	$CHROM{"$geneid|$chrom"} = $chrom;
+            	$POSITION{"$geneid|$chrom"}{$library} = "$start|$stop";
+            } close (IN); `rm -rf $nosql`;
+		
+            #while (my ($gene_id, $fpkm, $library_id, $chrom, $start, $stop) = $sth->fetchrow_array() ) {
+            #    $FPKM{"$gene_id|$chrom"}{$library_id} = $fpkm;
+            #    $CHROM{"$gene_id|$chrom"} = $chrom;
+            #    $POSITION{"$gene_id|$chrom"}{$library_id} = "$start|$stop";
+            #}
+            
+        } #end foreach extracting information from the database    
         printerr " Done\n";
         printerr "NOTICE:\t Processing Results ...";
         foreach my $newgene (sort keys %CHROM){ #turning the genes into an array
@@ -228,6 +264,7 @@ if ($dbdata){ #if db 2 data mode selected
         }
         push @VAR, [ splice @genearray, 0, 2000 ] while @genearray; #sub array the genes into a list of 2000
     
+        @headers = split(",", $sample);
         foreach (0..$#VAR){ $newfile .= "tadtmp/tmp_".$tmpname."-".$_.".zzz "; } #foreach sub array create a temporary file
         $queue = new Thread::Queue();
         my $builder=threads->create(\&main); #create thread for each subarray into a thread
@@ -552,6 +589,7 @@ if ($dbdata){ #if db 2 data mode selected
                     else {
                         foreach (@nosqlcontent) {
                             chomp; $count++;
+                             $syntax = "ibis -d $vfastbit -q \"select chrom,position,refallele,altallele,variantclass,consequence,group_concat(genename),group_concat(dbsnpvariant), group_concat(sampleid) where organism='$organism'";
                             my @arraynosqlA = split (",",$_,3); foreach (@arraynosqlA[0..1]) { $_ =~ s/"//g;}
                             my @arraynosqlB = split("\", \"", $arraynosqlA[2]); foreach (@arraynosqlB) { $_ =~ s/"//g ; $_ =~ s/NULL/-/g;}
                             push my @row, @arraynosqlA[0..1], @arraynosqlB[0..3], join(",", uniq(sort(split(", ", $arraynosqlB[4])))) , join(",", uniq(sort(split(", ", $arraynosqlB[5])))), join (",", uniq(sort(split (", ", $arraynosqlB[6]))));
@@ -606,7 +644,10 @@ if ($dbdata){ #if db 2 data mode selected
                             foreach my $ref (sort {$a cmp $b} keys %{$NEWREF{$chrom}{$position}}) {
                                 print OUT "chr",$chrom,"\t",$position,"\t",$NEWDBSNP{$chrom}{$position}{$ref},"\t",$NEWREF{$chrom}{$position}{$ref},"\t";
                                 print OUT $NEWALT{$chrom}{$position}{$ref},"\t",$NEWQUAL{$chrom}{$position}{$ref},"\tPASS\t";
-                                if (exists $NEWCSQ{$chrom}{$position}{$ref}) { print OUT "CSQ=",$NEWCSQ{$chrom}{$position}{$ref}, ";"; }
+                                if (exists $NEWCSQ{$chrom}{$position}{$ref}) {
+                                    $NEWCSQ{$chrom}{$position}{$ref} =~ s/0O0O0O/\*/g;
+                                    print OUT "CSQ=",$NEWCSQ{$chrom}{$position}{$ref}, ";";
+                                }
                                 print OUT "MTD=",$MTD{$chrom}{$position}{$ref},"\tGT\t",$NEWGT{$chrom}{$position}{$ref};
                                 print OUT "\n";
                             }
@@ -700,7 +741,7 @@ sub collectsort{
     foreach (@_){    
         sortposition($_);
     }
-    foreach my $genename (sort @_){
+    foreach my $genename (sort @_){ 
         if ($genename =~ /^\S/){
             my ($realstart,$realstop) = split('\|',$REALPOST{$genename},2);
             my $realgenes = (split('\|',$genename))[0];
@@ -780,7 +821,7 @@ sub PROCESS {
     $QUAL{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $line[5];
     if ($line[6]) {
         $consequenceheader = '##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations. Format:Consequence|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|Protein_position|Amino_acids|Codons|Existing_variation|VARIANT_CLASS">'."\n";
-        no warnings 'uninitialized';
+        no warnings 'uninitialized'; $line[13] =~ s/\*/0O0O0O/g;
         my $joint = "$line[6]|$line[7]|$line[8]|$line[9]|$line[10]|$line[11]|$line[12]|$line[13]|$line[14]|$line[15]|$line[16]";
         if (exists $CSQ{$line[1]}{$line[2]}{$line[3]}{$line[0]}) {
         $number{$line[1]}{$line[2]}{$line[3]}{$line[0]} = $number{$line[1]}{$line[2]}{$line[3]}{$line[0]}++;

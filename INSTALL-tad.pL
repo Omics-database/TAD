@@ -9,8 +9,8 @@ use Cwd qw(abs_path);
 use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
 
-our $VERSION = '$ Version: 1 $';
-our $DATE = '$ Date: 2016-10-25 13:19:08 (Tue, 25 Oct 2016) $';
+our $VERSION = '$ Version: 3 $';
+our $DATE = '$ Date: 2017-05-01 10:32:00 (Mon, 01 May 2017) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ $dbh->disconnect();
 #create FastBit path on connection details
 our $ffastbit = fastbit($location, $fbname);
 #check if ibis and ardea can be found
-`mkdir -p $ffastbit/variant-information $ffastbit/gene-information`;
+`mkdir -p $ffastbit`;
 my $check = `ls $ffastbit`;
 $verdict = "no";
 if (length $check > 0){
