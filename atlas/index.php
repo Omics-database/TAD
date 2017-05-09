@@ -8,9 +8,8 @@
 		<link rel="STYLESHEET" type="text/css" href="mainPage.css">
 		<link rel="icon" type="image/ico" href="images/atlas_ico.png"/>
 		<title>
-			TranscriptAtlas
+			TransAtlasDB
 		</title>
-	<header> <h1>Welcome <?php echo $_SESSION['firstname'] ?></h1></header>
         </head>
 	<body>
 		<div class="allofit">
@@ -18,7 +17,8 @@
 				<tr>
 					<td width=30px></td>
 					<td align="center">
-						<a href="index.php"><img src="images/atlas_main.png" alt="Transcriptome Atlas" ></a>
+						<a href="index.php">TransAtlasDB</a>
+						<!--<img src="images/atlas_main.png" alt="TransAtlasDB" ></a>-->
 					</td>
 				</tr>
 			</table>
@@ -26,10 +26,7 @@
 				<div class="container">
 					<table width=80%>
 						<tr><td colspan="2" class="menu_header"><center><b>
-							TranscriptAtlas is an integrated database connecting expression data from fRNAkenseq, curated metadata and variants using our Variants Analysis Pipeline.</b></center>
-
-<div style="margin:0 auto; padding-top:2pt;" align="right"><input type="button" class="goback" value="Log Out" onclick="window.location.href='logout.php'"></div>
-
+							TransAtlasDB is an integrated database application connecting samples metadata, expression and variant details from RNA sequencing analysis.</b></center></div>
 						</td></tr>
 					</table>
 					<div id="popup">
@@ -83,22 +80,8 @@
 									<ul style="margin: 0; padding-left:20px; list-style: none;"><li>Gives lists of variants and annotation information based on chromosomal location or gene specified.</li></ul>
 									</span></a>
 								</td>
-								<!--kaks-->
-								<td class="menu_button">
-									<a href="kaksratios.php" class="TAbutton"><img src="images/variant.png" width="45" height="45"><br>Ka/Ks
-									<span><b>Degree of selection:</b>
-									<ul style="margin: 0; padding-right:20px; list-style: none;"><li>Provides preliminary selection information of a given subset of samples.</li></ul>
-									</span></a>
-								</td>
 							</tr>
 							<tr>
-								<!--contact-->
-								<td class="menu_button" colspan=100% align="center">
-									<a href="contact.php" class="TAbutton"><img src="images/contact.png" width="45" height="45"><br>Contact
-									<span><b>Contact:</b>
-									<ul style="margin: 0; padding-left:20px; list-style: none;"><li>Shows detailed instructions on how to use the web page.</li></ul>
-									</span></a>
-								</td>
 							</tr>
 						</table>
 					</div>

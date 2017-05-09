@@ -8,13 +8,12 @@ function d_header() {
     <!DOCTYPE html><head>
       <link rel=\"STYLESHEET\" type=\"text/css\" href=\"stylefile.css\">
       <link rel=\"icon\" type=\"image/ico\" href=\"images/atlas_ico.png\"/>
-      <header> <h1>Welcome ".$_SESSION['firstname']." </h1> </header>
       <div class=\"allofit\">
       <table width=100%>
         <tr>
           <td width=30px></td>
           <td width=100px align=\"center\">
-            <a href=\"index.php\"><img src=\"images/atlas_main.png\" alt=\"Transcriptome Atlas\" ></a>
+            <a href=\"index.php\"><img src=\"images/atlas_main.png\" alt=\"TransAtlasDB\" ></a>
           </td>
           <td valign=\"center\" align=\"right\">
             <input type=\"button\" class=\"goback\" value=\"Return To Menu\" onclick=\"window.location.href='index.php'\"><br>
