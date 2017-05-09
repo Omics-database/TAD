@@ -1,0 +1,28 @@
+track type=vcfTabix name="AIL HC&HS" description="AIL HC&HS" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/AIL%20HC&HS.vcf.gz
+
+track type=vcfTabix name="AIL-Normal" description="AIL-Normal" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/AIL-Normal.vcf.gz
+
+track type=vcfTabix name="Broiler" description="Broiler" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Broiler.vcf.gz
+
+track type=vcfTabix name="CELC" description="CELC" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/CELC.vcf.gz
+
+track type=vcfTabix name="Fayoumi-chick HS" description="Fayoumi-chick HS" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Fayoumi-chick%20HS.vcf.gz
+
+track type=vcfTabix name="Fayoumi HC&HS" description="Fayoumi HC&HS" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Fayoumi%20HC&HS.vcf.gz
+
+track type=vcfTabix name="Fayoumi-Normal" description="Fayoumi-Normal" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Fayoumi-Normal.vcf.gz
+
+track type=vcfTabix name="Fayoumi" description="Fayoumi" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Fayoumi.vcf.gz
+
+track type=vcfTabix name="Fayoumi x Broiler" description="Fayoumi x Broiler" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Fayoumi%20x%20Broiler.vcf.gz
+
+track type=vcfTabix name="Illinois" description="Illinois" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Illinois.vcf.gz
+
+track type=vcfTabix name="LMH" description="LMH" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/LMH.vcf.gz
+
+track type=vcfTabix name="Ross" description="Ross" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Ross.vcf.gz
+
+track type=vcfTabix name="Ugandan" description="Ugandan" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/Ugandan.vcf.gz
+
+track type=vcfTabix name="WLH" description="WLH" bigDataUrl=http://raven.anr.udel.edu/~modupe/UCSC/WLH.vcf.gz
+

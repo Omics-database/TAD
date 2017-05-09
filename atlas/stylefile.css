@@ -1,0 +1,385 @@
+/* 
+    Document   : atlas_stylefile
+    Created on : December 17, 2015
+    Author     : Modupe Adetunji
+    Update     : November 04, 2016
+    Description:
+        Presentation and formatting for Transcriptome Atlas
+*/
+header {
+   color:#306269;
+   display:block;
+   line-height: 20px;
+   font-size: 20px;
+   font-family: 'Swanky and Moo Moo',cursive;
+   padding-left: 2cm;
+   margin: 50px;
+}
+root {
+   display:block;
+}
+fieldset{
+   border: solid 2px blue;  
+   float:left;
+}
+body{
+  background-color: #fffff6;
+  font-family: Tahoma, Geneva, sans-serif;/*#ffe*/
+}
+div.allofit{
+  margin:0 auto;
+  width: 90%;
+  display:block;
+  /*background-color: #ffe;*/
+}
+div.explain {
+  /* Explain the page */
+    padding-left:30px;
+    color:black;
+    line-height:16px;
+    text-align: left;
+    font-family:arial;
+	
+}
+.titlebutton {
+	-webkit-box-shadow:inset 0px 1px 50px 3px #fff;
+	box-shadow:inset 0px 1px 50px 3px #fff;
+      background: #8af;
+      width:100%;
+	color:#000;
+	font-size:30px;
+	font-style:normal;
+	text-align:center;
+	text-shadow:0px 0px 1px #000;
+}
+hr {
+  /* Default horizonal line */
+    display: block;
+    height: 12px;
+    border: 0;
+    border-top: 5px solid #306269;
+    padding: 0;
+}
+
+input[type="button"].goback {
+	font-size: 12px;
+      top: 5px;
+	left: 5px;
+      padding:8px;
+	margin:0px auto;
+      width:130px;
+	-webkit-border-radius:10px;
+	border-radius:10px;
+	cursor:pointer;
+      background-color: #ff8;
+      font-weight: bold;
+}
+
+input[type="button"].browser {
+      font-size: 12px;
+      font-weight: bold;
+      top: 2px;
+      left: 2px;
+      padding:10px;
+      margin:0px auto;      
+      border-radius:0px;
+      background-color: #ff8;
+}
+
+input[type="submit"] {
+    font-size: 12px; 
+    font-weight: bold;
+    background-color: #9f9fff;
+    border-radius:20px;
+    -webkit-border-radius:20px;
+    border-radius:20px;
+    top: 5px;
+    left: 5px;
+    padding:10px;
+    margin:0px auto;
+}
+p.pages{
+  /* Paragraph for the all pages */
+  margin:0;
+  padding:1ex 0ex 0ex 2ex;
+}
+/*TABLES in bigbird page*/
+table.border, td.border, th.border {
+    padding-left:10px;
+    padding-right:10px;
+    border-collapse: collapse;
+}
+td.borders {
+    padding-left:10px;
+    padding-right:10px;
+    background-color:#DDD;
+}
+th.border {
+    padding-left:10px;
+    padding-right:10px;
+    background-color:#306269;
+    color:white;
+    font-family:arial; font-weight:normal; font-size:10pt;
+}
+td.lines, th.lines {
+    padding-left:10px;
+    padding-right:10px;
+    font-family:arial; font-weight:normal; font-size:10pt;
+}
+table.lines {
+    border-collapse: collapse;
+    border: 1px solid black;
+    font-family:arial;
+    word-wrap:break;
+}
+input[type="submit"].bigbird {
+    padding:5px;
+    border-radius:0px;
+    font-weight: bold;
+}
+input[type="hidden"].bigbird {
+    border-radius:0px;
+    font-size: 20px; 
+    font-weight: bold;
+    width: 100%;
+    max-width: 100px;
+    background-color: gray;
+    border-radius: none;
+}
+input[type="text"].forms {
+  display: block;
+  margin: 0;
+  width: 100%;
+  font-family: sans-serif;
+  font-size: 12px;
+}
+
+/*TABLES in metadata page*/
+table.metadata {
+    max-width:100%;
+    border-collapse: collapse;
+    border: 1px solid black;
+    padding-left:10px;
+    padding-right:10px;
+    font-family:arial;
+    word-wrap: break-word;
+    table-layout: fixed;
+    
+}
+th.metadata {
+    padding-left:10px;
+    padding-right:10px;
+    color:#306269; background-color:white;
+    text-align: center;
+}
+
+td.metadata {
+    padding-left: 10px;
+    padding-right: 10px;
+    font-weight:normal; font-size:10pt;
+    word-wrap: break-word;
+}
+
+div.container{
+  display:block;
+  margin:0 auto;
+  padding: 0px 30px 0px 30px;
+}
+div.question{
+  display:block;
+  padding:10px;
+}
+div.indent{
+  display:block;
+  padding-left:10px;
+}
+/*TABLES in genexp page*/
+table.gened{
+    border-collapse: collapse;
+    border: 1px solid black;
+    padding-left:10px;
+    padding-right:10px;
+    font-family:arial;
+    table-layout: fixed;
+}
+th.gened {
+    border: 1px solid black;
+    padding-left:10px;
+    padding-right:10px;
+    color:#306269; background-color:white;
+}
+th.geneds {
+    border: 1px solid black;
+    padding-left:10px;
+    padding-right:10px;
+    color:#306269; background-color:#DDD;
+}
+
+td.gened {
+    background-color:white;
+    border: 1px solid black;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-weight:normal; font-size:10pt;
+    word-wrap: break-word;
+    max-width:150pt;
+}
+/*Floating table */
+table.summary{
+    width:100%;
+    border-collapse: collapse;
+    border:1px dashed black;
+    padding-left:10px;
+    padding-right:10px;
+    font-family:arial;
+    font-size:8pt;
+    
+}
+th.summary {
+    border: 1px;
+    padding-left:10px;
+    padding-right:10px;
+    color:#306269;
+    /*background-color:white;*/
+}
+td.summary {
+    border: 1px;
+    padding-left: 10px;
+    padding-right: 10px;
+    word-wrap: break-word;
+}
+
+
+input[type="text"].contact{
+    width:100%;
+}
+tr.even {
+   background-color: white;
+}
+tr.odd {
+  background-color: #DDD;
+}
+
+/*FORM*/
+input[type="text"] {
+  margin: 0;
+  font-family: sans-serif;
+}
+input[type="text"].vartext  {
+  margin: 0;
+  width:15%;
+  font-family: sans-serif;
+} 
+input[type="submit"].contact {
+    font-size: 12px; 
+    font-weight: normal;
+    border-radius: 0;
+}
+
+div.contact
+{
+	margin:0 auto;
+      background-color:#ffc;  
+	width:500px;
+      padding:20px 50px 20px 50px;
+	font-family: arial;
+	line-height:25px;
+}
+
+/* For the Metadata menu Bar*/
+div#metamenu {
+    letter-spacing: 1px;
+    font-size: 20px;
+    font-family: Tahoma, Geneva, sans-serif;
+    font-weight: normal;
+    text-align: center;
+    width: auto;
+}
+#metamenu ul {
+    height: auto;
+    padding: 8px 0px;
+    margin: 0px;
+}
+#metamenu li { 
+display: inline; 
+padding: 20px; 
+}
+#metamenu li a {
+    text-decoration: none;
+    color: black;
+    padding: 8px 10px;
+}
+#metamenu li a.active {
+    background-color: #ff8;
+    color: black;
+}
+
+#metamenu li a:hover:not(.active) {
+    background-color: #FFF;
+    color: #8af;
+}
+
+/*Images on the variants Page*/
+.vbtn:hover {
+  background-image:none;
+  background:-webkit-gradient( linear, left top, left bottom, color-stop(1, #8af), color-stop(0.05, #ff8) );
+  background:-moz-linear-gradient( center top, #8af 100%, #ff8 5% );
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff8', endColorstr='#8af');
+  background-color:#ff8 /*8af*/;
+  color: #fff;
+  text-shadow:1px 1px 13px #fff;
+}
+
+/* For the Variants main menu Bar*/
+div#headmenu {
+    letter-spacing: 1px;
+    font-size: 20px;
+    font-family: Tahoma, Geneva, sans-serif;
+    font-weight: normal;
+    text-align: center;
+    width: auto;
+}
+#headmenu ul {
+    height: auto;
+    padding: 8px 0px;
+    margin: 0px;
+}
+#headmenu li { 
+display: inline; 
+padding: 20px; 
+}
+#headmenu li a {
+    text-decoration: none;
+    color: black;
+    padding: 8px 10px;
+}
+#headmenu li a.active {
+    background-color: #8af;
+    color: #ff8;
+}
+
+#headmenu li a:hover:not(.active) {
+    background-color: #FFF;
+    color: #8af;
+}
+
+/*backtotop*/
+.back-to-top {
+   background: none;
+   margin: 0;
+   position: fixed;
+   bottom: 20%;
+   right: 0;
+   text-align: center;
+   width: 70px;
+   height: inherit;
+   z-index: 100;
+   display: none;
+   text-decoration: blink;
+   
+   font-weight: bolder;
+   
+} 
+.back-to-top i {
+   font-size: 60px;
+}
