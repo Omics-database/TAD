@@ -13,7 +13,7 @@ function d_header() {
         <tr>
           <td width=30px></td>
           <td width=100px align=\"center\">
-            <a href=\"index.php\"><img src=\"images/atlas_main.png\" alt=\"TransAtlasDB\" ></a>
+            <a href=\"index.php\"><img src=\"images/atlas_main.png\" alt=\"Transcriptome Atlas\" ></a>
           </td>
           <td valign=\"center\" align=\"right\">
             <input type=\"button\" class=\"goback\" value=\"Return To Menu\" onclick=\"window.location.href='index.php'\"><br>

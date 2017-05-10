@@ -1,27 +1,8 @@
-<!DOCTYPE html>
-<!-- Main Page -->
-<html lang='en'>
-<head>
-	<meta charset="UTF-8" />
-	<link rel="STYLESHEET" type="text/css" href="stylefile.css">
-	<link rel="icon" type="image/ico" href="images/icon.png"/>
-	<div>
-		<!--heading-->
-		<center>
-			<h1>TransAtlasDB</h1>
-		</center>
-	</div>
-	<div id="menu">
-		<!--menu-->
-		<ul>
-			<li><a href="index.html">Home</a></li>
-			<li><a href="dataimport.html">Data Import</a></li>
-			<li><a href="dataexport.html">Data Export</a></li>
-		</ul>
-	</div>
-</head>
-<body>
-	<div id="bodys">
+<?php
+	//require_once("display_fns.php");
+	include("tad_header.php");
+	session_start();
+?>
 	<title>
 		TransAtlasDB
 	</title>

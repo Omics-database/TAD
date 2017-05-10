@@ -10,6 +10,7 @@ h1 {
     color:#614051;
     font-weight:900;
     font-family: "calibri", arial,sans-serif;
+    padding: 10px;
 
 }
 h2 {
@@ -87,11 +88,11 @@ table.table1 tr:nth-child(odd) {background: #FFF}
 div#menu {
     width: 100%;
     letter-spacing: 1px;
-    font-size: 18px;
+    font-size: 20px;
     font-family: Tahoma, Geneva, sans-serif;
     font-weight: normal;
     text-align: left;
-    text-shadow: 1px 1px 1px #333333;
+    /**text-shadow: 1px 1px 1px #333333;**/
     background-color: #F0f0cd;
 }
 #menu ul {
@@ -110,6 +111,7 @@ padding: 20px;
 }
 #menu a:hover {
     color: #FFF;
+    border-radius: 50%;
     background-color: #415e66;
 }
 #menu a:active {
@@ -120,7 +122,7 @@ padding: 20px;
 
 /* Body Attributes */
 body{
-    background-color: #fffff6; //#F0F0CD;
+    background-color: #fffff6; /**#F0F0CD;**/
     margin-top: 10px;
     font-family: "times news roman",arial;	
 }

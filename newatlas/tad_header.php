@@ -1,6 +1,6 @@
-<!DOCTYPE html>
+<!DOCTYPE php>
 <!-- Main Page -->
-<html lang='en'>
+<php lang='en'>
 <head>
 	<meta charset="UTF-8" />
 	<link rel="STYLESHEET" type="text/css" href="stylefile.css">
@@ -14,9 +14,9 @@
 	<div id="menu">
 		<!--menu-->
 		<ul>
-			<li><a href="index.html">Home</a></li>
-			<li><a href="dataimport.html">Data Import</a></li>
-			<li><a href="dataexport.html">Data Export</a></li>
+			<li><a href="index.php">Home</a></li>
+			<li><a href="dataimport.php">Data Import</a></li>
+			<li><a href="dataexport.php">Data Export</a></li>
 		</ul>
 	</div>
 </head>
