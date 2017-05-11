@@ -134,6 +134,18 @@ sub processArguments {
   open(CONNECT, ">$get/\.connect.txt"); 
   my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname";
   print CONNECT $connectcontent; close (CONNECT);
+  `mkdir -p $get/web`;
+  open(CONFIG, ">$get/web/config.php");
+  print CONFIG "<?php
+  define('DB_SERVER', 'localhost');
+  define('DB_USERNAME', '$username');
+  define('DB_PASSWORD', '$password');
+  define('DB_DATABASE', '$dbname');
+  \$db_conn = mysqli_connect(DB_SERVER,DB_USERNAME,DB_PASSWORD,DB_DATABASE);
+?>
+";
+close (CONFIG);
+
 }
 
 sub SCHEMA {

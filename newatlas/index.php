@@ -1,30 +1,37 @@
-<?php
-	//require_once("display_fns.php");
-	include("tad_header.php");
-	session_start();
-?>
-	<title>
-		TransAtlasDB
-	</title>
-		<table class="topic" align="center"><tr><td>Home</td></tr></table>
-		<div>
-			<p>
-				TransAtlasDB is an integrated database application connecting samples metadata, expression and variant details from RNA sequencing analysis.
-			</p>
-			<p>
-				This is the web interface for TransAtlasDB database application.
-			</p>
-			<br>
-			<p>
-				The following options are available view the web interface.
-			</p>
-			<table class="home">
-				<tr><th>Data Import</th><th>Data Export</th></tr>
-				<tr><td>Samples Metadata</td><td>Average fpkm</td></tr>
-				<tr><td>RNAseq data</td><td>Individual Gene Expression</td></tr>
-				<tr><td></td><td>Chromosomal variant distribution</td></tr>
-				<tr><td></td><td>Variant Annotation Information</td></tr>
-			</table>
-		</div>
-	</div>
-</body>
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>TransAtlasDB</title>
+
+        <!-- Fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Raleway:100,600" rel="stylesheet" type="text/css">
+        
+        <!-- Styles -->
+        <link rel="STYLESHEET" type="text/css" href="stylesheet.css">
+        
+    </head>
+    <body>
+        <div class="flex-center position-ref full-height">
+            
+            <div class="content">
+                <div class="title m-b-md">
+                    TransAtlasDB
+                </div>
+                <div class="linksheader">
+                    <a href="about.php">About</a>
+                    <a href="dataimport.php">Data Import</a>
+                    <a href="dataexport.php">Data Export</a>
+                    <a href="https://modupeore.github.com/TransAtlasDB" target="_blank">GitHub</a>
+                </div>
+                <br>
+                <p>The web platform for TransAtlasDB</p>
+            </div>
+        </div>
+    </body>
+</html>
+

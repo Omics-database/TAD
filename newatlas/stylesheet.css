@@ -1,0 +1,117 @@
+/* 
+    Document   : stylefile.css
+    Created on : May 10th, 2017
+    Author     : Modupeore Adetunji
+    Description: TransAtlasDB web interface style sheet
+*/
+/* For all the pages */
+html, head {
+    background-color: #fff;
+    color: #636b6f;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 100;
+    height: 100vh;
+    margin: 0;
+}
+/* For the main page */
+.full-height {
+    height: 100vh;
+}
+
+.flex-center {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+
+.position-ref {
+    position: relative;
+}
+
+.top-right {
+    position: absolute;
+    right: 10px;
+    top: 18px;
+}
+
+.content {
+    text-align: center;
+}
+.content > p {
+    color:black;
+}
+
+.title {
+    font-size: 84px;
+    text-shadow: 4px 4px 4px #aaa;
+}
+
+.title > a {
+    text-decoration: none;
+    color: inherit;
+}
+.linksheader > a {
+    color: #636b6f;
+    padding: 0 25px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .1rem;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+.linksheader > a:hover {
+    color: #FFF;
+    background-color: #66415e;
+}
+
+.m-b-md {
+    margin-bottom: 30px;
+}
+
+/* For the Other Pages Header */
+.sub-md {
+    font-size: 50px;
+    margin: 20px;
+    text-align: center;
+}
+.links > a {
+    color: #636b6f;
+    padding: 25px 25px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .1rem;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+.links > a:hover {
+    color: #FFF;
+    background-color: #66415e;
+}
+
+/* The Content */
+.structure {
+    padding:40pt;
+    color:black;
+}
+.dift {
+    margin-top: 30px;
+    font-family: helvetica;
+    font-size: 100%;
+    color: #636b6f;
+    padding-left:30pt;
+    font-weight: normal;
+    line-height: 20pt;
+}
+.menu {
+    width: 100%;
+    letter-spacing: 1px;
+    font-size: 20px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 400;
+    text-align: center;
+    background-color: #F0f0cd;
+    margin: 1em 0 1em;
+    padding: 2pt;
+    color: #4a4166;
+    text-shadow: 1pt 1pt 1pt white;
+}

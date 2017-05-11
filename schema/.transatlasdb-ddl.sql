@@ -131,7 +131,6 @@ CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `genes` INT(11) NULL
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `Metadata`;
 CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
-
 -- -----------------------------------------------------
 -- Table structure for table `VarSummary`
 -- -----------------------------------------------------
