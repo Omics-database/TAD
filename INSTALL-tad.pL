@@ -22,6 +22,7 @@ my ($sth,$dbh,$schema); #connect to database;
 our @dbtables = qw|Sample Animal MapStats GeneStats Metadata  GenesFpkm IsoformsFpkm VarAnnotation VarResult VarSummary|;
 #--------------------------------------------------------------------------------
 sub printerr; #declare error routine
+our ($ibis, $ardea) = fastbit_name(); #ibis and ardea location
 our $default = DEFAULTS(); #default error contact
 processArguments(); #Process input
 
@@ -132,7 +133,7 @@ sub processArguments {
   print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
   $sqlfile = "$get/schema/\.transatlasdb-ddl.sql";
   open(CONNECT, ">$get/\.connect.txt"); 
-  my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname";
+  my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n  ibis $ibis\n  ardea $ardea";
   print CONNECT $connectcontent; close (CONNECT);
   `mkdir -p $get/web`;
   open(CONFIG, ">$get/web/config.php");
@@ -142,6 +143,7 @@ sub processArguments {
   define('DB_PASSWORD', '$password');
   define('DB_DATABASE', '$dbname');
   \$db_conn = mysqli_connect(DB_SERVER,DB_USERNAME,DB_PASSWORD,DB_DATABASE);
+  \$basepath = '$get';
 ?>
 ";
 close (CONFIG);
