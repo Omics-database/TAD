@@ -219,4 +219,13 @@ CREATE TABLE `vw_vvcf` (`sampleid` INT, `chrom` INT, `position` INT, `refallele`
 DROP VIEW IF EXISTS `vw_vvcf` ;
 DROP TABLE IF EXISTS `vw_vvcf`;
 CREATE VIEW `vw_vvcf` AS select `a`.`sampleid` as `sampleid`, `a`.`chrom` AS `chrom`,`a`.`position` AS `position`,`a`.`refallele` AS `refallele`,`a`.`altallele` AS `altallele`,`a`.`quality` as `quality`, `b`.`consequence` as `consequence`, `b`.`genename` AS `genename`,`b`.`geneid` AS `geneid`,`b`.`feature` AS `feature`,`b`.`transcript` AS `transcript`,`b`.`genetype` AS `genetype`,`b`.`proteinposition` AS `proteinposition`,`b`.`aachange` AS `aachange`,`b`.`codonchange` AS `codonchange`,`a`.`dbsnpvariant` AS `dbsnpvariant`,`a`.`variantclass` AS `variantclass`,`a`.`zygosity` AS `zygosity`,`c`.`tissue` AS `tissue`, `c`.`organism` AS `organism` from ((`VarResult` `a` left outer join `VarAnnotation` `b` on (((`a`.`sampleid` = `b`.`sampleid`) and (`a`.`chrom` = `b`.`chrom`) and (`a`.`position` = `b`.`position`)))) join `vw_sampleinfo` `c` on ((`a`.`sampleid` = `c`.`sampleid`))) order by `a`.`sampleid`, `a`.`chrom`,`a`.`position`, `b`.`consequence`;
--- ---------------------------------------------------
+-- -----------------------------------------------------
+-- View `vw_seqstats`
+-- -----------------------------------------------------
+DROP VIEW IF EXISTS `vw_seqstats`;
+DROP TABLE IF EXISTS `vw_seqstats`;
+CREATE TABLE `vw_seqstats` AS (select `sampleid` INT, `totalreads` INT, `alignmentrate` INT, `genes` INT, `totalvariants` INT, `mappingtool` INT, `annotationfile` INT, `mapdate` INT, `diffexpresstool` INT, `genedate` INT, `varianttool` INT, `variantannotationtool` INT, `variantdate` INT);
+DROP VIEW IF EXISTS `vw_seqstats`;
+DROP TABLE IF EXISTS `vw_seqstats`;
+CREATE VIEW `vw_seqstats` AS select `a`.`sampleid` AS `sampleid`,`a`.`totalreads` AS `totalreads`,`a`.`alignmentrate` AS `alignmentrate`,`a`.`genes` AS `genes`,`a`.`totalvariants` AS `totalvariants`,`b`.`mappingtool` AS `mappingtool`,`b`.`annfile` AS `annotationfile`,`c`.`date` AS `mapdate`,`d`.`diffexpresstool` AS `diffexpresstool`,`d`.`date` AS `genedate`,`e`.`varianttool` AS `varianttool`,`e`.`annversion` AS `variantannotationtool`,`e`.`date` AS `variantdate` from ((((`vw_sampleinfo` `a` join `metadata` `b` on ((`a`.`sampleid` = `b`.`sampleid`))) join `mapstats` `c` on ((`a`.`sampleid` = `c`.`sampleid`))) join `genestats` `d` on((`a`.`sampleid` = `d`.`sampleid`))) join `varsummary` `e` on ((`a`.`sampleid` = `e`.`sampleid`))) order by `a`.`sampleid`;
+-- -----------------------------------------------------
