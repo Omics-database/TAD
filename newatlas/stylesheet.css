@@ -94,10 +94,9 @@ html, head {
     color:black;
 }
 .dift {
-    margin-top: 30px;
-    margin-bottom:30px;
+    margin: 10px 0 30px;
     font-family: helvetica;
-    font-size: 100%;
+    font-size: 90%;
     color: #272a2c;
     padding-left:30pt;
     font-weight: normal;
@@ -107,7 +106,7 @@ html, head {
     margin: 10pt;
     padding-bottom: 20pt;
     font-family: 'tahoma','times';
-    font-size: 100%;
+    font-size: 95%;
     color: #272a2c;
     font-weight: normal;
     line-height: 20pt;
@@ -163,3 +162,42 @@ tr.even {
 tr.odd {
   background-color: #e3e1e4;
 }
+.metamenu {
+    margin: 0 0 5px;
+    list-style: none;
+    padding: 10pt;
+    text-align: center;
+    color: #636b6f;
+    font-size: 15px;
+    font-weight: 600;
+    background: #f4f4f4;
+    border: 1px solid #e0e0e0;
+    text-decoration: none;
+}
+.metamenu > a {
+    text-decoration: none;
+    list-style: none;
+}
+.metamenu > a:hover {
+    color: red;
+}
+.metactive {
+    margin: 0 0 5px;
+    list-style: none;
+    padding: 10pt;
+    text-align: center;
+    color: red;
+    font-size: 15px;
+    font-weight: 600;
+    background: #F0f0cd;
+    border: 1px solid #e0e0e0;
+    text-decoration: none;
+}
+.metactive > a {
+    text-decoration: none;
+    list-style: none;
+}
+.metactive > a:hover {
+    color: red;
+}
+
