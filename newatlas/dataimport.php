@@ -31,15 +31,16 @@
 		<div class="xtra">
 <?php	
 	$table = "vw_metadata";
+	$stat = "dataimport";
 	$query = "SELECT * FROM $table";
 	$all_rows = $db_conn->query($query);
 	$total_rows = $all_rows->num_rows;
 
 	if (!empty($_REQUEST['order'])) {
     // if the sort option was used
-		$_SESSION['sort'] = $_POST['sort'];
-		$_SESSION['dir'] = $_POST['dir'];
-		$_SESSION['num_recs'] = $_POST['num_recs'];
+		$_SESSION[$stat]['sort'] = $_POST['sort'];
+		$_SESSION[$stat]['dir'] = $_POST['dir'];
+		$_SESSION[$stat]['num_recs'] = $_POST['num_recs'];
 
 		$terms = explode(",", $_POST['search']);
 		$is_term = false;
@@ -48,31 +49,31 @@
 		        $is_term = true;
 		    }
 		}
-		$_SESSION['select'] = $terms;
-		$_SESSION['column'] = $_POST['column'];
+		$_SESSION[$stat]['select'] = $terms;
+		$_SESSION[$stat]['column'] = $_POST['column'];
 
 		$query = ("SELECT * FROM $table ");
 		if ($is_term) {
 		    $query .= "WHERE ";
 		}
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$stat]['select'] as $term) {
 		    if (trim($term) == "") {
 		        continue;
 		    }
-		    $query .= $_SESSION['column'] . " LIKE '%" . trim($term) . "%' OR ";
+		    $query .= $_SESSION[$stat]['column'] . " LIKE '%" . trim($term) . "%' OR ";
 		}
 		$query = rtrim($query, " OR ");
-		$query .= " ORDER BY " . $_SESSION['sort'] . " " . $_SESSION['dir'];
+		$query .= " ORDER BY " . $_SESSION[$stat]['sort'] . " " . $_SESSION[$stat]['dir'];
 
 		$result = $db_conn->query($query);
 		$num_total_result = $result->num_rows;
-		if ($_SESSION['num_recs'] != "all") {
-		    $query .= " limit " . $_SESSION['num_recs'];
+		if ($_SESSION[$stat]['num_recs'] != "all") {
+		    $query .= " limit " . $_SESSION[$stat]['num_recs'];
 		}
-		unset($_SESSION['txt_query']);
-		} elseif (!empty($_SESSION['sort'])) {
+		unset($_SESSION[$stat]['txt_query']);
+		} elseif (!empty($_SESSION[$stat]['sort'])) {
 		$is_term = false;
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$stat]['select'] as $term) {
 		    if (trim($term) != "") {
 		        $is_term = true;
 		    }
@@ -81,19 +82,19 @@
 		if ($is_term) {
 		    $query .= "WHERE ";
 		}
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$stat]['select'] as $term) {
 		    if (trim($term) == "") {
 		        continue;
 		    }
-		    $query .= $_SESSION['column'] . " LIKE '%" . trim($term) . "%' OR ";
+		    $query .= $_SESSION[$stat]['column'] . " LIKE '%" . trim($term) . "%' OR ";
 		}
 		$query = rtrim($query, " OR ");
-		$query .= " ORDER BY " . $_SESSION['sort'] . " " . $_SESSION['dir'];
+		$query .= " ORDER BY " . $_SESSION[$stat]['sort'] . " " . $_SESSION[$stat]['dir'];
 		$result = $db_conn->query($query);
 		$num_total_result = $result->num_rows;
 
-		if ($_SESSION['num_recs'] != "all") {
-		    $query .= " limit " . $_SESSION['num_recs'];
+		if ($_SESSION[$stat]['num_recs'] != "all") {
+		    $query .= " limit " . $_SESSION[$stat]['num_recs'];
 		}
 	} else {
     // if this is the first time, then just order by line and display all rows //default
@@ -108,7 +109,7 @@
 	    echo "</div>";
 	}
 	$num_results = $result->num_rows;
-	if (empty($_SESSION['sort'])) {
+	if (empty($_SESSION[$stat]['sort'])) {
 	    $num_total_result = $num_results;
 	}
 ?>
@@ -117,8 +118,8 @@
     <p class="pages">
 		<span>Search for: </span>
 <?php
-	if (!empty($_SESSION['select'])) {
-		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION["select"]) . '"\"/>';
+	if (!empty($_SESSION[$stat]['select'])) {
+		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION[$stat]["select"]) . '"\"/>';
 	} else {
 		echo '<input type="text" size="35" name="search" placeholder="Enter variable(s) separated by commas (,)"/>';
 	} 
@@ -150,10 +151,10 @@
 		<select name="dir">
 			<option value="asc">ascending</option>
 			<?php
-				if (empty($_SESSION['dir'])) {
-					$_SESSION['asc'] = "asc";
+				if (empty($_SESSION[$stat]['dir'])) {
+					$_SESSION[$stat]['asc'] = "asc";
 				}
-				if ($_SESSION['dir'] == "desc") {
+				if ($_SESSION[$stat]['dir'] == "desc") {
 					echo '<option selected value="desc">descending</option>';
 				} else {
 					echo '<option value="desc">descending</option>';
@@ -164,20 +165,20 @@
 		<select name="num_recs">
 			<option value="10">10</option>
 			<?php
-				if (empty($_SESSION['num_recs'])) {
-					$_SESSION['num_recs'] = "10";
+				if (empty($_SESSION[$stat]['num_recs'])) {
+					$_SESSION[$stat]['num_recs'] = "10";
 				}
-				if ($_SESSION['num_recs'] == "20") {
+				if ($_SESSION[$stat]['num_recs'] == "20") {
 					echo '<option selected value="20">20</option>';
 				} else {
 					echo '<option value="20">20</option>';
 				}
-				if ($_SESSION['num_recs'] == "50") {
+				if ($_SESSION[$stat]['num_recs'] == "50") {
 					echo '<option selected value="50">50</option>';
 				} else {
 					echo '<option value="50">50</option>';
 				}
-				if ($_SESSION['num_recs'] == "all") {
+				if ($_SESSION[$stat]['num_recs'] == "all") {
 					echo '<option selected value="all">all</option>';
 				} else {
 					echo '<option value="all">all</option>';

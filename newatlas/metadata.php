@@ -3,21 +3,25 @@
 	require_once('all_fns.php');
 	tmetadata(); 
 ?>
-<?php
+<?PHP
 	//Database Attributes
 	$table = "vw_metadata";
 	$statustable1 = "GeneStats";
 	$statustable2 = "VarSummary";
-	$query = "select $table.sampleid, $table.animalid, $table.organism, $table.tissue, $table.sampledescription, $table.date ,$statustable1.status as genestatus, $statustable2.status as variantstatus from $table left outer join $statustable1 on $table.sampleid = $statustable1.sampleid left outer join $statustable2 on $statustable2.sampleid = $table.sampleid";
+	$query = "select $table.sampleid, $table.animalid, $table.organism, $table.tissue, $table.sampledescription, $table.date ,$statustable1.status as genestatus, $statustable2.status as variantstatus from $table left outer join $statustable1 on $table.sampleid = $statustable1.sampleid left outer join $statustable2 on $statustable2.sampleid = $table.sampleid ";
 ?>
 	<div class="menu">TransAtlasDB Metadata</div>
+	<table><tr><td width="20%">
+	<div class="metactive"><a href="metadata.php">MetaData Information</a></div>
+	<div class="metamenu"><a href="sequence.php">Sequencing Information</a></div>
+	</td><td>
 	<div class="dift"><p>View bio-data of the RNA-Seq libraries processed and status information.</p>
-
+	
 <?php
 	//create query for DB display
 	if (!empty($_GET['libs'])) {
     //if the sort option was used
-		$_SESSION['num_recs'] = "all";
+		$_SESSION[$table]['num_recs'] = "all";
 
 		$terms = explode(",", $_GET['libs']);
 		$is_term = false;
@@ -26,31 +30,31 @@
 				$is_term = true;
 			}	
 		}
-		$_SESSION['select'] = $terms;
-		$_SESSION['column'] = "sampleid";
+		$_SESSION[$table]['select'] = $terms;
+		$_SESSION[$table]['column'] = "sampleid";
 		if ($is_term) {
 		    $query .= "WHERE ";
 		}
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$table]['select'] as $term) {
 			if (trim($term) == "") {
 				continue;
 			}
-			$query .= $table.".".$_SESSION['column'] . " =" . trim($term) . " OR ";
+			$query .= $table.".".$_SESSION[$table]['column'] . " =" . trim($term) . " OR ";
 		}
 		$query = rtrim($query, " OR ");
-		$query .= " ORDER BY " . $table.".".$_SESSION['column'] . " " . $_SESSION['dir'];
+		$query .= " ORDER BY " . $table.".".$_SESSION[$table]['column'] . " " . $_SESSION[$table]['dir'];
 
 		$result = $db_conn->query($query);
 		$num_total_result = $result->num_rows;
-		if ($_SESSION['num_recs'] != "all") {
-			$query .= " limit " . $_SESSION['num_recs'];
+		if ($_SESSION[$table]['num_recs'] != "all") {
+			$query .= " limit " . $_SESSION[$table]['num_recs'];
 		}
 	}
 	elseif (!empty($_REQUEST['order'])) {
 		// if the sort option was used
-		$_SESSION['sort'] = $_POST['sort'];
-		$_SESSION['dir'] = $_POST['dir'];
-		$_SESSION['num_recs'] = $_POST['num_recs'];
+		$_SESSION[$table]['sort'] = $_POST['sort'];
+		$_SESSION[$table]['dir'] = $_POST['dir'];
+		$_SESSION[$table]['num_recs'] = $_POST['num_recs'];
 
 		$terms = explode(",", $_POST['search']);
 		$is_term = false;
@@ -59,17 +63,17 @@
 				$is_term = true;
 			}
 		}
-		$_SESSION['select'] = $terms;
-		$_SESSION['column'] = $_POST['column'];
-		$_SESSION['gstatus'] = $_POST['rnull'];
-		$_SESSION['vstatus'] = $_POST['vnull'];
+		$_SESSION[$table]['select'] = $terms;
+		$_SESSION[$table]['column'] = $_POST['column'];
+		$_SESSION[$table]['gstatus'] = $_POST['rnull'];
+		$_SESSION[$table]['vstatus'] = $_POST['vnull'];
 
-		if ($_SESSION['gstatus'] == "true"){
+		if ($_SESSION[$table]['gstatus'] == "true"){
 			$query .= " WHERE $statustable1.status = ". '"done" ';
 			if ($is_term) {
 				$query .= "AND ";
 			}
-		} elseif ($_SESSION['vstatus'] == "true"){
+		} elseif ($_SESSION[$table]['vstatus'] == "true"){
 			$query .= " WHERE $statustable2.status = ". '"done" ';
 			if ($is_term) {
 				$query .= "AND ";
@@ -79,33 +83,33 @@
 				$query .= "WHERE ";
 			}
 		}
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$table]['select'] as $term) {
 			if (trim($term) == "") {
 				continue;
 			}
-			$query .= $table.".".$_SESSION['column'] . " LIKE '%" . trim($term) . "%' OR ";
+			$query .= $table.".".$_SESSION[$table]['column'] . " LIKE '%" . trim($term) . "%' OR ";
 		}
 		$query = rtrim($query, " OR ");
-		$query .= " ORDER BY " . $table.".".$_SESSION['sort'] . " " . $_SESSION['dir'];
+		$query .= " ORDER BY " . $table.".".$_SESSION[$table]['sort'] . " " . $_SESSION[$table]['dir'];
 
 		$result = $db_conn->query($query);
 		$num_total_result = $result->num_rows;
-		if ($_SESSION['num_recs'] != "all") {
-			$query .= " limit " . $_SESSION['num_recs'];
+		if ($_SESSION[$table]['num_recs'] != "all") {
+			$query .= " limit " . $_SESSION[$table]['num_recs'];
 		}
-	} elseif (!empty($_SESSION['sort'])) {
+	} elseif (!empty($_SESSION[$table]['sort'])) {
 		$is_term = false;
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$table]['select'] as $term) {
 			if (trim($term) != "") {
 				$is_term = true;
 			}
 		}
-		if ($_SESSION['gstatus'] == "true"){
+		if ($_SESSION[$table]['gstatus'] == "true"){
 			$query .= " WHERE $statustable1.status = ". '"done" ';
 			if ($is_term) {
 				$query .= "AND ";
 			}
-		} elseif ($_SESSION['vstatus'] == "true"){
+		} elseif ($_SESSION[$table]['vstatus'] == "true"){
 			$query .= " WHERE $statustable2.status = ". '"done" ';
 			if ($is_term) {
 				$query .= "AND ";
@@ -115,20 +119,20 @@
 				$query .= "WHERE ";
 			}
 		}
-		foreach ($_SESSION['select'] as $term) {
+		foreach ($_SESSION[$table]['select'] as $term) {
 			if (trim($term) == "") {
 				continue;
 			}
-			$query .= $table.".".$_SESSION['column'] . " LIKE '%" . trim($term) . "%' OR ";
+			$query .= $table.".".$_SESSION[$table]['column'] . " LIKE '%" . trim($term) . "%' OR ";
 		}
 		$query = rtrim($query, " OR ");
-		$query .= " ORDER BY " . $table.".".$_SESSION['sort'] . " " . $_SESSION['dir'];
+		$query .= " ORDER BY " . $table.".".$_SESSION[$table]['sort'] . " " . $_SESSION[$table]['dir'];
 
 		$result = $db_conn->query($query);
 		$num_total_result = $result->num_rows;
 	
-		if ($_SESSION['num_recs'] != "all") {
-			$query .= " limit " . $_SESSION['num_recs'];
+		if ($_SESSION[$table]['num_recs'] != "all") {
+			$query .= " limit " . $_SESSION[$table]['num_recs'];
 		}
 	}
 	$result = $db_conn->query($query);
@@ -140,7 +144,7 @@
 		echo "</div>";
 	}
 	$num_results = $result->num_rows;
-	if (empty($_SESSION['sort'])) {
+	if (empty($_SESSION[$table]['sort'])) {
 		$num_total_result = $num_results;
 	}
 ?>
@@ -149,8 +153,8 @@
     <p class="pages">
 		<span>Search for: </span>
 <?php
-	if (!empty($_SESSION['select'])) {
-		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION["select"]) . '"\"/>';
+	if (!empty($_SESSION[$table]['select'])) {
+		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION[$table]["select"]) . '"\"/>';
 	} else {
 		echo '<input type="text" size="35" name="search" placeholder="Enter variable(s) separated by commas (,)"/>';
 	} 
@@ -222,20 +226,21 @@
     <input type="submit" name="order" value="Go"/></p></div>
 </form>
 </div>
-
+</td></tr></table>
+	
 <?php
   if(!empty($db_conn) && (!empty($_POST['order']) || !empty($_GET['libs']) || !empty($_POST['meta_data']))) { //make sure an options is selected
 	echo '<div class="menu">Results</div><div class="xtra">';
     if ($num_total_result == 0){ //Cross check if libraries selected are in the database
       echo '<center>No results were found with your search criteria.<br>
-      There are no "'.implode(",", $_SESSION["select"]).'" in "'.$_SESSION['column'].'".<center>';
+      There are no "'.implode(",", $_SESSION[$table]["select"]).'" in "'.$_SESSION[$table]['column'].'".<center>';
     }else { //Provide download options
-      echo '<div>';
+      echo '<div class="xtra">';
       echo '<form action="" method="post">';
       echo "<span>" . $num_results . " out of " . $num_total_result . " search results displayed. ";
       echo '<input type="submit" name="downloadvalues" value="Download Selected Values"/></span>
 	    <input type="submit" name="downloadfpkm" value="Download FPKM  Values"/></span>
-            <input type="submit" name="transfervalues" value="View Mapping Information"/></span><br>';
+            <input type="submit" name="transfervalues" value="View Mapping Information"/></span>';
       meta_display($result);
       if(!empty($_POST['meta_data']) && isset($_POST['downloadvalues'])) { //If download Metadata
         foreach($_POST['meta_data'] as $check) {
@@ -268,7 +273,7 @@
           $dataline .= $check.",";
         }
         $dataline = rtrim($dataline, ",");
-        $_SESSION['store'] = "yes";
+        $_SESSION[$table]['store'] = "yes";
         print("<script>location.href='sequence.php?libs=$dataline'</script>");
       }
       
@@ -281,7 +286,7 @@
   $db_conn->close();
 ?>
 
-<!--<a class="back-to-top" style="display: inline;" href="#"><img src="images/backtotop.png" alt="Back To Top" width="45" height="45"></a>
+<!-- <a class="back-to-top" style="display: inline;" href="#"><img src="images/backtotop.png" alt="Back To Top" width="45" height="45"></a>
 <script src=”//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js”></script>
     <script>
       jQuery(document).ready(function() {

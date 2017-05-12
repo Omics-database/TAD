@@ -70,3 +70,49 @@ function meta_display($result) {
     echo "</table></form>";
 }
 ?>
+
+
+<?php 
+function metavw_display($result) {
+    $num_rows = $result->num_rows;
+    echo '<br><table class="metadata"><tr style="font-size:1.8vh;">';
+    echo '<th align="left" width=40pt bgcolor="white"></th><th class="metadata" colspan=5>Analysis Summary</th><th class="metadata" colspan=3 style="color:#306269;">Mapping Metadata</th><th class="metadata" colspan=2 style="color:#306937;">Expression Metadata</th><th class="metadata" colspan=3 style="color:#693062;">Variant Metadata</th></tr><tr>';
+    echo '<th align="left" width=40pt bgcolor="white"><font size="2" color="red">Select All</font><input type="checkbox" id="selectall" onClick="selectAll(this)" /></th>';
+    $meta = $result->fetch_field_direct(0); echo '<th class="metadata" id="' . $meta->name . '">Sample Id</th>';
+    $meta = $result->fetch_field_direct(1); echo '<th class="metadata" id="' . $meta->name . '">Total Fastq reads</th>';
+    $meta = $result->fetch_field_direct(2); echo '<th class="metadata" id="' . $meta->name . '">Alignment Rate</th>';
+    $meta = $result->fetch_field_direct(3); echo '<th class="metadata" id="' . $meta->name . '">Genes</th>';
+    $meta = $result->fetch_field_direct(4); echo '<th class="metadata" id="' . $meta->name . '">Variants</th>';
+    $meta = $result->fetch_field_direct(5); echo '<th class="metadata" style="color:#306269;" id="' . $meta->name . '">Mapping Tool</th>';
+    $meta = $result->fetch_field_direct(6); echo '<th class="metadata" style="color:#306269;" id="' . $meta->name . '">Annotation file format</th>';
+    $meta = $result->fetch_field_direct(7); echo '<th class="metadata" style="color:#306269;" id="' . $meta->name . '">Date</th>';
+    $meta = $result->fetch_field_direct(8); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Differential Expression Tool</th>';
+    $meta = $result->fetch_field_direct(9); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Date</th>';
+    $meta = $result->fetch_field_direct(10); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Tool</th>';
+    $meta = $result->fetch_field_direct(11); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Annotation Tool</th>';
+    $meta = $result->fetch_field_direct(12); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Date</th>';
+    
+
+    for ($i = 0; $i < $num_rows; $i++) {
+        if ($i % 2 == 0) {
+            echo "<tr class=\"odd\">";
+        } else {
+            echo "<tr class=\"even\">";
+        }
+        $row = $result->fetch_assoc();
+        echo '<td><input type="checkbox" name="meta_data[]" value="'.$row['sampleid'].'"></td>';
+        $j = 0;
+        while ($j < $result->field_count) {
+            $meta = $result->fetch_field_direct($j);
+            if ($row[$meta->name] == "done"){
+                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src="images/done.png" style="display:block;" width="10%" height="10%" ></center></td>';
+            } else {
+                echo '<td headers="' . $meta->name . '" class="metadata"><center>' . $row[$meta->name] . '</center></td>';
+            }
+            $j++;
+        }
+        echo "</tr>";
+    }
+    echo "</table></form>";
+}
+?>

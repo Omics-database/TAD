@@ -25,7 +25,9 @@
                 <div class="linksheader">
                     <a href="about.php">About</a>
                     <a href="dataimport.php">Data Import</a>
-                    <a href="dataexport.php">Data Export</a>
+                    <a href="metadata.php">MetaData</a>
+                    <a href="genes.php">Genes Expression</a>
+                    <a href="variants.php">Variants</a>
                     <a href="https://modupeore.github.com/TransAtlasDB" target="_blank">GitHub</a>
                 </div>
                 <br>
