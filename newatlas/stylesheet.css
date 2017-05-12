@@ -76,7 +76,7 @@ html, head {
 }
 .links > a {
     color: #636b6f;
-    padding: 25px 25px;
+    padding: 5px 20px;
     font-size: 15px;
     font-weight: 600;
     letter-spacing: .1rem;
@@ -95,10 +95,20 @@ html, head {
 }
 .dift {
     margin-top: 30px;
+    margin-bottom:30px;
     font-family: helvetica;
     font-size: 100%;
-    color: #636b6f;
+    color: #272a2c;
     padding-left:30pt;
+    font-weight: normal;
+    line-height: 20pt;
+}
+.xtra {
+    margin: 10pt;
+    padding-bottom: 20pt;
+    font-family: 'tahoma','times';
+    font-size: 100%;
+    color: #272a2c;
     font-weight: normal;
     line-height: 20pt;
 }
@@ -113,5 +123,43 @@ html, head {
     margin: 1em 0 1em;
     padding: 2pt;
     color: #4a4166;
-    text-shadow: 1pt 1pt 1pt white;
+    text-shadow: 1pt 0.5pt 0.5pt green;
+}
+
+.pages{
+  /* Paragraph for the all pages */
+  margin:0;
+  padding:0;
+}
+/* Data Import table */
+table.metadata {
+    width:100%;
+    border-collapse: collapse;
+    border: 1px solid #636b6f;
+    padding-left:10px;
+    padding-right:10px;
+    font-family:arial;
+    word-wrap: break-word;
+    table-layout: fixed;
+    
+    
+}
+th.metadata {
+    padding-left:10px;
+    padding-right:10px;
+    color:#693730;
+    background-color:white;
+    text-align: center;
+}
+
+td.metadata {
+    font-weight:normal; font-size:10pt;
+    word-wrap: break-word;
+}
+
+tr.even {
+   background-color: white;
+}
+tr.odd {
+  background-color: #e3e1e4;
 }
