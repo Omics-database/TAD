@@ -308,10 +308,10 @@ sub AVERAGE { #tad-interact option D
 						if ($genename =~ /NULL/) { $genename = "-"; }
 						$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
 					}
-					$genes .= $gene;
+					$genes .= $gene.",";
 				} else {
 					printerr "NOTICE:\t No Results found with gene '$gene'\n";
-				}
+				} 
 				`rm -rf $_[3]`;
 		
 				#my $found = $sth->fetch();
@@ -351,7 +351,7 @@ sub AVERAGE { #tad-interact option D
 	} else {
 		$indent = "Only";
 	}
-
+	chop $genes;
 	if ($count > 0 ) {
 		print colored("$precount out of $count results displayed.", 'underline'), "\n";
 		print LOG "$precount out of $count results displayed.\n";

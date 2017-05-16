@@ -9,7 +9,7 @@
 	$query = "select * from $table ";
 ?>
 	<div class="menu">TransAtlasDB Mapping Information</div>
-	<table><tr><td width="20%">
+	<table width=80%><tr><td width=280pt>
 	<div class="metamenu"><a href="metadata.php">MetaData Information</a></div>
 	<div class="metactive"><a href="sequence.php">Sequencing Information</a></div>
 	</td><td>
@@ -125,13 +125,7 @@
 <form action="" method="post">
     <p class="pages">
 		<span>Search for: </span>
-<?php
-	if (!empty($_SESSION[$table]['select'])) {
-		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION[$table]["select"]) . '"\"/>';
-	} else {
-		echo '<input type="text" size="35" name="search" placeholder="Enter variable(s) separated by commas (,)"/>';
-	} 
-?>
+ 
     <span> in </span>
     <select name="column">
         <?php

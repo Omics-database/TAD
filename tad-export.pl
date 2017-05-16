@@ -673,7 +673,7 @@ if ($dbdata){ #if db 2 data mode selected
     } #end of varanno module
 } #end of db2data module
 #output: the end
-unless ($log) {
+unless ($log) { 
     printerr "-----------------------------------------------------------------\n";
     printerr $status;
     unless ($count == 0) { if ($output) { printerr "NOTICE:\t Successful export of user report to '$outfile'\n"; } }
@@ -681,6 +681,8 @@ unless ($log) {
     printerr "-----------------------------------------------------------------\n";
     print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
     close (LOG);
+} else {
+    `rm -rf $efile`;
 }
 #--------------------------------------------------------------------------------
 

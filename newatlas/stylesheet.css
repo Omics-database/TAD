@@ -118,11 +118,11 @@ html, head {
     font-family: 'Raleway', sans-serif;
     font-weight: 400;
     text-align: center;
-    background-color: #F0f0cd;
+    background-color: #e4edf8;
     margin: 1em 0 1em;
     padding: 2pt;
     color: #4a4166;
-    text-shadow: 1pt 0.5pt 0.5pt green;
+    text-shadow: 0.5pt 0.5pt 0.5pt #23415a;
 }
 
 .pages{
@@ -157,7 +157,7 @@ td.metadata {
 }
 
 tr.even {
-   background-color: white;
+   background-color: #FFF;
 }
 tr.odd {
   background-color: #e3e1e4;
@@ -167,37 +167,36 @@ tr.odd {
     list-style: none;
     padding: 10pt;
     text-align: center;
-    color: #636b6f;
     font-size: 15px;
     font-weight: 600;
-    background: #f4f4f4;
-    border: 1px solid #e0e0e0;
+    background: #e3e1e4;
     text-decoration: none;
+    color:#000;
 }
 .metamenu > a {
     text-decoration: none;
     list-style: none;
 }
 .metamenu > a:hover {
-    color: red;
+    color: #fff;
 }
 .metactive {
     margin: 0 0 5px;
     list-style: none;
     padding: 10pt;
     text-align: center;
-    color: red;
     font-size: 15px;
     font-weight: 600;
-    background: #F0f0cd;
+    background: #BCD2EE;
     border: 1px solid #e0e0e0;
     text-decoration: none;
+    color:#000;
 }
 .metactive > a {
     text-decoration: none;
     list-style: none;
 }
 .metactive > a:hover {
-    color: red;
+    color: #fff;
 }
 

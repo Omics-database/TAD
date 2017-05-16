@@ -11,7 +11,7 @@
 	$query = "select $table.sampleid, $table.animalid, $table.organism, $table.tissue, $table.sampledescription, $table.date ,$statustable1.status as genestatus, $statustable2.status as variantstatus from $table left outer join $statustable1 on $table.sampleid = $statustable1.sampleid left outer join $statustable2 on $statustable2.sampleid = $table.sampleid ";
 ?>
 	<div class="menu">TransAtlasDB Metadata</div>
-	<table><tr><td width="20%">
+	<table width=80%><tr><td width=280pt>
 	<div class="metactive"><a href="metadata.php">MetaData Information</a></div>
 	<div class="metamenu"><a href="sequence.php">Sequencing Information</a></div>
 	</td><td>

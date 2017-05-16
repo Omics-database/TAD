@@ -22,9 +22,9 @@ echo '
         <center>
             <div class="links">
                 <a href="about.php">About</a>
-                <a href="dataimport.php">Data Import</a>
+                <a href="import.php">Data Import</a>
                 <a href="metadata.php">MetaData</a>
-                <a href="genes.php">Genes Expression</a>
+                <a href="expression.php">Genes Expression</a>
                 <a href="variants.php">Variants</a>
                 <a href="https://modupeore.github.com/TransAtlasDB" target="_blank">GitHub</a>
             </div>
@@ -37,18 +37,36 @@ echo '
 <?php
 function tmetadata() {
     theader();
-    echo "<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\" />";
-    echo "<title>Metadata</title>";
-    echo '<script type="text/javascript" src="/code.jquery.com/jquery-1.8.3.js"></script>';
-    echo "<style type= 'text/css'></style>";
 ?>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <title>Metadata</title>
+    <script type="text/javascript" src="/code.jquery.com/jquery-1.8.3.js"></script>
     <script type="text/javascript">
-    function selectAll(source) {
-        checkboxes = document.getElementsByName('meta_data[]');
-        for(var i in checkboxes)
-        checkboxes[i].checked = source.checked;
-    }
-<?PHP
-    echo "</script></style>";
+        function selectAll(source) {
+            checkboxes = document.getElementsByName('meta_data[]');
+            for(var i in checkboxes)
+            checkboxes[i].checked = source.checked;
+        }
+    </script>
+<?php
+}
+?>
+<?php //Genes Expression Page
+function texpression() {
+  theader();
+?>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Expression</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.8.3.js"></script>
+    <link href="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+    <script src="jquery/jquery-1.11.3.min.js"></script>
+    <script src="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.js"></script>
+	<script language=JavaScript>
+        function reload(form) {
+            var val=form.organism.options[form.organism.options.selectedIndex].value;
+            self.location='expression.php?organism=' + val ;
+        }
+    </script>
+<?php
 }
 ?>

@@ -1,7 +1,7 @@
 <?php
 function db_display($result){
     $num_rows = $result->num_rows;
-    echo '<form action="dataimport.php" method="post">';
+    echo '<form action="" method="post">';
     echo '<table class="metadata"><tr>';    
     $meta = $result->fetch_field_direct(0); echo '<th class="metadata" id="' . $meta->name . '">Sample Id</th>';
     $meta = $result->fetch_field_direct(1); echo '<th class="metadata" id="' . $meta->name . '">Animal Id</th>';
@@ -59,7 +59,7 @@ function meta_display($result) {
         while ($j < $result->field_count) {
             $meta = $result->fetch_field_direct($j);
             if ($row[$meta->name] == "done"){
-                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src="images/done.png" style="display:block;" width="10%" height="10%" ></center></td>';
+                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src="images/done.png" style="display:block;" width="20pt" height="20pt" ></center></td>';
             } else {
                 echo '<td headers="' . $meta->name . '" class="metadata"><center>' . $row[$meta->name] . '</center></td>';
             }
@@ -114,5 +114,32 @@ function metavw_display($result) {
         echo "</tr>";
     }
     echo "</table></form>";
+}
+?>
+<?php
+function tabs_to_table($input) {
+    //define replacement constants
+    define('TAB_REPLACEMENT', "</center></td><td class='metadata'><center>");
+    define('NEWLINE_BEGIN', "<tr%s><td class='metadata'><center>");
+    define('NEWLINE_END', "</center></td></tr>");
+    define('TABLE_BEGIN', "<table class='metadata'><tr><th class='metadata'>");
+    define('TABLE_END', "</center></td></tr></table>");
+    define('TAB_HEADER', "</th><th class='metadata'>");
+    define('HEADER_END', "</th></tr>");
+
+    //split the rows
+    $rows = preg_split  ('/\n/'  , $input); $header = array_slice($rows,0,1); $rest = array_splice($rows,1);
+    foreach ($header as $index => $row) {
+        $row = preg_replace ('/\t/', TAB_HEADER , $row);
+        $output = $row . HEADER_END;
+    }      
+    foreach ($rest as $index => $row) {
+        $row = preg_replace  ('/\t/'  , TAB_REPLACEMENT  , $row);
+        $output .= sprintf(NEWLINE_BEGIN, ($index%2?"":' class="odd"')) . $row . NEWLINE_END;
+    }
+    $input = TABLE_BEGIN. $output . "</table>";
+    //build table
+    //$input = TABLE_BEGIN . $output . TABLE_END;
+    return ($input);
 }
 ?>
