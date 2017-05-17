@@ -355,8 +355,8 @@ if ($dbdata){ #if db 2 data mode selected
             } else {
                 unless ($log) { $verbose and printerr "NOTICE:\t Chromosome(s) selected: 'all chromosomes'\n"; }
             }
-            my $endsyntax = "group by sampleid, chrom order by sampleid, length(chrom),chrom";
-            my $allsyntax = $syntax.$endsyntax; 
+            my $endsyntax = "group by sampleid, chrom order by sampleid, length(chrom), chrom";
+            my $allsyntax = $syntax.$endsyntax;
             $sth = $dbh->prepare($allsyntax); 
             $sth->execute or die "SQL Error:$DBI::errstr\n";
             my $number = 0;
@@ -407,7 +407,7 @@ if ($dbdata){ #if db 2 data mode selected
                     $outfile = @{ open_unique($output) }[1];
                     open (OUT, ">$outfile") or die "ERROR:\t Output file $output can be not be created\n";
                     print OUT join("\t", @header),"\n";
-                    foreach (sort keys %ARRAYQUERY) { print OUT join("\t",@{$ARRAYQUERY{$_}}), "\n"; }
+                    foreach (sort {$a <=> $b} keys %ARRAYQUERY) { print OUT join("\t",@{$ARRAYQUERY{$_}}), "\n"; }
                     close OUT;
                 } else {
                     unless ($log) { printerr $table-> render, "\n"; } #print display
@@ -454,6 +454,8 @@ if ($dbdata){ #if db 2 data mode selected
                 $chrheader = $chromosome;
                 if ($#chromosomes == 0) {
                     if ($region){
+                        $syntax .= " and chrom = '$chromosomes[0]'";
+                        $vcfsyntax .= " and chrom = '$chromosomes[0]'";
                         if ($region =~ /\-/) {
                             ($start, $stop) = split("-", $region);
                             $syntax .= " and position between $start and $stop";
@@ -627,7 +629,6 @@ if ($dbdata){ #if db 2 data mode selected
                 }
             } #end parsing the results to arrayquery
         } #end if gene
-        
         @header = qw(Chrom Position Refallele Altallele Variantclass Consequence Genename Dbsnpvariant Sampleid);
         tr/a-z/A-Z/ for @header;
         $table = Text::TabularDisplay->new(@header); #header

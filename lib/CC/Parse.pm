@@ -962,7 +962,7 @@ sub CHRANNO {
 		printerr "\nORGANISM : $species\n";
 		$sth = $dbh->prepare("select group_concat(distinct a.nosql) from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' and a.nosql is not null group by a.nosql");$sth->execute(); my $found =$sth->fetch();
 		$verdict = undef;
-		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = (select sampleid from Sample a join Animal b on a.derivedfrom = b.animalid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
+		$sth = $dbh->prepare("select distinct chrom from VarResult where sampleid = (select a.sampleid from VarSummary a join vw_sampleinfo b on a.sampleid = b.sampleid where b.organism = '$species' order by a.date desc limit 1) order by length(chrom), chrom");
 		$sth->execute or die "SQL Error: $DBI::errstr\n";
 		$number = 0;
 		while (my $row = $sth->fetchrow_array() ) {

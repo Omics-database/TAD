@@ -34,7 +34,7 @@ echo '
 }
 ?>
 
-<?php
+<?php //Metadata pages
 function tmetadata() {
     theader();
 ?>
@@ -51,7 +51,8 @@ function tmetadata() {
 <?php
 }
 ?>
-<?php //Genes Expression Page
+
+<?php //Genes Expression Pages
 function texpression() {
   theader();
 ?>
@@ -64,7 +65,28 @@ function texpression() {
 	<script language=JavaScript>
         function reload(form) {
             var val=form.organism.options[form.organism.options.selectedIndex].value;
-            self.location='expression.php?organism=' + val ;
+            self.location='?organism=' + val ;
+        }
+    </script>
+    </script>
+<?php
+}
+?>
+
+<?php //Variant PAges
+function tvariants() {
+  theader();
+?>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Variants</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.8.3.js"></script>
+    <link href="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+    <script src="jquery/jquery-1.11.3.min.js"></script>
+    <script src="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.js"></script>
+	<script language=JavaScript>
+        function reload(form) {
+            var val=form.organism.options[form.organism.options.selectedIndex].value;
+            self.location='?organism=' + val ;
         }
     </script>
 <?php

@@ -1,31 +1,32 @@
 <?php				
 	session_start();
 	require_once('all_fns.php');
-	texpression(); 
+	tvariants(); 
 ?>
 <?PHP
 	//Database Attributes
 	$table = "vw_sampleinfo";
+	$Varstats = "variants";
 ?>
 
-<div class="menu">TransAtlasDB Expression Information</div>
+<div class="menu">TransAtlasDB Gene - Variant Information</div>
 	<table width=80%><tr><td width="280pt">
-	<div class="metactive"><a href="expression.php">Gene Expression Summary</a></div>
-	<div class="metamenu"><a href="fragmentpkm.php">Samples-Gene Expression</a></div>
-	<br><br></td><td>
-	<div class="dift"><p> View expression (FPKM) summaries of specified genes.</p>
+	<div class="metamenu"><a href="varsummary.php">Variants Distribution</a></div>
+	<div class="metactive"><a href="variants.php">Gene - Associated Variants</a></div>
+	<div class="metamenu"><a href="varchroms.php">Variants - Chromosomal position </a></div>
+	</td><td>
+	<div class="dift"><p> View variants based on a specific gene of interest.</p>
 
 <?php
 	@$species=$_GET['organism'];
 
 	if(isset($species)){
 		$query="SELECT DISTINCT tissue FROM $table where organism='$species' order by tissue"; 
-	}else{ $query ="SELECT DISTINCT tissue FROM $table where organism is null order by tissue"; }
+	}else{ $query ="SELECT DISTINCT tissue FROM $table order by tissue"; }
 
 	if (!empty($_REQUEST['salute'])) {
-		$_SESSION[$table]['tissue'] = $_POST['tissue'];
-		$_SESSION[$table]['organism'] = $_POST['organism'];
-		$_SESSION[$table]['search'] = $_POST['search'];
+		$_SESSION[$Varstats]['organism'] = $_POST['organism'];
+		$_SESSION[$Varstats]['search'] = $_POST['search'];
 	}
 ?>
 
@@ -44,43 +45,30 @@
 
     <p class="pages"><span>Specify your gene name: </span>
 	<?php
-		if (!empty($_SESSION[$table]['search'])) {
-		  echo '<input type="text" name="search" id="genename" size="35" value="' .$_SESSION[$table]['search']. '"/></p>';
+		if (!empty($_SESSION[$Varstats]['search'])) {
+		  echo '<input type="text" name="search" id="genename" size="35" value="' .$_SESSION[$Varstats]['search']. '"/></p>';
 		} else {
 		  echo '<input type="text" name="search" id="genename" size="35" placeholder="Enter Gene Name(s)" /></p>';
 		}
-	?>
-	
-	<p class="pages"><span>Tissue(s) of interest: </span>
-	<select name="tissue[]" id="tissue" size=3 multiple="multiple">
-		<option value="" selected disabled >Select Tissue(s)</option>
-		<?php
-			foreach ($db_conn->query($query) as $row) {
-				echo "<option value='$row[tissue]'>$row[tissue]</option>";
-			}
-		?>
-		</select></p>
+	?><br><br>
 <center><input type="submit" name="salute" value="View Results"></center>
 </form>
 </div>
   </td></tr></table>
 
 <?php
-
 	if (!empty($_POST['salute'])) {
 		echo '<div class="menu">Results</div><div class="xtra">';
-		if ((!empty($_POST['tissue'])) && (!empty($_POST['organism'])) && (!empty($_POST['search']))) {          
-			$output = "OUTPUT/avgfpkm_".$explodedate.".txt";
-			foreach ($_POST["tissue"] as $tissue){ $tissues .= $tissue. ","; } $tissues = rtrim($tissues,",");
+		if ((!empty($_POST['organism'])) && (!empty($_POST['search']))) {          
+			$output = "OUTPUT/variants_".$explodedate.".txt";
 			$genenames = rtrim($_POST['search'],",");
-			$pquery = "perl $basepath/tad-export.pl -w -db2data -avgfpkm -species '$_POST[organism]' --gene '".strtoupper("$genenames")."' --tissue '$tissues' -o $output";
+			$pquery = "perl $basepath/tad-export.pl -w -db2data -varanno -species '$_POST[organism]' --gene '".strtoupper("$genenames")."' -o $output";
 			//print $pquery;
 			shell_exec($pquery);
-			print $rquery;
 			if (file_exists($output)){
 				echo '<form action="' . $phpscript . '" method="post">';
 				echo '<p class="gened">Download the results below. ';
-				$newbrowser = "results.php?file=$output&name=genes-stats.txt";
+				$newbrowser = "results.php?file=$output&name=genevariant.txt";
 				echo '<input type="button" class="browser" value="Download Results" onclick="window.open(\''. $newbrowser .'\')"></p>';
 				echo '</form>';
 
