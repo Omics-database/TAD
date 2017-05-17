@@ -1,4 +1,46 @@
 <?php
+function about_display($result, $result2){
+    $num_rows = $result->num_rows;
+    echo '<form action="" method="post">';
+    echo '<table class="metadata"><tr>';    
+    $j = 0;
+    while ($j < $result->field_count) { 
+        $meta = $result->fetch_field_direct($j);
+        echo '<th class="metadata" id="' . $meta->name . '">'.$meta->name.'</th>';
+        $j++;
+    }
+    echo '</tr>';
+    for ($i = 0; $i < $num_rows; $i++) {
+      if ($i % 2 == 0) {
+          echo "<tr class=\"odd\">";
+      } else {
+          echo "<tr class=\"even\">";
+      }
+      $row = $result->fetch_assoc();
+      $j = 0;
+      while ($j < $result->field_count) {
+        $meta = $result->fetch_field_direct($j);
+        echo '<td headers="' . $meta->name . '" class="metadata"><center>' . $row[$meta->name] . '</center></td>';
+        $j++;
+      }
+      echo "</tr>";
+    }
+    if ($result2 != "null") {
+        $j = 0;
+        echo '<tr style="background-color:#f6fbf1;"><td class="metadata" align="right"><font style="font-size:100%;font-weight:bolder;letter-spacing:1px;">Total</font></td>';
+        $row = $result2->fetch_assoc();
+        while ($j < $result2->field_count) { 
+            $meta = $result2->fetch_field_direct($j);
+            echo '<td align="right" class="metadata" id="' . $meta->name . '"><font style="font-size:100%;font-weight:bolder;letter-spacing:1px;">'.$row[$meta->name].'</font></td>';
+            $j++;
+        }
+        echo '</tr>';
+    }
+    echo '</table></form>';
+}
+?>
+
+<?php
 function db_display($result){
     $num_rows = $result->num_rows;
     echo '<form action="" method="post">';
