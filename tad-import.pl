@@ -17,7 +17,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $efile, $help, $man, $nosql, $vnosql, $gnosql, $transaction);
+our ($verbose, $efile, $help, $man, $nosql, $vnosql, $gnosql, $log, $transaction);
 our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar, $delete); #command options
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
@@ -59,22 +59,23 @@ if (length($ibis) < 1){ ($ibis, $ardea) = ($all_details{'FastBit-ibis'}, $all_de
 if ($metadata){
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   	if ($tab) { #unix tab delimited file
-    		printerr "JOB:\t Importing Sample Information from tab-delimited file => $file2consider\n"; #status
-	    	my %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
-    		foreach my $row (sort keys %filecontent){
-	      		if (exists $filecontent{$row}{'sample name'}) { #sample name
+		printerr "JOB:\t Importing Sample Information from tab-delimited file => $file2consider\n"; #status
+		my %filecontent = %{ tabcontent($file2consider) }; #get content from tab-delimited file
+		foreach my $row (sort keys %filecontent){
+			if (exists $filecontent{$row}{'sample name'}) { #sample name
 				my $sheetid = "$filecontent{$row}{'first name'} $filecontent{$row}{'middle initial'} $filecontent{$row}{'last name'}"; #scientist name
 				if (length $sheetid > 3) { #Person Name 
-	  				$sth = $dbh->prepare("select personid from Person where personid = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
-		  			unless ($found) { # if person is not in the database
-		    				$sth = $dbh->prepare("insert into Person (personid, firstname, lastname, middleinitial) values (?,?,?,?)");
-	    					$sth->execute($sheetid, $filecontent{$row}{'first name'}, $filecontent{$row}{'last name'}, $filecontent{$row}{'middle initial'}) or die "\nERROR:\t Complication in Person table\n";
+					$sth = $dbh->prepare("select personid from Person where personid = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
+					unless ($found) { # if person is not in the database
+						$sth = $dbh->prepare("insert into Person (personid, firstname, lastname, middleinitial) values (?,?,?,?)");
+						$sth->execute($sheetid, $filecontent{$row}{'first name'}, $filecontent{$row}{'last name'}, $filecontent{$row}{'middle initial'}) or die "\nERROR:\t Complication in Person table\n";
 					}
 					$NAME{$sheetid} = $sheetid;
 				} else {
 					undef $sheetid;
 				}
-				$sheetid = $filecontent{$row}{'organization name'}; #organization name
+				$sheetid = $filecontent{$row}{'organization'}; #organization name
+				print $sheetid;
 				if ($sheetid) { #Organization Name
 					$sth = $dbh->prepare("select organizationname from Organization where organizationname = '$sheetid'"); $sth->execute(); $found = $sth->fetch();
 					unless ($found) { # if person is not in the database
@@ -129,6 +130,20 @@ if ($metadata){
 					printerr "Duplicate: SampleID '$sheetid' already exists in Sample table. Moving on.\n";
 					printerr "Optional: To delete $sheetid ; Execute: tad-import.pl -delete $sheetid\n";
 				}
+				foreach (keys %NAME) {
+					$sth = $dbh->prepare("select sampleid, personid from SamplePerson where sampleid = '$sheetid' and personid = '$_'"); $sth->execute(); $found =$sth->fetch();
+					unless ($found) { # if sample-person is not in the database
+						$sth = $dbh->prepare("insert into SamplePerson (sampleid, personid) values (?,?)");
+						$sth->execute($sheetid, $_) or die "\nERROR:\t Complication in SamplePerson table\n";
+					}
+				}
+				foreach (keys %ORGANIZATION) {
+					$sth = $dbh->prepare("select sampleid, organizationname from SampleOrganization where sampleid = '$sheetid' and organizationname = '$_'"); $sth->execute(); $found =$sth->fetch();
+					unless ($found) { # if sample-organization is not in the database
+						$sth = $dbh->prepare("insert into SampleOrganization (sampleid, organizationname) values (?,?)");
+						$sth->execute($sheetid, $_) or die "\nERROR:\t Complication in SampleOrganization table\n";
+					}
+				}		
 			} else {
 				pod2usage("\nFAILED:\t Error in tab-delimited file \"$file2consider\".\n\tCheck => ROW: $row, COLUMN: \"Sample Name\"");
 			} #end of if sample name is real
@@ -597,13 +612,13 @@ if ($datadb) {
   	} #end if data in sample table
 }
 if ($delete){ #delete section
-	my (%KEYDELETE);
+	my (%KEYDELETE, $decision);
 	my ($i,$alldelete) = (0,0);
-	printerr "JOB:\t Deleting Existing Records in Database\n"; #status
+	unless ($log) { printerr "JOB:\t Deleting Existing Records in Database\n"; } #status
 	$dbh = mysql($all_details{'MySQL-databasename'}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
   	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$delete'"); $sth->execute(); $found = $sth->fetch();
 	if ($found) {
-		printerr "NOTICE:\t This module deletes records from ALL database systems for TransAtlasDB. Proceed with caution\n";
+		unless ($log) { printerr "NOTICE:\t This module deletes records from ALL database systems for TransAtlasDB. Proceed with caution\n"; }
 		$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$delete'"); $sth->execute(); $found =$sth->fetch();
     		if ($found) {
 			$i++; $KEYDELETE{$i} = "Sample Information";
@@ -620,14 +635,18 @@ if ($delete){ #delete section
     		if ($found) {
 			$i++; $KEYDELETE{$i} = "Variant Information";
 		}
-		print "--------------------------------------------------------------------------\n";
+		unless ($log) {
+			print "--------------------------------------------------------------------------\n";
     		print "The following details match the sampleid '$delete' provided\n";
     		foreach (sort {$a <=> $b} keys %KEYDELETE) { print "  ", uc($_),"\.  $KEYDELETE{$_}\n";}
+		}
 		$KEYDELETE{0} = "ALL information relating to '$delete'";
-		print "  0\.  ALL information relating to '$delete'\n";
-		print "--------------------------------------------------------------------------\n";
-		print "Choose which information you want remove (multiple options separated by comma) or press ENTER to leave ? ";
-		chomp (my $decision = (<>)); print "\n";
+		unless ($log) {
+			print "  0\.  ALL information relating to '$delete'\n";
+			print "--------------------------------------------------------------------------\n";
+			print "Choose which information you want remove (multiple options separated by comma) or press ENTER to leave ? ";
+			chomp ($decision = (<>)); print "\n";
+		} else {$decision = $log; }
 		if (length $decision >0) {
 			my @allverdict = split(",",$decision);
 			foreach my $verdict (sort {$b<=>$a} @allverdict) {
@@ -680,7 +699,6 @@ if ($delete){ #delete section
 							my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 							
 							printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
-							$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							
 							my $execute = "$ibis -d $gfastbit -y \"sampleid = '$delete'\" -z";
@@ -761,28 +779,30 @@ if ($delete){ #delete section
 	}
 }
 #output: the end
-printerr "-----------------------------------------------------------------\n";
-if ($metadata){
-  	printerr ("SUCCESS: Import of Sample Information in \"$file2consider\"\n");
-} #end if complete RNASeq metadata
-if ($datadb){
-  	printerr ("SUCCESS: Import of RNA Seq analysis information in \"$file2consider\"\n");
-} #end if completed RNASeq data2db
-printerr $additional;
-$transaction = "data to database import" if $datadb;
-$transaction = "METADATA IMPORT(s)" if $metadata;
-$transaction = "DELETE '$delete' activity" if $delete;
-printerr ("NOTICE:\t Summary of $transaction in log file $efile\n");
-printerr "-----------------------------------------------------------------\n";
-print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
-close (LOG);
+unless ($log) {
+	printerr "-----------------------------------------------------------------\n";
+	if ($metadata){
+	  	printerr ("SUCCESS: Import of Sample Information in \"$file2consider\"\n");
+	} #end if complete RNASeq metadata
+	if ($datadb){
+	  	printerr ("SUCCESS: Import of RNA Seq analysis information in \"$file2consider\"\n");
+	} #end if completed RNASeq data2db
+	printerr $additional;
+	$transaction = "data to database import" if $datadb;
+	$transaction = "METADATA IMPORT(s)" if $metadata;
+	$transaction = "DELETE '$delete' activity" if $delete;
+	printerr ("NOTICE:\t Summary of $transaction in log file $efile\n");
+	printerr "-----------------------------------------------------------------\n";
+	print LOG "TransAtlasDB Completed:\t", scalar(localtime),"\n";
+	close (LOG);
+} else { `rm -rf $efile`; }
 #--------------------------------------------------------------------------------
 
 sub processArguments {
 	my @commandline = @ARGV;
   	GetOptions('verbose|v'=>\$verbose, 'help|h'=>\$help, 'man|m'=>\$man, 'metadata'=>\$metadata,
 		'data2db'=>\$datadb, 'gene'=>\$gene, 'variant'=>\$variant, 'all'=>\$all, 'vep'=>\$vep,
-		'annovar'=>\$annovar, 't|tab'=>\$tab, 'x|excel'=>\$excel, 'delete=s'=>\$delete ) or pod2usage ();
+		'annovar'=>\$annovar, 't|tab'=>\$tab, 'x|excel'=>\$excel, 'w=s'=>\$log, 'delete=s'=>\$delete ) or pod2usage ();
 
 	$help and pod2usage (-verbose=>1, -exitval=>1, -output=>\*STDOUT);
   	$man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
@@ -799,15 +819,17 @@ sub processArguments {
 	my $get = dirname(abs_path $0); #get source path
 	$connect = $get.'/.connect.txt';
 	#setup log file
-	$efile = @{ open_unique("db.tad_status.log") }[1];
+	$efile = @{ open_unique("db.tad_status.log") }[1]; `rm -rf $efile`;
 	$nosql = @{ open_unique(".nosqlimport.txt") }[1]; `rm -rf $nosql`;
 	$vnosql = @{ open_unique(".nosqlvimport.txt") }[1]; `rm -rf $vnosql`;
 	$gnosql = @{ open_unique(".nosqlgimport.txt") }[1]; `rm -rf $gnosql`;
-	open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
-	print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
-	print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
-	print LOG "TransAtlasDB Command:\t $0 @commandline\n";
-	print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
+	unless ($log) {
+		open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
+		print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
+		print LOG "TransAtlasDB Information:\tFor questions, comments, documentation, bug reports and program update, please visit $default \n";
+		print LOG "TransAtlasDB Command:\t $0 @commandline\n";
+		print LOG "TransAtlasDB Started:\t", scalar(localtime),"\n";
+	}
 }
 
 sub LOGFILE { #subroutine for getting metadata

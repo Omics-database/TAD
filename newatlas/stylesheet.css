@@ -200,3 +200,52 @@ tr.odd {
     color: #fff;
 }
 
+/*TABLES in bigbird page*/
+table.border, td.border, th.border {
+    border-collapse: collapse;
+    margin: 10px;
+    text-align: left;
+}
+td.borders {
+    padding-left:10px;
+    padding-right:10px;
+    background-color:#f1f0f1;
+}
+th.border {
+    padding-left:10px;
+    padding-right:10px;
+    background-color:#f1f6fb;
+    color:#66415E;
+    font-family:arial; font-weight:normal; font-size:10pt;
+}
+table.lines, td.lines, th.lines {
+    margin:10px;
+    text-align: left;
+    border-collapse: collapse;
+    font-family:arial; font-weight:normal; font-size:10pt;
+}
+td.lines {
+    padding-left:10px;
+    padding-right:10px;
+    width: 10em;
+    border:1px solid #66415E;
+    margin:10pt;
+}
+th.lines {
+    color:#66415E;
+    font-family:arial; font-weight:normal; font-size:10pt;
+}
+input[type="hidden"].port {
+    display: block;
+    font-size: 20px; 
+    font-weight: bold;
+    margin:20pt;
+}
+input[type="text"].forms {
+  display: block;
+  margin: 0;
+  width:10em;
+  max-width: 20em;
+  font-family: sans-serif;
+  font-size: 12px;
+}

@@ -1,14 +1,130 @@
 <?php				
 	session_start();
 	require_once('all_fns.php');
-	theader();	
+	theader();
+	
+	$table = "vw_metadata";
+	$stat = "delete";
+
 ?>
-    <div class="menu">TransAtlasDB Data Import</div>
+<?php
+	if ($_GET['quest'] == 'delete') {
+		if (isset($_POST['accept'])) {
+			$samplename = $_POST['samplename'];
+			$_SESSION[$stat]['samplename'] = $_POST['samplename'];
+		}
+?>
+	<div class="menu">TransAtlasDB Data Delete</div>
+	<table width=80%><tr><td valign="top" width=280pt>
+	<br><br>
+	<div class="metamenu"><a href="import.php">Upload Files</a></div>
+	<div class="metamenu"><a href="import.php?quest=manual">Manual Entry</a></div>
+	<div class="metactive"><a href="import.php?quest=delete">Remove Data</a></div>
+	</td><td>
+	<div class="dift"><p>Delete Existing Sample Records in database.</p>
+		<table><tr><td>
+			<form action="" method="post">	
+				<table class="border" border="0">
+					<tr>
+						<th class="border"><strong>Sample ID</strong> <font color=red>*</font></th>
+						<td class="borders"><input type="text" class="forms" name="samplename"<?php if(!empty($db_conn)){echo 'value="'.$samplename.'"';}?></td>	<!--sample name-->
+					</tr>
+					<tr><td class="border" colspan="2"><center><input type="submit" name="accept" value="delete"/></center></td></tr>
+				</table>
+			</form>
+		</td><td><div style="padding: 0 10pt; margin: 0 50pt;background-color: #f1f0f1;">
+<?php
+		if (!empty($_POST['samplename'])) { $_SESSION[$stat]['counter'] = db_delete($stat, $db_conn); }
+		if (!empty($_REQUEST['removed'])) {
+			rsort($_POST['data_delete']);
+			foreach($_POST['data_delete'] as $check) {
+				$oda = $check+1;
+				$pquery = "perl $basepath/tad-import.pl -w $oda -delete ".$_SESSION[$stat]['samplename'];
+				//print $pquery;
+				if (($oda >= count($_SESSION[$stat]['counter'])) || ($oda >= 3)){
+					shell_exec($pquery);
+					echo "<span><strong>Sucessfully deleted</strong> ".$_SESSION[$stat]['counter'][$check]."</span><br>";
+					unset($_SESSION[$stat]['counter'][$check]);
+				} else {
+					echo "<span><strong>Delete unsuccessful.</strong> (first remove dependent data)</span><br>";
+				}
+			}
+		}
+	echo '</div></td></tr></table></div></td></tr></table>';
+
+	} elseif ($_GET['quest'] == 'manual') {
+		if (isset($_POST['accept'])) {
+			$samplename = $_POST['samplename'];
+			$sampledesc = $_POST['sampledesc'];
+			$animalid = $_POST['animalid'];
+			$species= $_POST['organism'];
+			$part = $_POST['part'];
+			$firstname= $_POST['firstname'];
+			$middle = $_POST['middle'];
+			$lastname = $_POST['last'];
+			$organization = $_POST['organization'];
+		}
+?>
+	<div class="menu">TransAtlasDB Data Import</div>
+	<table width=80%><tr><td valign="top" width=280pt>
+	<br><br>
+	<div class="metamenu"><a href="import.php">Upload Files</a></div>
+	<div class="metactive"><a href="import.php?quest=manual">Manual Entry</a></div>
+	<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>
+	</td><td>
+	<div class="dift"><p>Samples Metadata Manual entry into the database.</p>
+		<table><tr><td>
+			<form action="" method="post">	
+				<table class="border" border="0">
+					<tr>
+						<th class="border"><strong>Sample Name</strong> <font color=red>*</font></th>
+						<td class="borders"><input type="text" class="forms" name="samplename"<?php if(!empty($db_conn)){echo 'value="'.$samplename.'"';}?></td>	<!--sample name-->
+					</tr><tr>
+						<th class="border"><strong>Sample description</strong></th>
+						<td class="borders"><input type="text" class="forms" name="sampledesc"<?php if(!empty($db_conn)){echo 'value="'.$sampledesc.'"';}?></td>	<!--sample desc -->
+					</tr><tr>
+						<th class="border"><strong>Animal ID</strong> <font color=red>*</font></th>
+						<td class="borders"><input type="text" class="forms" name="animalid"<?php if(!empty($db_conn)){echo 'value="'.$animalid.'"';}?>/></td>	<!--animalid-->
+					</tr><tr>
+						<th class="border"><strong>Organism</strong> <font color=red>*</font></th>
+						<td class="borders"><input type="text" class="forms" name="organism"<?php if(!empty($db_conn)){echo 'value="'.$species.'"';}?>/></td>	<!--organism-->
+					</tr><tr>
+						<th class="border"><strong>Organism Part</strong> <font color=red>*</font></th>
+						<td class="borders"><input type="text" class="forms" name="part"<?php if(!empty($db_conn)){echo 'value="'.$part.'"';}?>/></td>	<!--part-->
+					</tr><tr>
+						<th class="border"><strong>First Name</strong></th>
+						<td class="borders"><input type="text" class="forms" name="firstname"<?php if(!empty($db_conn)){echo 'value="'.$firstname.'"';}?>/></td>	<!--first name-->
+					</tr><tr>
+						<th class="border"><strong>Middle Initial</strong></th>
+						<td class="borders"><input type="text" class="forms" name="middle"<?php if(!empty($db_conn)){echo 'value="'.$middle.'"';}?>/></td>	<!--middle-->
+					</tr><tr>
+						<th class="border"><strong>Last Name</strong></th>
+						<td class="borders"><input type="text" class="forms" name="lastname"<?php if(!empty($db_conn)){echo 'value="'.$lastname.'"';}?>/></td>	<!--last-->
+					</tr><tr>
+						<th class="border"><strong>Organization</strong></th>
+						<td class="borders"><input type="text" class="forms" name="organization"<?php if(!empty($db_conn)){echo 'value="'.$organization.'"';}?>/></td>	<!--org-->
+					</tr>
+					<tr><td class="border" colspan="7"><center><input type="submit" name="accept" value="insert"/></center></td></tr>
+				</table>
+			</form>
+		</td><td><div style="padding: 0 10pt; margin: 0 50pt;background-color: #f1f0f1;">
+<?php
+		if ((!empty($_POST['samplename'])) && (!empty($_POST['organism'])) && (!empty($_POST['animalid'])) && (!empty($_POST['part']))) {
+			db_accept("Sample", $db_conn);
+			db_insert("Sample", $db_conn);
+		}
+?>
+		</div></td></tr></table>
+	</div></td></tr></table>
+<?php
+	} else { //import upload
+?>
+	<div class="menu">TransAtlasDB Data Upload</div>
 	<table width=80%><tr><td valign="top" width=280pt>
 	<br><br>
 	<div class="metactive"><a href="import.php">Upload Files</a></div>
-	<div class="metamenu"><a href="manual.php">Manual Entry</a></div>
-	<div class="metamenu"><a href="manual.php?quest=delete">Remove Data</a></div>
+	<div class="metamenu"><a href="import.php?quest=manual">Manual Entry</a></div>
+	<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>
 	</td><td>
 	<div class="dift"><p>Samples Metadata or RNASeq Data Analysis results upload and import to the database.</p>
 		<ul>
@@ -29,14 +145,15 @@
                 </form>
             </p></li>
         </ul>
-	</div>
-	</td></tr></table>
+<?php			
+	}
+?>						
+
+	</div></td></tr></table>
 		<!-- Next Section -->
-		<div class="menu">Summary of libraries currently in the database</div>
-		<div class="xtra">
+	<div class="menu">Summary of libraries currently in the database</div>
+	<div class="xtra">
 <?php	
-	$table = "vw_metadata";
-	$stat = "dataimport";
 	$query = "SELECT * FROM $table";
 	$all_rows = $db_conn->query($query);
 	$total_rows = $all_rows->num_rows;
@@ -103,7 +220,7 @@
 		}
 	} else {
     // if this is the first time, then just order by line and display all rows //default
-		$query = "SELECT * FROM $table ORDER BY sampleid desc limit 10";
+		$query = "SELECT * FROM $table ORDER BY date desc limit 10";
 	}
 	$result = $db_conn->query($query);
 	if ($db_conn->errno) {
@@ -204,26 +321,5 @@ $result->free();
 $db_conn->close();
 ?>
 </div>
-<!--<a class="back-to-top" style="display: inline;" href="#"><img src="images/backtotop.png" alt="Back To Top" width="45" height="45"></a>
-<script src=”//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js”></script>
-    <script>
-      jQuery(document).ready(function() {
-        var offset = 250;
-        var duration = 300;
-        jQuery(window).scroll(function() {
-          if (jQuery(this).scrollTop() > offset) {
-            jQuery(‘.back-to-top’).fadeIn(duration);
-          } else {
-            jQuery(‘.back-to-top’).fadeOut(duration);
-          }
-        });
- 
-        jQuery(‘.back-to-top’).click(function(event) {
-          event.preventDefault();
-          jQuery(‘html, body’).animate({scrollTop: 0}, duration);
-          return false;
-        }) 
-      });
-    </script>-->
 </body>
 </html>

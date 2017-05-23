@@ -224,7 +224,7 @@ CREATE VIEW `vw_vvcf` AS select `a`.`sampleid` as `sampleid`, `a`.`chrom` AS `ch
 -- -----------------------------------------------------
 DROP VIEW IF EXISTS `vw_seqstats`;
 DROP TABLE IF EXISTS `vw_seqstats`;
-CREATE TABLE `vw_seqstats` AS (select `sampleid` INT, `totalreads` INT, `alignmentrate` INT, `genes` INT, `totalvariants` INT, `mappingtool` INT, `annotationfile` INT, `mapdate` INT, `diffexpresstool` INT, `genedate` INT, `varianttool` INT, `variantannotationtool` INT, `variantdate` INT);
+CREATE TABLE `vw_seqstats` ( `sampleid` INT, `totalreads` INT, `alignmentrate` INT, `genes` INT, `totalvariants` INT, `mappingtool` INT, `annotationfile` INT, `mapdate` INT, `diffexpresstool` INT, `genedate` INT, `varianttool` INT, `variantannotationtool` INT, `variantdate` INT);
 DROP VIEW IF EXISTS `vw_seqstats`;
 DROP TABLE IF EXISTS `vw_seqstats`;
 CREATE VIEW `vw_seqstats` AS select `a`.`sampleid` AS `sampleid`,`a`.`totalreads` AS `totalreads`,`a`.`alignmentrate` AS `alignmentrate`,`a`.`genes` AS `genes`,`a`.`totalvariants` AS `totalvariants`,`b`.`mappingtool` AS `mappingtool`,`b`.`annfile` AS `annotationfile`,`c`.`date` AS `mapdate`,`d`.`diffexpresstool` AS `diffexpresstool`,`d`.`date` AS `genedate`,`e`.`varianttool` AS `varianttool`,`e`.`annversion` AS `variantannotationtool`,`e`.`date` AS `variantdate` from ((((`vw_sampleinfo` `a` join `metadata` `b` on ((`a`.`sampleid` = `b`.`sampleid`))) join `mapstats` `c` on ((`a`.`sampleid` = `c`.`sampleid`))) join `genestats` `d` on((`a`.`sampleid` = `d`.`sampleid`))) join `varsummary` `e` on ((`a`.`sampleid` = `e`.`sampleid`))) order by `a`.`sampleid`;
