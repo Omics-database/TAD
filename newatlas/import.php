@@ -4,28 +4,33 @@
 	theader();	
 ?>
     <div class="menu">TransAtlasDB Data Import</div>
-    <body>
-        <div class="dift">
-            <p>Samples Metadata or RNASeq Data Analysis results upload and import to the database.</p>
-            <ul>
-                <li><p>Samples Metadata<br>
+	<table width=80%><tr><td valign="top" width=280pt>
+	<br><br>
+	<div class="metactive"><a href="import.php">Upload Files</a></div>
+	<div class="metamenu"><a href="manual.php">Manual Entry</a></div>
+	<div class="metamenu"><a href="manual.php?quest=delete">Remove Data</a></div>
+	</td><td>
+	<div class="dift"><p>Samples Metadata or RNASeq Data Analysis results upload and import to the database.</p>
+		<ul>
+            <li><p>Samples Metadata<br>
                 N.B. Samples metadata file can either be the FAANG samples form or the tab-delimited file <a href="https://modupeore.github.io/TransAtlasDB/sample.html" target="_blank">provided</a>.
-                    <form action="uploads.php" method="post" enctype="multipart/form-data">
-                        Select metadata file:
-                        <input type="file" name="fileToUpload" id="fileToUpload">
-                        <input type="submit" value="Import to database" name="submit">
-                    </form>
-                </p></li>
-                <li><p>Sample Analysis Results<br>
-                N.B. Samples analysis results should be in a compressed (zip or tar) format.
-                    <form action="uploads.php" method="post" enctype="multipart/form-data">
-                        Select Data Analysis file:
-                        <input type="file" name="fileToUpload" id="fileToUpload">
-                        <input type="submit" value="Import to database" name="submit">
-                    </form>
-                </p></li>
-            </ul>
-		</div>
+                <form action="uploads.php" method="post" enctype="multipart/form-data">
+                    Select metadata file:
+                    <input type="file" name="fileToUpload" id="fileToUpload">
+                    <input type="submit" value="Import to database" name="submit">
+                </form>
+            </p></li>
+            <li><p>Sample Analysis Results<br>
+				N.B. Samples analysis results should be in a compressed (zip or tar) format.
+                <form action="uploads.php" method="post" enctype="multipart/form-data">
+                    Select Data Analysis file:
+                    <input type="file" name="fileToUpload" id="fileToUpload">
+					<input type="submit" value="Import to database" name="submit">
+                </form>
+            </p></li>
+        </ul>
+	</div>
+	</td></tr></table>
 		<!-- Next Section -->
 		<div class="menu">Summary of libraries currently in the database</div>
 		<div class="xtra">
