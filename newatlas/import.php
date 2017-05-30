@@ -2,20 +2,21 @@
 	session_start();
 	require_once('all_fns.php');
 	theader();
-	
+	$newdate = shell_exec("date +%Y-%m-%d");
 	$table = "vw_metadata";
-	$stat = "delete";
+	$stat = "import";
 
 ?>
 <?php
 	if ($_GET['quest'] == 'delete') {
+		$stat = "delete";
 		if (isset($_POST['accept'])) {
 			$samplename = $_POST['samplename'];
 			$_SESSION[$stat]['samplename'] = $_POST['samplename'];
 		}
 ?>
 	<div class="menu">TransAtlasDB Data Delete</div>
-	<table width=80%><tr><td valign="top" width=280pt>
+	<table width=100%><tr><td valign="top" width=280pt>
 	<br><br>
 	<div class="metamenu"><a href="import.php">Upload Files</a></div>
 	<div class="metamenu"><a href="import.php?quest=manual">Manual Entry</a></div>
@@ -53,6 +54,7 @@
 	echo '</div></td></tr></table></div></td></tr></table>';
 
 	} elseif ($_GET['quest'] == 'manual') {
+		$stat = "manual";
 		if (isset($_POST['accept'])) {
 			$samplename = $_POST['samplename'];
 			$sampledesc = $_POST['sampledesc'];
@@ -127,10 +129,11 @@
 	<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>
 	</td><td>
 	<div class="dift"><p>Samples Metadata or RNASeq Data Analysis results upload and import to the database.</p>
+		<table><tr><td>
 		<ul>
             <li><p>Samples Metadata<br>
                 N.B. Samples metadata file can either be the FAANG samples form or the tab-delimited file <a href="https://modupeore.github.io/TransAtlasDB/sample.html" target="_blank">provided</a>.
-                <form action="uploads.php" method="post" enctype="multipart/form-data">
+                <form action="" method="post" enctype="multipart/form-data">
                     Select metadata file:
                     <input type="file" name="fileToUpload" id="fileToUpload">
                     <input type="submit" value="Import to database" name="submit">
@@ -138,13 +141,122 @@
             </p></li>
             <li><p>Sample Analysis Results<br>
 				N.B. Samples analysis results should be in a compressed (zip or tar) format.
-                <form action="uploads.php" method="post" enctype="multipart/form-data">
+                <form action="" method="post" enctype="multipart/form-data">
                     Select Data Analysis file:
-                    <input type="file" name="fileToUpload" id="fileToUpload">
+                    <input type="file" name="compToUpload" id="compToUpload">
 					<input type="submit" value="Import to database" name="submit">
                 </form>
             </p></li>
         </ul>
+		</td><td><div style="padding: 0 10pt; margin: 0 50pt;background-color: #f1f0f1;">
+<?php
+	if ((!empty($_FILES['fileToUpload']['name']))) {
+		$target_file = "uploads/" . basename($_FILES["fileToUpload"]["name"]);
+		$uploadOk = 1;
+		$FileType = pathinfo($target_file,PATHINFO_EXTENSION);
+		if(isset($_POST["submit"])) {
+			$check = filesize($_FILES["fileToUpload"]["tmp_name"]);
+			if($check !== false) {
+			    $uploadOk = 1;
+			} else {
+			    echo "File is not valid.";
+			    $uploadOk = 0;
+			}
+		}
+
+		// Allow certain file formats
+		if($FileType != "txt" && $FileType != "xls" && $FileType != "xlsx" ) {
+		    $uploadOk = 0;
+		} else {
+		    if ($FileType == "txt") {
+		        $query = "-w 1 -t";
+		    } else {
+		        $query = "-w 1 ";
+		    }
+		}
+		// Check if $uploadOk is set to 0 by an error
+		if ($uploadOk == 0) {
+		    echo "Sorry, your file was not uploaded.";
+		// if everything is ok, try to upload file
+		} else {
+		    if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+                echo "<span><strong>Upload successful.</strong></span><br>";
+                echo "<span><strong>File: </strong>".basename($_FILES['fileToUpload']['name'])."</span><br>";
+				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $number = $result->num_rows;
+				$pquery = "perl $basepath/tad-import.pl -metadata $query uploads/".$_FILES['fileToUpload']['name'];
+		//        print $pquery;
+				shell_exec($pquery);
+				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $newnumber = $result->num_rows;
+				$oddnumber = $newnumber - $number;
+				if ($oddnumber >= 1) {
+					echo "<br><span><strong>Insert successful.</strong></span><br>";
+					echo "<span><strong>$number </strong>row inserted.</span>";
+				} else {
+					echo "<br><span><strong>Insert status.</strong></span><br>";
+					echo "<span><strong>No </strong>rows inserted.</span>";
+				}
+				$query = "rm -rf uploads/".$_FILES['fileToUpload']['name'];
+				shell_exec($query);
+		    } else {
+		        echo "Sorry, there was an error uploading your file.";
+		    }
+		}
+	} elseif ((!empty($_FILES['compToUpload']['name']))) { //upload zip files
+		$target_file = "uploads/" . basename($_FILES["compToUpload"]["name"]);
+		$uploadOk = 1;
+		$FileType = pathinfo($target_file,PATHINFO_EXTENSION);
+		if(isset($_POST["submit"])) {
+			$check = filesize($_FILES["compToUpload"]["tmp_name"]);
+			if($check !== false) {
+			    $uploadOk = 1;
+			} else {
+			    echo "File is not valid.";
+			    $uploadOk = 0;
+			}
+		}
+
+		// Allow certain file formats
+		if($FileType != "zip" && $FileType != "tgz" && $FileType != "tar.gz" ) {
+		    $uploadOk = 0;
+		} else {
+		    if ($FileType == "zip") {
+		        $query = "unzip -f ";
+		    } else {
+		        $query = "tar -xzvf ";
+		    }
+		}
+		// Check if $uploadOk is set to 0 by an error
+		if ($uploadOk == 0) {
+		    echo "Sorry, your file was not uploaded.";
+		// if everything is ok, try to upload file
+		} else {
+		    if (move_uploaded_file($_FILES["compToUpload"]["tmp_name"], $target_file)) {
+                echo "<span><strong>Upload successful.</strong></span><br>";
+                echo "<span><strong>File: </strong>".basename($_FILES['compToUpload']['name'])."</span><br>";
+				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $number = $result->num_rows;
+				$pquery = "perl $basepath/tad-import.pl -metadata $query uploads/".$_FILES['fileToUpload']['name'];
+		//        print $pquery;
+				shell_exec($pquery);
+				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $newnumber = $result->num_rows;
+				$oddnumber = $newnumber - $number;
+				if ($oddnumber >= 1) {
+					echo "<br><span><strong>Insert successful.</strong></span><br>";
+					echo "<span><strong>$number </strong>row inserted.</span>";
+				} else {
+					echo "<br><span><strong>Insert status.</strong></span><br>";
+					echo "<span><strong>No </strong>rows inserted.</span>";
+				}
+				$query = "rm -rf uploads/".$_FILES['fileToUpload']['name'];
+				shell_exec($query);
+		    } else {
+		        echo "Sorry, there was an error uploading your file.";
+		    }
+		}
+	}
+?>
+		</div></td></tr></table>
+	</div></td></tr></table>
+		
 <?php			
 	}
 ?>						
