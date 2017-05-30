@@ -242,8 +242,8 @@ if ($dbdata){ #if db 2 data mode selected
             my $newsyntax = $syntax." sampleid = '$_' ORDER BY geneid desc;";
             #$sth = $dbh->prepare($newsyntax);
             #$sth->execute or die "SQL Error:$DBI::errstr\n";
-            printerr "\nthis is ibis $ibis\n";
             `$ibis -d $gfastbit -q "$newsyntax" -o $nosql 2>>$efile`;
+            print $newsyntax,"\n";
             open(IN,"<",$nosql);
             while (<IN>){
             	chomp;
