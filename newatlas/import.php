@@ -136,16 +136,12 @@
                 <form action="" method="post" enctype="multipart/form-data">
                     Select metadata file:
                     <input type="file" name="fileToUpload" id="fileToUpload">
-                    <input type="submit" value="Import to database" name="submit">
+                    <input type="submit" value="Import to database" name="metasubmit">
                 </form>
             </p></li>
             <li><p>Sample Analysis Results<br>
-				N.B. Samples analysis results should be in a compressed (zip or tar) format.
-                <form action="" method="post" enctype="multipart/form-data">
-                    Select Data Analysis file:
-                    <input type="file" name="compToUpload" id="compToUpload">
-					<input type="submit" value="Import to database" name="submit">
-                </form>
+				N.B. Samples analysis results can only be imported using the perl toolkit.<br>
+				<code>perl tad-import -data2db</code>
             </p></li>
         </ul>
 		</td><td><div style="padding: 0 10pt; margin: 0 50pt;background-color: #f1f0f1;">
@@ -154,7 +150,7 @@
 		$target_file = "uploads/" . basename($_FILES["fileToUpload"]["name"]);
 		$uploadOk = 1;
 		$FileType = pathinfo($target_file,PATHINFO_EXTENSION);
-		if(isset($_POST["submit"])) {
+		if(isset($_POST["metasubmit"])) {
 			$check = filesize($_FILES["fileToUpload"]["tmp_name"]);
 			if($check !== false) {
 			    $uploadOk = 1;
@@ -182,57 +178,6 @@
 		    if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
                 echo "<span><strong>Upload successful.</strong></span><br>";
                 echo "<span><strong>File: </strong>".basename($_FILES['fileToUpload']['name'])."</span><br>";
-				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $number = $result->num_rows;
-				$pquery = "perl $basepath/tad-import.pl -metadata $query uploads/".$_FILES['fileToUpload']['name'];
-		//        print $pquery;
-				shell_exec($pquery);
-				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $newnumber = $result->num_rows;
-				$oddnumber = $newnumber - $number;
-				if ($oddnumber >= 1) {
-					echo "<br><span><strong>Insert successful.</strong></span><br>";
-					echo "<span><strong>$number </strong>row inserted.</span>";
-				} else {
-					echo "<br><span><strong>Insert status.</strong></span><br>";
-					echo "<span><strong>No </strong>rows inserted.</span>";
-				}
-				$query = "rm -rf uploads/".$_FILES['fileToUpload']['name'];
-				shell_exec($query);
-		    } else {
-		        echo "Sorry, there was an error uploading your file.";
-		    }
-		}
-	} elseif ((!empty($_FILES['compToUpload']['name']))) { //upload zip files
-		$target_file = "uploads/" . basename($_FILES["compToUpload"]["name"]);
-		$uploadOk = 1;
-		$FileType = pathinfo($target_file,PATHINFO_EXTENSION);
-		if(isset($_POST["submit"])) {
-			$check = filesize($_FILES["compToUpload"]["tmp_name"]);
-			if($check !== false) {
-			    $uploadOk = 1;
-			} else {
-			    echo "File is not valid.";
-			    $uploadOk = 0;
-			}
-		}
-
-		// Allow certain file formats
-		if($FileType != "zip" && $FileType != "tgz" && $FileType != "tar.gz" ) {
-		    $uploadOk = 0;
-		} else {
-		    if ($FileType == "zip") {
-		        $query = "unzip -f ";
-		    } else {
-		        $query = "tar -xzvf ";
-		    }
-		}
-		// Check if $uploadOk is set to 0 by an error
-		if ($uploadOk == 0) {
-		    echo "Sorry, your file was not uploaded.";
-		// if everything is ok, try to upload file
-		} else {
-		    if (move_uploaded_file($_FILES["compToUpload"]["tmp_name"], $target_file)) {
-                echo "<span><strong>Upload successful.</strong></span><br>";
-                echo "<span><strong>File: </strong>".basename($_FILES['compToUpload']['name'])."</span><br>";
 				$result = $db_conn->query("select sampleid from Sample where date = '$newdate'"); $number = $result->num_rows;
 				$pquery = "perl $basepath/tad-import.pl -metadata $query uploads/".$_FILES['fileToUpload']['name'];
 		//        print $pquery;
