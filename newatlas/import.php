@@ -186,7 +186,7 @@
 				$oddnumber = $newnumber - $number;
 				if ($oddnumber >= 1) {
 					echo "<br><span><strong>Insert successful.</strong></span><br>";
-					echo "<span><strong>$number </strong>row inserted.</span>";
+					echo "<span><strong>$oddnumber </strong>row inserted.</span>";
 				} else {
 					echo "<br><span><strong>Insert status.</strong></span><br>";
 					echo "<span><strong>No </strong>rows inserted.</span>";
