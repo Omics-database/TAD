@@ -125,6 +125,9 @@ function db_accept($table, $db_conn) {
 						<th class="lines"><strong>Animal ID</strong></th>
 						<td class="lines"><input type="hidden" class="port" name="animalid"<?php if(!empty($db_conn)){echo 'value="'.$_POST['animalid'].'"/>'.$_POST['animalid'];}?></td>	<!--animalid-->
 					</tr><tr>
+						<th class="lines"><strong>Animal Description</strong></th>
+						<td class="lines"><input type="hidden" class="port" name="animaldesc"<?php if(!empty($db_conn)){echo 'value="'.$_POST['animaldesc'].'"/>'.$_POST['animaldesc'];}?></td>	<!--animalid-->
+					</tr><tr>
 						<th class="lines"><strong>Organism</strong></th>
 						<td class="lines"><input type="hidden" class="port" name="organism"<?php if(!empty($db_conn)){echo 'value="'.$_POST['organism'].'"/>'.$_POST['organism'];}?></td>	<!--organism-->
 					</tr><tr>
@@ -200,7 +203,7 @@ function db_insert($table, $db_conn) {
         $all_stat = $db_conn->query($query); //animalid
         $total_rows = $all_stat->num_rows;
         if ($total_rows < 1) { // if animalid is not in the database
-            $query = "INSERT INTO Animal (animalid, organism) values ('".$_POST['animalid']."', '".$_POST['organism']."')";
+            $query = "INSERT INTO Animal (animalid, organism,description) values ('".$_POST['animalid']."', '".$_POST['organism']."', '".$_POST['animaldesc']."')";
             $result = $db_conn->query($query);
             
             if (!$result) {
@@ -274,7 +277,7 @@ function meta_display($result) {
         while ($j < $result->field_count) {
             $meta = $result->fetch_field_direct($j);
             if ($row[$meta->name] == "done"){
-                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src="images/done.png" style="display:block;" width="20pt" height="20pt" ></center></td>';
+                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src=".images/done.png" style="display:block;" width="20pt" height="20pt" ></center></td>';
             } else {
                 echo '<td headers="' . $meta->name . '" class="metadata"><center>' . $row[$meta->name] . '</center></td>';
             }
@@ -320,7 +323,7 @@ function metavw_display($result) {
         while ($j < $result->field_count) {
             $meta = $result->fetch_field_direct($j);
             if ($row[$meta->name] == "done"){
-                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src="images/done.png" style="display:block;" width="10%" height="10%" ></center></td>';
+                echo '<td headers="' . $meta->name . '" class="metadata"><center><img src=".images/done.png" style="display:block;" width="10%" height="10%" ></center></td>';
             } else {
                 echo '<td headers="' . $meta->name . '" class="metadata"><center>' . $row[$meta->name] . '</center></td>';
             }

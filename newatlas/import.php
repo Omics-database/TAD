@@ -59,11 +59,12 @@
 			$samplename = $_POST['samplename'];
 			$sampledesc = $_POST['sampledesc'];
 			$animalid = $_POST['animalid'];
+			$animaldesc = $_POST['animaldesc'];
 			$species= $_POST['organism'];
 			$part = $_POST['part'];
 			$firstname= $_POST['firstname'];
 			$middle = $_POST['middle'];
-			$lastname = $_POST['last'];
+			$lastname = $_POST['lastname'];
 			$organization = $_POST['organization'];
 		}
 ?>
@@ -87,6 +88,9 @@
 					</tr><tr>
 						<th class="border"><strong>Animal ID</strong> <font color=red>*</font></th>
 						<td class="borders"><input type="text" class="forms" name="animalid"<?php if(!empty($db_conn)){echo 'value="'.$animalid.'"';}?>/></td>	<!--animalid-->
+					</tr><tr>
+						<th class="border"><strong>Animal Description</strong></th>
+						<td class="borders"><input type="text" class="forms" name="animaldesc"<?php if(!empty($db_conn)){echo 'value="'.$animaldesc.'"';}?>/></td>	<!--animalid-->
 					</tr><tr>
 						<th class="border"><strong>Organism</strong> <font color=red>*</font></th>
 						<td class="borders"><input type="text" class="forms" name="organism"<?php if(!empty($db_conn)){echo 'value="'.$species.'"';}?>/></td>	<!--organism-->
