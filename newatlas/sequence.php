@@ -125,7 +125,13 @@
 <form action="" method="post">
     <p class="pages">
 		<span>Search for: </span>
- 
+ <?php
+	if (!empty($_SESSION[$table]['select'])) {
+		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION[$table]["select"]) . '"\"/>';
+	} else {
+		echo '<input type="text" size="35" name="search" placeholder="Enter variable(s) separated by commas (,)"/>';
+	} 
+?>
     <span> in </span>
     <select name="column">
         <?php
