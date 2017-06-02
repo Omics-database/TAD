@@ -9,7 +9,7 @@
 	$query = "select * from $table ";
 ?>
 	<div class="menu">TransAtlasDB Mapping Information</div>
-	<table width=80%><tr><td width=280pt>
+	<table width=100%><tr><td width=280pt>
 	<div class="metamenu"><a href="metadata.php">MetaData Information</a></div>
 	<div class="metactive"><a href="sequence.php">Sequencing Information</a></div>
 	</td><td>
@@ -106,7 +106,6 @@
 			$query .= " limit " . $_SESSION[$table]['num_recs'];
 		}
 	}
-	else
 	$result = $db_conn->query($query);
 	if ($db_conn->errno) {
 		echo "<div>";
