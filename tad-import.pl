@@ -919,6 +919,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 	unless ($found) {
 		my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 		my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
+		`rm -rf $gfastbit/*sp`; #removeing old indexes
 		`$ibis -d $gfastbit -q 'select count(sampleid) where sampleid = "$_[0]"' -o $nosql 2>>$efile`;
 		open(IN,"<",$nosql);
 		no warnings;
@@ -966,6 +967,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 				my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 				my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 				`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
+				`rm -rf $gfastbit/*sp`; #removeing old indexes
 				`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
 				`chmod 777 $gfastbit && rm -rf $gnosql`;
 				
@@ -1069,6 +1071,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
 					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
+					`rm -rf $gfastbit/*sp`; #removeing old indexes
 					`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
 					`chmod 777 $gfastbit && rm -rf $gnosql`;
 				
@@ -1166,8 +1169,9 @@ sub GENES_FPKM { #subroutine for getting gene information
 					
 					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
-					my $execute = "$ardea -d $gfastbit -m 	'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
+					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
+					`rm -rf $gfastbit/*sp`; #removing old indexes
 					`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
 					`chmod 777 $gfastbit && rm -rf $gnosql`;
 				
@@ -1485,9 +1489,10 @@ sub NOSQL {
 	my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 	my $vfastbit = $ffastbit."/variant-information"; # specifying the variant section.
 	printerr "NOTICE:\t Importing $_[0] - Variant Annotation to NoSQL '$ffastbit' ...";
-	my $execute = "$ardea -d $vfastbit -m 'variantclass:key,zygosity:key,dbsnpvariant:text,source:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:key,aachange:text,codonchange:text,organism:text,sampleid:text,quality:double,position:int,proteinposition:int' -t $vnosql";
+	my $execute = "$ardea -d $vfastbit -m 'variantclass:char,zygosity:char,dbsnpvariant:text,source:text,consequence:text,geneid:text,genename:text,transcript:text,feature:text,genetype:text,refallele:char,altallele:char,tissue:text,chrom:text,aachange:text,codonchange:text,organism:text,sampleid:text,quality:double,position:int,proteinposition:int' -t $vnosql";
 	`$execute 2>> $efile` or die "\nERROR\t: Complication importing to FastBit, contact $AUTHOR\n";
-	`ibis -d $vfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
+	`rm -rf $vfastbit/*sp`; #removing old indexes
+	`ibis -d $vfastbit -query "select genename, sampleid, chrom, tissue, organism, consequence, dbsnpvariant" 2>> $efile`; #create a new index based on genename
 	`chmod 777 $vfastbit && rm -rf $vnosql`;
 	$sth = $dbh->prepare("update VarSummary set nosql = 'done' where sampleid = '$_[0]'"); $sth ->execute(); #update database nosql : DONE
 	

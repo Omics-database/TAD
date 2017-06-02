@@ -8,14 +8,14 @@
 
 ?>
 <?php
-	if ($_GET['quest'] == 'delete') {
-		$stat = "delete";
-		if (isset($_POST['accept'])) {
-			$samplename = $_POST['samplename'];
-			$_SESSION[$stat]['samplename'] = $_POST['samplename'];
-		}
+//	if ($_GET['quest'] == 'delete') {
+//		$stat = "delete";
+//		if (isset($_POST['accept'])) {
+//			$samplename = $_POST['samplename'];
+//			$_SESSION[$stat]['samplename'] = $_POST['samplename'];
+//		}
 ?>
-	<div class="menu">TransAtlasDB Data Delete</div>
+<!--	<div class="menu">TransAtlasDB Data Delete</div>
 	<table width=100%><tr><td valign="top" width=280pt>
 	<br><br>
 	<div class="metamenu"><a href="import.php">Upload Files</a></div>
@@ -28,32 +28,36 @@
 				<table class="border" border="0">
 					<tr>
 						<th class="border"><strong>Sample ID</strong> <font color=red>*</font></th>
-						<td class="borders"><input type="text" class="forms" name="samplename"<?php if(!empty($db_conn)){echo 'value="'.$samplename.'"';}?></td>	<!--sample name-->
-					</tr>
+						<td class="borders"><input type="text" class="forms" name="samplename"
+						<?php //if(!empty($db_conn)){echo 'value="'.$samplename.'"';}?>
+						</td>	<!--sample name-->
+<!--					</tr>
 					<tr><td class="border" colspan="2"><center><input type="submit" name="accept" value="delete"/></center></td></tr>
 				</table>
 			</form>
 		</td><td><div style="padding: 0 10pt; margin: 0 50pt;background-color: #f1f0f1;">
+-->
 <?php
-		if (!empty($_POST['samplename'])) { $_SESSION[$stat]['counter'] = db_delete($stat, $db_conn); }
-		if (!empty($_REQUEST['removed'])) {
-			rsort($_POST['data_delete']);
-			foreach($_POST['data_delete'] as $check) {
-				$oda = $check+1;
-				$pquery = "perl $basepath/tad-import.pl -w $oda -delete ".$_SESSION[$stat]['samplename'];
-				//print $pquery;
-				if (($oda >= count($_SESSION[$stat]['counter'])) || ($oda >= 3)){
-					shell_exec($pquery);
-					echo "<span><strong>Sucessfully deleted</strong> ".$_SESSION[$stat]['counter'][$check]."</span><br>";
-					unset($_SESSION[$stat]['counter'][$check]);
-				} else {
-					echo "<span><strong>Delete unsuccessful.</strong> (first remove dependent data)</span><br>";
-				}
-			}
-		}
-	echo '</div></td></tr></table></div></td></tr></table>';
-
-	} elseif ($_GET['quest'] == 'manual') {
+//		if (!empty($_POST['samplename'])) { $_SESSION[$stat]['counter'] = db_delete($stat, $db_conn); }
+//		if (!empty($_REQUEST['removed'])) {
+//			rsort($_POST['data_delete']);
+//			foreach($_POST['data_delete'] as $check) {
+//				$oda = $check+1;
+//				$pquery = "perl $basepath/tad-import.pl -w $oda -delete ".$_SESSION[$stat]['samplename'];
+//				//print $pquery;
+//				if (($oda >= count($_SESSION[$stat]['counter'])) || ($oda >= 3)){
+//					shell_exec($pquery);
+//					echo "<span><strong>Sucessfully deleted</strong> ".$_SESSION[$stat]['counter'][$check]."</span><br>";
+//					unset($_SESSION[$stat]['counter'][$check]);
+//				} else {
+//					echo "<span><strong>Delete unsuccessful.</strong> (first remove dependent data)</span><br>";
+//				}
+//			}
+//		}
+//	echo '</div></td></tr></table></div></td></tr></table>';
+//
+//	} else
+	if ($_GET['quest'] == 'manual') {
 		$stat = "manual";
 		if (isset($_POST['accept'])) {
 			$samplename = $_POST['samplename'];
@@ -69,11 +73,11 @@
 		}
 ?>
 	<div class="menu">TransAtlasDB Data Import</div>
-	<table width=80%><tr><td valign="top" width=280pt>
+	<table width=100%><tr><td valign="top" width=280pt>
 	<br><br>
 	<div class="metamenu"><a href="import.php">Upload Files</a></div>
 	<div class="metactive"><a href="import.php?quest=manual">Manual Entry</a></div>
-	<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>
+	<!--<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>-->
 	</td><td>
 	<div class="dift"><p>Samples Metadata Manual entry into the database.</p>
 		<table><tr><td>
@@ -126,11 +130,11 @@
 	} else { //import upload
 ?>
 	<div class="menu">TransAtlasDB Data Upload</div>
-	<table width=80%><tr><td valign="top" width=280pt>
+	<table width=100%><tr><td valign="top" width=280pt>
 	<br><br>
 	<div class="metactive"><a href="import.php">Upload Files</a></div>
 	<div class="metamenu"><a href="import.php?quest=manual">Manual Entry</a></div>
-	<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>
+	<!--<div class="metamenu"><a href="import.php?quest=delete">Remove Data</a></div>-->
 	</td><td>
 	<div class="dift"><p>Samples Metadata or RNASeq Data Analysis results upload and import to the database.</p>
 		<table><tr><td>
