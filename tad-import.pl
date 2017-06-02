@@ -665,6 +665,7 @@ if ($delete){ #delete section
 								my $execute = "$ibis -d $vfastbit -y \"sampleid = '$delete'\" -z";
 								`$execute 2>> $efile`; printerr ".";
 								`rm -rf $vfastbit/*sp $vfastbit/*old $vfastbit/*idx $vfastbit/*dic $vfastbit/*int `; #removing old indexes
+								`ibis -d $vfastbit -query "select genename, sampleid, chrom, tissue, organism, consequence, dbsnpvariant" 2>> $efile`; #create a new index based on genename
 								printerr " Done\n";
 							}
 						} else {
@@ -677,6 +678,7 @@ if ($delete){ #delete section
 							my $execute = "$ibis -d $vfastbit -y \"sampleid = '$delete'\" -z";
 							`$execute 2>> $efile`; printerr ".";
 							`rm -rf $vfastbit/*sp $vfastbit/*old $vfastbit/*idx $vfastbit/*dic $vfastbit/*int `; #removing old indexes
+							`ibis -d $vfastbit -query "select genename, sampleid, chrom, tissue, organism, consequence, dbsnpvariant" 2>> $efile`; #create a new index based on genename
 							printerr " Done\n";
 						}
 					}
@@ -692,6 +694,7 @@ if ($delete){ #delete section
 								my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
 								`$execute 2>> $efile`; printerr ".";
 								`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
+								`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
 								printerr " Done\n";
 							}
 						} else {
@@ -704,6 +707,7 @@ if ($delete){ #delete section
 							my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
 							`$execute 2>> $efile`; printerr ".";
 							`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
+							`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
 							printerr " Done\n";
 						}
 					}
@@ -919,7 +923,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 	unless ($found) {
 		my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 		my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
-		`rm -rf $gfastbit/*sp`; #removeing old indexes
 		`$ibis -d $gfastbit -q 'select count(sampleid) where sampleid = "$_[0]"' -o $nosql 2>>$efile`;
 		open(IN,"<",$nosql);
 		no warnings;
