@@ -109,4 +109,38 @@ function tvariants() {
     </script>
 <?php
 }
+function tvarisum() {
+  theader();
+?>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Variants</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.8.3.js"></script>
+    <link href="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+    <script src="jquery/jquery-1.11.3.min.js"></script>
+    <script src="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.js"></script>
+	<script language=JavaScript>
+        function reload(form) {
+            var val=form.organism.options[form.organism.options.selectedIndex].value;
+            self.location='?quest=summary&organism=' + val ;
+        }
+    </script>
+<?php
+}
+function tvarichrom() {
+  theader();
+?>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Variants</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.8.3.js"></script>
+    <link href="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+    <script src="jquery/jquery-1.11.3.min.js"></script>
+    <script src="jquery/jquery-ui-1.11.4.custom/jquery-ui.min.js"></script>
+	<script language=JavaScript>
+        function reload(form) {
+            var val=form.organism.options[form.organism.options.selectedIndex].value;
+            self.location='?quest=chrom&organism=' + val ;
+        }
+    </script>
+<?php
+}
 ?>
