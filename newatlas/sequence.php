@@ -23,7 +23,7 @@
 		$_SESSION[$table]['dir'] = $_POST['dir'];
 		$_SESSION[$table]['num_recs'] = $_POST['num_recs'];
 
-		$terms = explode(",", $_POST['search']);
+		$terms = explode(",", $_POST['select']);
 		$is_term = false;
 		foreach ($terms as $term) {
 			if (trim($term) != "") {
@@ -127,9 +127,9 @@
 		<span>Search for: </span>
  <?php
 	if (!empty($_SESSION[$table]['select'])) {
-		echo '<input type="text" size="35" name="search" value="' . implode(",", $_SESSION[$table]["select"]) . '"\"/>';
+		echo '<input type="text" size="35" name="select" value="' . implode(",", $_SESSION[$table]["select"]) . '"\"/>';
 	} else {
-		echo '<input type="text" size="35" name="search" placeholder="Enter variable(s) separated by commas (,)"/>';
+		echo '<input type="text" size="35" name="select" placeholder="Enter variable(s) separated by commas (,)"/>';
 	} 
 ?>
     <span> in </span>
@@ -202,7 +202,7 @@
   if(!empty($db_conn) && (!empty($_POST['order']) || !empty($_POST['meta_data']))) { //make sure an options is selected
 	echo '<div class="menu">Results</div><div class="xtra">';
     if ($num_total_result == 0){ //Cross check if libraries selected are in the database
-      echo '<center>No results were found with your search criteria.<br>
+      echo '<center>No sequencing information were found with your search criteria.<br>
       There are no "'.implode(",", $_SESSION[$table]["select"]).'" in "'.$_SESSION[$table]['column'].'".<center>';
     }else { //Provide download options
       echo '<div class="xtra">';
