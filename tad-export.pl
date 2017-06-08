@@ -224,35 +224,54 @@ if ($dbdata){ #if db 2 data mode selected
         @headers = split(",", $sample); 
         $syntax = "select genename, fpkm, sampleid, chrom, start, stop where";
         if ($gene) {
-            $syntax .= " (";
             my @genes = split(",", $gene); undef $gene;
             foreach (@genes){
                 $_ =~ s/^\s+|\s+$//g;
-                $syntax .= " genename like '%$_%' or";
                 $gene .= $_.",";
             } chop $gene;
             unless ($log) { $verbose and printerr "NOTICE:\t Gene(s) selected: '$gene'\n"; }
-            $syntax = substr($syntax, 0, -2); $syntax .= " ) and";
-        } else {
+        }
+        else {
             unless ($log) { $verbose and printerr "NOTICE:\t Gene(s) selected: 'all genes'\n"; }
         }
+        
         unless ($log) { printerr "NOTICE:\t Processing Gene Expression for each library ."; }
-        foreach (@headers){ 
+        foreach my $header (@headers){ 
             unless ($log) { printerr "."; }
-            my $newsyntax = $syntax." sampleid = '$_' ORDER BY geneid desc;";
-            #$sth = $dbh->prepare($newsyntax);
-            #$sth->execute or die "SQL Error:$DBI::errstr\n";
-            `$ibis -d $gfastbit -q "$newsyntax" -o $nosql 2>>$efile`;
-            print $newsyntax,"\n";
-            open(IN,"<",$nosql);
-            while (<IN>){
-            	chomp;
-            	my ($geneid, $fpkm, $library, $chrom, $start, $stop) = split /\, /; 
-            	$geneid =~ s/^'|'$|^"|"$//g; $library =~ s/^'|'$|^"|"$//g; $chrom =~ s/^'|'$|^"|"$//g; #removing quotation marks if applicable
-            	$FPKM{"$geneid|$chrom"}{$library} = $fpkm;
-            	$CHROM{"$geneid|$chrom"} = $chrom;
-            	$POSITION{"$geneid|$chrom"}{$library} = "$start|$stop";
-            } close (IN); `rm -rf $nosql`;
+            my $newsyntax;
+
+            if ($gene) {
+                my @genes = split(",", $gene);
+                foreach (@genes){
+                    $_ =~ s/^\s+|\s+$//g;
+                    $newsyntax = $syntax." genename like '%$_%' and sampleid = '$header' ORDER BY geneid desc;";
+                    `$ibis -d $gfastbit -q "$newsyntax" -o $nosql 2>>$efile`;
+                    
+                    open(IN,"<",$nosql);
+                    while (<IN>){
+                        chomp;
+                        my ($geneid, $fpkm, $library, $chrom, $start, $stop) = split /\, /; 
+                        $geneid =~ s/^'|'$|^"|"$//g; $library =~ s/^'|'$|^"|"$//g; $chrom =~ s/^'|'$|^"|"$//g; #removing quotation marks if applicable
+                        $FPKM{"$geneid|$chrom"}{$library} = $fpkm;
+                        $CHROM{"$geneid|$chrom"} = $chrom;
+                        $POSITION{"$geneid|$chrom"}{$library} = "$start|$stop";
+                    } close (IN); `rm -rf $nosql`;
+                } 
+            } else {
+                $newsyntax = $syntax." sampleid = '$_' ORDER BY geneid desc;";
+                `$ibis -d $gfastbit -q "$newsyntax" -o $nosql 2>>$efile`;
+                
+                open(IN,"<",$nosql);
+                while (<IN>){ 
+                    chomp;
+                    my ($geneid, $fpkm, $library, $chrom, $start, $stop) = split /\, /; 
+                    $geneid =~ s/^'|'$|^"|"$//g; $library =~ s/^'|'$|^"|"$//g; $chrom =~ s/^'|'$|^"|"$//g; #removing quotation marks if applicable
+                    $FPKM{"$geneid|$chrom"}{$library} = $fpkm;
+                    $CHROM{"$geneid|$chrom"} = $chrom;
+                    $POSITION{"$geneid|$chrom"}{$library} = "$start|$stop";
+                } close (IN); `rm -rf $nosql`;
+            }
+            
 		
             #while (my ($gene_id, $fpkm, $library_id, $chrom, $start, $stop) = $sth->fetchrow_array() ) {
             #    $FPKM{"$gene_id|$chrom"}{$library_id} = $fpkm;
