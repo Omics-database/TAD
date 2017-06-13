@@ -135,7 +135,7 @@ sub processArguments {
   open(CONNECT, ">$get/\.connect.txt"); 
   my $connectcontent = "MySQL\n  username $username\n  password $password\n  databasename $dbname\nFastBit\n  path $location\n  foldername $fbname\n  ibis $ibis\n  ardea $ardea";
   print CONNECT $connectcontent; close (CONNECT);
-  `tar -xzf $get/.web.tgz`;
+  `tar -xzf $get/.web.tgz -C $get`;
   open(CONFIG, ">$get/web/config.php");
   print CONFIG "<?php
   define('DB_SERVER', 'localhost');
