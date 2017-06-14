@@ -50,12 +50,23 @@ The TransAtlasDB toolkit is written in Perl and can be run on diverse hardware s
 		* Sort::Key
 		
 - Quick Guide:
-	* To install [with root priviledges]
+	* To install [RECOMMENDED: with root priviledges]
 	```
 	INSTALL-tad.pl -password <mysql-password>
 	```
 	
 	* More details and instructions are provided at https://modupeore.github.io/TransAtlasDB/tutorial.html
+
+---
+
+## TransAtlasDB web portal
+- Requirements:
+	* In addition to the requirements in the TransAtlasDB installation section.
+	* PHP (at least version 5.5.38)
+	* Apache (at least version 2.4.18)
+	
+- Guide:
+	* After installation of the TransAlasDB databases and dependencies (as show above). The **web** folder is provided and should be moved to your localhost or web accessible location.
 
 ---
 
