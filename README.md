@@ -28,7 +28,7 @@ The TransAtlasDB toolkit is written in Perl and can be run on diverse hardware s
 	* schema : contains the TransAtlasDB relational database schema.
 	* example : contains sample files and templates.
 	* lib : contains required Perl Modules.
-
+	* web : TransAtlasDB web portal ( is visible after executing INSTALL-tad.pl )
 ---
 
 ## TransAtlasDB installation
@@ -61,12 +61,12 @@ The TransAtlasDB toolkit is written in Perl and can be run on diverse hardware s
 
 ## TransAtlasDB web portal
 - Requirements:
-	* In addition to the requirements in the TransAtlasDB installation section.
+	* Requirements in the above section (TransAtlasDB installation).
 	* PHP (at least version 5.5.38)
 	* Apache (at least version 2.4.18)
 	
 - Guide:
-	* After installation of the TransAlasDB databases and dependencies (as show above). The **web** folder is provided and should be moved to your localhost or web accessible location.
+	* After installation of the TransAlasDB databases and dependencies (as show above). The **web** folder is provided and should be moved to your localhost or apache location.
 
 ---
 
