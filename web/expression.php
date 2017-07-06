@@ -51,11 +51,11 @@
 		}
 	?>
 	
-	<p class="pages"><span>Libraries of interest: </span>
+	<p class="pages"><span>Samples of interest: </span>
 	<select name="tissue[]" id="tissue" size=3 multiple="multiple">
-		<option value="" selected disabled >Select Library ID(s)</option>
+		<option value="" selected disabled >Select Sample(s)</option>
 		<?php
-			foreach ($db_conn->query("select sampleid from GeneStats") as $row) {
+			foreach ($db_conn->query($query) as $row) {
 				echo "<option value='$row[sampleid]'>$row[sampleid]</option>";
 			}
 		?>
