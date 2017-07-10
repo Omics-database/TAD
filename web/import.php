@@ -11,12 +11,14 @@
 	if ($_GET['quest'] == 'manual') {
 		$stat = "manual";
 		if (isset($_POST['accept'])) {
-			$samplename = $_POST['samplename'];
+			$_POST['samplename'] = strtoupper($_POST['samplename']);
+			$samplename = strtoupper($_POST['samplename']);
 			$sampledesc = $_POST['sampledesc'];
 			$animalid = $_POST['animalid'];
 			$animaldesc = $_POST['animaldesc'];
 			$species= $_POST['organism'];
-			$part = $_POST['part'];
+			$_POST['part'] = strtolower($_POST['part']);
+			$part = strtolower($_POST['part']);
 			$firstname= $_POST['firstname'];
 			$middle = $_POST['middle'];
 			$lastname = $_POST['lastname'];
