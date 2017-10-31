@@ -31,6 +31,8 @@ processArguments(); #Process input
 $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database
 `which ardea` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit executable 'ardea'. Download fastbit software and add to PATH.");
 `which ibis` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit query 'ibis'. Download fastbit software and add to PATH");
+`which samtools` or pod2usage("ERROR:\t TransAtlasDB import module requires SAMtools.\n\tCan not find 'samtools'. Download samtools package and add to PATH");
+
 $verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n";
 $sth = $dbh-> prepare("show databases"); $sth->execute;
 my %HashDB = ();
