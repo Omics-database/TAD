@@ -126,7 +126,7 @@ CREATE TABLE `MapStats` (`sampleid` VARCHAR(150) NOT NULL, `totalreads` INT(11) 
 -- Table structure for table `ReadCounts`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `ReadCounts`;
-CREATE TABLE `ReadCounts` (`sampleid` VARCHAR(150) NOT NULL, `genename` VARCHAR(100) NULL DEFAULT NULL, `readcounts`  INT(11) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`, `genename`), CONSTRAINT `ReadCountsStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `ReadCounts` (`sampleid` VARCHAR(150) NOT NULL, `genename` VARCHAR(100) NOT NULL, `readcounts`  INT(11) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`, `genename`), CONSTRAINT `ReadCountsStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
