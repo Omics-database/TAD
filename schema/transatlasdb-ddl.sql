@@ -1,7 +1,7 @@
 -- MySQL Script
 -- 
 -- Host: localhost    Database: transatlasdb
--- Model: TransAtlasDB		Version: 2.0
+-- Model: TransAtlasDB		Version: 3.0
 -- Function: TransAtlasDB Schema Script
 -- 
 -- ---------------------------------------------------
@@ -35,6 +35,7 @@ DROP TABLE IF EXISTS `AnimalStats`;
 DROP TABLE IF EXISTS `Sample`;
 DROP TABLE IF EXISTS `SampleStats`;
 DROP TABLE IF EXISTS `MapStats`;
+DROP TABLE IF EXISTS `ReadCounts`;
 DROP TABLE IF EXISTS `GeneStats`;
 DROP TABLE IF EXISTS `Metadata`;
 DROP TABLE IF EXISTS `GenesFpkm`;
@@ -122,6 +123,11 @@ CREATE TABLE `SampleStats` (`sampleid` VARCHAR(150) NOT NULL, `collectionprotoco
 DROP TABLE IF EXISTS `MapStats`;
 CREATE TABLE `MapStats` (`sampleid` VARCHAR(150) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `alignmentrate` DOUBLE(5,2) NULL DEFAULT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
+-- Table structure for table `ReadCounts`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ReadCounts`;
+CREATE TABLE `ReadCounts` (`sampleid` VARCHAR(150) NOT NULL, `genename` VARCHAR(100) NULL DEFAULT NULL, `readcounts`  INT(11) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`, `genename`), CONSTRAINT `ReadCountsStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+-- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `GeneStats`;
@@ -130,7 +136,7 @@ CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `genes` INT(11) NULL
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `Metadata`;
-CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, `parameters` TEXT NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarSummary`
 -- -----------------------------------------------------
