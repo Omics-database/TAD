@@ -42,6 +42,11 @@ The TransAtlasDB toolkit is written in Perl and can be run on diverse hardware s
 		* FastBit
 
 	
+	* Programs :
+		* Perl (at least version 5.18.2)
+		* SAMtools (at least version 0.1.19)
+
+	
 	* Perl Modules needed :
 		* DBD::mysql
 		* Spreadsheet::Read
