@@ -28,10 +28,10 @@ our ($sheetid, %NAME, %ORGANIZATION);
 our ($found);
 our (@allgeninfo);
 my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
-my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile); #for annotation file
+my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile, $parameters); #for annotation file
 my $additional;
 #genes import
-our ($samfile, $alignfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $logfile, $variantfile, $vepfile, $annofile);
+our ($bamfile, $alignfile, $version, $readcountfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $variantfile, $vepfile, $annofile);
 our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress);
 my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm, %ALL);
 #variant import
@@ -394,18 +394,19 @@ if ($datadb) {
   	my $dataid = (split("\/", $file2consider))[-1]; 
   	`find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
   	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample directory location "); close (DIR);
-  	my @foldercontent = split("\n", `find $file2consider`); #get details of the folder
+  	my @foldercontent = split("\n", `find $file2consider -type f -print0 | xargs -0 ls -tr `); #get details of the folder
+		
   	foreach (grep /\.gtf/, @foldercontent) { unless (`head -n 3 $_ | wc -l` <= 0 && $_ =~ /skipped/) { $transcriptsgtf = $_; } }
 		$alignfile = (grep /summary.txt/, @foldercontent)[0];
   	$genesfile = (grep /genes.fpkm/, @foldercontent)[0];
   	$deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
   	$insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
   	$junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
-  	$logfile = (grep /logs\/run.log/, @foldercontent)[0];
-		$samfile = (grep /.sam$/, @foldercontent)[0];
+		$bamfile = (grep /.bam$/, @foldercontent)[0];
   	$variantfile = (grep /.vcf$/, @foldercontent)[0]; 
   	$vepfile = (grep /.vep.txt$/, @foldercontent)[0];
   	$annofile = (grep /anno.txt$/, @foldercontent)[0];
+		$readcountfile = (grep /.counts$/, @foldercontent)[0];
  
   	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
   	if ($found) { # if sample is not in the database    
@@ -450,12 +451,13 @@ if ($datadb) {
       			printerr " Done\n";
       			#metadata table
       			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
-      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool, parameters ) values (?,?,?,?,?,?,?)");
+      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool, $parameters) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
       			printerr " Done\n";
       
 		     	#toggle options
       			unless ($variant) {
+							READ_COUNT($dataid);
         			GENES_FPKM($dataid);
         			if ($all){
           				DBVARIANT($variantfile, $dataid);
@@ -498,13 +500,14 @@ if ($datadb) {
       			$sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
 						unless ($found) {
         			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
- 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+ 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool, parameters ) values (?,?,?,?,?,?,?)");
+							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool, $parameters) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
 							printerr " Done\n";
 						} #end else found in MapStats table
       			#toggle options
 	      		unless ($variant) {
 			        $sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid' and status ='done'"); $sth->execute(); $found = $sth->fetch();
+							READ_COUNT($dataid); #READCOUNTS
 							GENES_FPKM($dataid); #GENES
 							if ($all){
           				my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
@@ -817,7 +820,7 @@ sub processArguments {
 	if ($vep || $annovar) {
 		pod2usage(-msg=>"ERROR:\t Invalid syntax specified for @commandline, specify -variant.") unless (($variant && $annovar)||($variant && $vep) || ($all && $annovar) || ($all && $vep));
 	}
-  	@ARGV<=1 or pod2usage("Syntax error");
+  	@ARGV==1 or pod2usage("Syntax error");
   	$file2consider = $ARGV[0];
   	
 	$verbose ||=0;
@@ -838,77 +841,104 @@ sub processArguments {
 }
 
 sub LOGFILE { #subroutine for getting metadata
-	if ($samfile){
-		@allgeninfo = split('\s',`grep -m 1 "ID:hisat" $samfile | head -1`,5);
-		
-		#getting metadata info
-		if ($#allgeninfo > 1){
-			if ($allgeninfo[1] =~ /(hisat.*)$/){ $mappingtool = $1." v".(split(':',$allgeninfo[3]))[-1]; } #mapping tool name and version
-			$allgeninfo[4] =~ /\-x\s(\w+)\s/;
+	if ($bamfile){
+		my $headerdetails = `samtools view -H $bamfile | grep -m 1 "\@PG" | head -1`;
+		$headerdetails =~ /\@PG\s*ID\:(\S*).*VN\:(\S*)\s*CL\:(.*)/;
+		$mappingtool = $1." v".$2; $parameters = $3;
+		if ($mappingtool =~ /hisat/i) {
+			$parameters =~ /\-x\s(\w+)\s/;
 			$refgenome = $1; #reference genome name
-			$refgenomename = (split('\/', $refgenome))[-1]; 
-			if ($allgeninfo[4] =~ /-1/){
-				$allgeninfo[4] =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
+			$refgenomename = (split('\/', $refgenome))[-1];
+			if ($parameters =~ /-1/){ #paired-end reads
+				$parameters =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
 				my @nseq = split(",",$1); my @pseq = split(",",$2);
 				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				foreach (@pseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				chop $sequences;
 			}
-			elsif ($allgeninfo[4] =~ /-U/){
-				$allgeninfo[4] =~ /\-U\s(\S+)"$/;
+			elsif ($parameters =~ /-U/){ #single-end reads
+				$parameters =~ /\-U\s(\S+)"$/;
 				my @nseq = split(",",$1);
 				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				chop $sequences;
 			} #end if toggle for sequences
 			$stranded = undef;
 			$annotationfile = undef;
-		} else {
+		} # end if working with hisat.
+		elsif ($mappingtool =~ /tophat/i) {
+			my $annotation; undef %ALL; my $no = 0;
+			my @newgeninfo = split('\s', $parameters);
+			foreach my $number (1..$#newgeninfo) {
+				unless ($newgeninfo[$number] =~ /-no-coverage-search/){
+					if ($newgeninfo[$number] =~ /^\-/){
+						my $old = $number++;
+						$ALL{$newgeninfo[$old]} = $newgeninfo[$number];
+					} else {
+						unless (exists $ALL{$no}){
+							$ALL{$no} = $newgeninfo[$number];
+							$no++;
+						}
+					}
+				}
+			}
+			unless ((exists $ALL{"-G"}) || (exists $ALL{"--GTF"})) {
+				$annotationfile = undef;
+			} else {
+				if (exists $ALL{"-G"}){ $annotation = $ALL{"-G"} ; } else { $annotation = $ALL{"--GTF"};}
+				$annotationfile = uc ( (split('\.',((split("\/", $annotation))[-1])))[-1] ); #(annotation file)
+			}
+			unless (exists $ALL{"--library-type"}) { $stranded = undef; } else { $stranded = $ALL{"--library-type"}; }
+		
+			$refgenome = $ALL{0}; my $seq = $ALL{1}; my $otherseq = $ALL{2};
+			$refgenomename = (split('\/', $ALL{0}))[-1]; 
+			unless(length($otherseq)<1){ #sequences
+				$sequences = ( ( split('\/', $seq) ) [-1]).",". ( ( split('\/', $otherseq) ) [-1]);
+			} else {
+				$sequences = ( ( split('\/', $seq) ) [-1]);
+			} #end if seq
+		} # end if working with tophat
+		else {
 			$annotationfile = undef;
 			$stranded = undef; $sequences = undef;
 		}
-	}
-	elsif ($logfile){
-		@allgeninfo = split('\s',`head -n 1 $logfile`);
+	} # end if bamfile
+}
+
+sub READ_COUNT { #subroutine for read counts
+	#INSERT INTO DATABASE: #ReadCounts table
+	if ($readcountfile) {
+		my $readcountstatus = "no";
+		open(READ, "<", $readcountfile) or die "\nERROR:\t Can not open file $readcountfile\n";
+		$sth = $dbh->prepare("select sampleid from ReadCounts where sampleid = '$_[0]' limit 1"); $sth->execute(); $found = $sth->fetch();
+		unless ($found) {
+			$readcountstatus = "yes";
+		} else {
+			$sth = $dbh->prepare("select count(*) from ReadCounts where sampleid = '$_[0]'"); $sth->execute(); my $readcount = $sth->fetchrow_array();
+			my $readunix = `cat $readcountfile | wc -l `; chomp $readunix; $readcount += 5; #assuming there are atleast 5 miscellaneous lines #version 1
+			if ($readcount < $readunix) {
+				$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in ReadCounts table\n";
+				$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$_[0]'"); $sth->execute();
+				$readcountstatus = "yes";
+			} else {
+				printerr "NOTICE:\t $_[0] already in ReadCounts table... Moving on \n";
+			}
+		}
 		
-		my $annotation;
-		#getting metadata info
-		if ($#allgeninfo > 1){
-			if ($allgeninfo[0] =~ /tophat/){ $mappingtool = "TopHat";}
-			undef %ALL;
-			my ($no, $number) = (0,1);
-      while ($number <= $#allgeninfo){
-        unless ($allgeninfo[$number] =~ /-no-coverage-search/){
-          if ($allgeninfo[$number] =~ /^\-/){
-            my $old = $number++;
-            $ALL{$allgeninfo[$old]} = $allgeninfo[$number];
-          } else {
-            unless (exists $ALL{$no}){
-              $ALL{$no} = $allgeninfo[$number];
-              $no++;
-            }
-          }
-        }
-        $number++;
-      }
-      unless ((exists $ALL{"-G"}) || (exists $ALL{"--GTF"})) {
-        $annotationfile = undef;
-      } else {
-        if (exists $ALL{"-G"}){ $annotation = $ALL{"-G"} ; } else { $annotation = $ALL{"--GTF"};}
-        $annotationfile = uc ( (split('\.',((split("\/", $annotation))[-1])))[-1] ); #(annotation file)
-      }
-      unless (exists $ALL{"--library-type"}) { $stranded = undef; } else { $stranded = $ALL{"--library-type"}; }
-			
-      $refgenome = $ALL{0}; my $seq = $ALL{1}; my $otherseq = $ALL{2};
-			$refgenomename = (split('\/', $ALL{0}))[-1]; 
-      unless(length($otherseq)<1){ #sequences
-        $sequences = ( ( split('\/', $seq) ) [-1]).",". ( ( split('\/', $otherseq) ) [-1]);
-      } else {
-        $sequences = ( ( split('\/', $seq) ) [-1]);
-      } #end if seq
+		if ($readcountstatus eq "yes") { #importing into Realational Database.
+			printerr "NOTICE:\t Importing $_[0] to ReadCounts table ...";
+			while (<READ>) {
+				chomp;
+				my ($idgene, $idcount) = split("\t");
+				if ($idgene =~ /^[a-zA-Z0-9]/) {
+					$sth = $dbh->prepare("insert into ReadCounts (sampleid, genename, readcounts) values (?,?,?)");
+					$sth ->execute($_[0], $idgene, $idcount) or die "\nERROR:\t $idgene $idcount Complication in ReadCounts table, consult documentation\n";
+				}
+			} close (READ);
+			printerr " Done \n";
 		}
 	}
-}
-	
+}		
+		
 sub GENES_FPKM { #subroutine for getting gene information
 	#INSERT INTO DATABASE: #GeneStats table
 	$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
@@ -1553,7 +1583,7 @@ sub NOSQL {
 	  tad-import.pl -delete GGA_UD_1004
 
 
- Version: $ Date: 2017-01-04 15:52:40 (Fri, 04 Jan 2017) $
+ Version: $ Date: 2017-11-01 10:52:40 (Fri, 01 Nov 2017) $
 
 =head1 OPTIONS
 
@@ -1631,13 +1661,19 @@ successful processing.
 
 Detailed documentation for TransAtlasDB should be viewed on https://modupeore.github.io/TransAtlasDB/.
 
-=over 8
+=over
 
 =item * B<invalid input>
 
 If any of the files input contain invalid arguments or format, TransAtlasDB 
 will terminate the program and the invalid input with the outputted. 
 Users should manually examine this file and identify sources of error.
+
+=back
+
+=head1 INPUT FILES TYPES
+
+=over 8
 
 =back
 
@@ -1652,6 +1688,7 @@ The 'sample name' must be a word and can be alphanumeric. An example is shown be
   Sample Name	Derived from	Organism	Organism Part	Sample description	Organization
   GGA_UD_1004	GGA_UD_1004	Gallus gallus	Pituitary gland	21 day male Ross 708	University of Delaware
   GGA_UD_1014	GGA_UD_1014	Gallus gallus	Pituitary gland	21 day male Ross 708	University of Delaware
+
 
 =head2 Directory/Folder structure
 
@@ -1669,7 +1706,7 @@ in the sample information previously imported.
 
 =item * B<TopHat2 and Cufflinks directory structure>
 The default naming scheme from the above software are required.
-The sub_folders <tophat_folder>,  <cufflinks_folder>, <variant_folder> are optional.
+The sub_folders <tophat_folder>,  <cufflinks_folder>, <variant_folder>, <readcounts_folder> are optional.
 All files pertaining to such 'sample_name' must be in the same folder.
 An example of TopHat and Cufflinks results directory is shown below:
 
@@ -1687,26 +1724,38 @@ An example of TopHat and Cufflinks results directory is shown below:
 	/sample_name/<variant_folder>/<filename>.vcf
 	/sample_name/<variant_folder>/<filename>.multianno.txt
 	/sample_name/<variant_folder>/<filename>.vep.txt
+	/sample_name/<readcounts_folder>/<filename>.counts
 	
 =item * B<HISAT2 and StringTie directory structure>
-The required files from HISAT2 are the SAM mapping file (suffix = '.sam') and the
+The required files from HISAT2 are the BAM mapping file (suffix = '.bam') and the
 alignment summary details. The alignment summary is generated as a standard
 output, which should be stored in a file named 'align_summary.txt'.
 The required file from StringTie is the transcripts file with suffix = '.gtf').
-The sub_folders <hisat_folder>,  <stringtie_folder>, <variant_folder> are optional.
+The sub_folders <hisat_folder>,  <stringtie_folder>, <variant_folder>, <readcounts_folder> are optional.
 All files pertaining to such 'sample_name' must be in the same folder.
 An example of HiSAT2 and Stringtie results directory is shown below:
 
 	/sample_name/
 	/sample_name/<hisat_folder>/
 	/sample_name/<hisat_folder>/align_summary.txt
-	/sample_name/<hisat_folder>/<filename>.sam
+	/sample_name/<hisat_folder>/<filename>.bam
 	/sample_name/<stringtie_folder>/
 	/sample_name/<stringtie_folder>/<filename>.gtf
 	/sample_name/<variant_folder>/
 	/sample_name/<variant_folder>/<filename>.vcf
 	/sample_name/<variant_folder>/<filename>.multianno.txt
 	/sample_name/<variant_folder>/<filename>.vep.txt
+	/sample_name/<readcounts_folder>/<filename>.counts
+
+=back
+
+=head2 Genomic features or genes read counts file
+
+The genomic features read count files generated from various feature summarization
+programs, such as HTseq-count, featureCounts, can be imported into TransAtlasDB.
+Read count files must be named with suffix '.counts' to be imported.
+
+=over 8
 
 =back
 
