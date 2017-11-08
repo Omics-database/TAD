@@ -29,9 +29,6 @@ processArguments(); #Process input
 
 #creating or using databases
 $dbh = mysql_create($dbname, $username, $password); #connect to mysql to create database
-`which ardea` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit executable 'ardea'. Download fastbit software and add to PATH.");
-`which ibis` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit query 'ibis'. Download fastbit software and add to PATH");
-`which samtools` or pod2usage("ERROR:\t TransAtlasDB import module requires SAMtools.\n\tCan not find 'samtools'. Download samtools package and add to PATH");
 
 $verbose and printerr "NOTICE:\t Using SCHEMA $dbname\n";
 $sth = $dbh-> prepare("show databases"); $sth->execute;
@@ -119,7 +116,13 @@ sub processArguments {
   $man and pod2usage (-verbose=>2, -exitval=>1, -output=>\*STDOUT);  
   pod2usage(-msg=>"Error: Required argument -p (MySQL password) not provided.") if (!$password);
   if ($> != 0) { pod2usage ("ERROR:\t TranAtlasDB requires root priviledges to proceed with installation.\n\t Provide root access by using \t'sudo perl $0 @commandline'") };
-  #set defaults
+  
+	#check system requirements
+	`which ardea` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit executable 'ardea'. Download fastbit software and add to PATH.");
+	`which ibis` or pod2usage("ERROR:\t TransAtlasDB requires the nosql platform => FastBit.\n\t Can not find fastbit query 'ibis'. Download fastbit software and add to PATH");
+	`which samtools` or pod2usage("ERROR:\t TransAtlasDB import module requires SAMtools.\n\tCan not find 'samtools'. Download samtools package and add to PATH");
+
+	#set defaults
   $verbose ||=0;
   my $get = dirname(abs_path $0); #get source path
   $dbname = "transatlasdb" if (! $dbname);
