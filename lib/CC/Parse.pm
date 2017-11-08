@@ -10,7 +10,7 @@ use Sort::Key::Natural qw(natsort);
 
 
 my ($sth, $dbh, $ibis, $t);
-my ($precount, $count, $verdict);
+my ($precount, $count, $verdict, $exinst);
 
 sub excelcontent { #read excel content
 	unless($_[0] =~ /\.xls/){pod2usage("Error: File \"$_[0]\" is not an excel file.");}
@@ -230,7 +230,7 @@ sub AVERAGE { #tad-interact option D
 	print LOG "D.\tAVERAGE FPKM VALUES OF INDIVIDUAL GENES.\n";
 	my $gfastbit = $_[2]."/gene-information";
 	$dbh = $_[0]; $ibis = $_[4];
-	my (%TISSUE, %GENES, %AVGFPKM, $tissue, $genes , $species, %ORGANISM);
+	my (%TISSUE, %GENES, %AVGEXP, $tissue, $genes , $species, $end, %ORGANISM);
 	$count = 0;
 	$sth = $dbh->prepare("select distinct organism from vw_sampleinfo where genes is not null"); #get organism(s)
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -292,55 +292,79 @@ sub AVERAGE { #tad-interact option D
 		} chop $tissue;
 		printerr "\nTISSUE(S) selected: $tissue\n";
 		@tissue = split("\,",$tissue);
+		
+		print color ('bold');
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "  1 :  FPKM\n  2 :  TPM\n";
+		print color('bold');
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "\nSelect either expression value format (or 0 for both) ? "; #ask for expression format 
+		chomp ($verdict = int(<>)); print "\n";
+		unless ($verdict) { $verdict = 0; }
+		if ($verdict == 1) {
+			printerr "\nViewing \"FPKM\" expression values\n";
+			$t = Text::TabularDisplay->new(qw(GeneName Tissue MaximumFpkm AverageFpkm MinimumFpkm)); #header
+			$exinst = "tad-export.pl --db2data --avgexp --fpkm";
+			$end = " and fpkm != 0";
+		} elsif ($verdict == 2) {
+			printerr "\nViewing \"TPM\" expression values\n";
+			$t = Text::TabularDisplay->new(qw(GeneName Tissue MaximumTpm AverageTpm MinimumTpm)); #header
+			$exinst = "tad-export.pl --db2data --avgexp --tpm";
+			$end = " and tpm != 0";
+		} else {
+			printerr "\nViewing \"BOTH\" expression values\n";
+			$t = Text::TabularDisplay->new(qw(GeneName Tissue MaximumFpkm AverageFpkm MinimumFpkm MaximumTpm AverageTpm MinimumTpm)); #header
+			$exinst = "tad-export.pl --db2data --avgexp";
+			$end = "";
+		}
+		
 		foreach my $gene (@genes){
 			foreach my $ftissue (@tissue) {
 				#my $syntax = "call usp_gdtissue(\"".$gene."\",\"".$ftissue."\",\"". $species."\")";
 				#$sth = $dbh->prepare($syntax);
 				#$sth->execute() or die "SQL Error: $DBI::errstr\n";
-				`$ibis -d $gfastbit -q 'select genename, max(fpkm), avg(fpkm), min(fpkm) where genename like "%$gene%" and tissue = "$ftissue" and organism = "$species"' -o $_[3] 2>>$_[1]`;
+				`$ibis -d $gfastbit -q 'select genename, max(fpkm), avg(fpkm), min(fpkm), max(tpm), avg(tpm), min(tpm) where genename like "%$gene%" and tissue = "$ftissue" and organism = "$species"$end' -o $_[3] 2>>$_[1]`;
 				my $found = `head -n 1 $_[3]`;
 				if (length($found) > 1) {
 					open(IN,"<",$_[3]);
 					while (<IN>){
 						chomp;
-						my ($genename,$max,$avg,$min) = split (/\, /, $_, 4);
+						my ($genename,$fmax,$favg,$fmin,$tmax, $tavg, $tmin) = split (/\, /, $_, 7);
 						$genename =~ s/^'|'$|^"|"$//g; #removing the quotation marks from the words
 						if ($genename =~ /NULL/) { $genename = "-"; }
-						$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
+						if (($fmax+$favg+$fmin+$tmax+$tavg+$tmin) != 0) { #removing empty values
+							$AVGEXP{$genename}{$ftissue} = "$fmax|$favg|$fmin|$tmax|$tavg|$tmin";
+						}
 					}
 					$genes .= $gene.",";
 				} else {
 					printerr "NOTICE:\t No Results found with gene '$gene'\n";
 				} 
 				`rm -rf $_[3]`;
-		
-				#my $found = $sth->fetch();
-				#if ($found) {
-				#	$sth->execute() or die "SQL Error: $DBI::errstr\n";
-				#	while (my ($genename, $max, $avg, $min) = $sth->fetchrow_array() ) { 
-				#		$AVGFPKM{$genename}{$ftissue} = "$max|$avg|$min";
-				#	}
-				#	$genes .= $gene;
-				#} else {
-				#	printerr "NOTICE:\t No Results found with gene '$gene'\n";
-				#}
 			}
 		}
-		$count = scalar keys %AVGFPKM;
+		$count = scalar keys %AVGEXP;
 	} elsif ($number == 0){
 		printerr "\nERROR:\tEmpty dataset, import Gene Information using tad-import.pl -data2db\n"; next MAINMENU;
 	} else {
 		printerr "ERROR:\t Organism number was not valid \n"; next MAINMENU;
 	}
-  $t = Text::TabularDisplay->new(qw(GeneName Tissue MaximumFpkm AverageFpkm MinimumFpkm)); #header
-	$precount = 0;
-	foreach my $a (sort keys %AVGFPKM){ #preset to 10 rows
+  $precount = 0;
+	foreach my $a (sort keys %AVGEXP){ #preset to 10 rows
 		unless ($precount >= 10) { 
-			foreach my $b (sort keys % {$AVGFPKM{$a} }){
+			foreach my $b (sort keys % {$AVGEXP{$a} }){
 				unless ($precount >= 10) {
-					my @all = split('\|', $AVGFPKM{$a}{$b}, 3);
+					my @all = split('\|', $AVGEXP{$a}{$b}, 6);
 					$precount++;
-					$t->add($a, $b, $all[0], $all[1], $all[2]);
+					if ($verdict == 1) { #fpkm
+						$t->add($a, $b, $all[0], $all[1], $all[2]);
+					} elsif ($verdict == 2) { #tpm
+						$t->add($a, $b, $all[3], $all[4], $all[5]);
+					} else { #both
+						$t->add($a, $b, $all[0], $all[1], $all[2],$all[3], $all[4], $all[5]);
+					}
 				}
 			}
     }    
@@ -362,8 +386,8 @@ sub AVERAGE { #tad-interact option D
 		print "--------------------------------------------------------------------------\n";
 		print "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		print "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
-		print "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
+		print "\t$exinst --species '$species' --gene '$genes' --tissue '$tissue'\n";
+		print "\t$exinst --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
 		print "--------------------------------------------------------------------------\n";
 		print "--------------------------------------------------------------------------\n";
 		print color('reset');
@@ -371,8 +395,8 @@ sub AVERAGE { #tad-interact option D
 		print LOG "--------------------------------------------------------------------------\n";
 		print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
 		print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-		print LOG "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue'\n";
-		print LOG "\ttad-export.pl --db2data --avgfpkm --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
+		print LOG "\t$exinst --species '$species' --gene '$genes' --tissue '$tissue'\n";
+		print LOG "\t$exinst --species '$species' --gene '$genes' --tissue '$tissue' --output output.txt\n";
 		print LOG "--------------------------------------------------------------------------\n";
 		print LOG "--------------------------------------------------------------------------\n";
 		printerr "\n\n";
@@ -387,7 +411,7 @@ sub GENEXP { #tad-interact option E
 	print LOG "E.\tGENE EXPRESSION ACROSS SAMPLES.\n";
 	my $gfastbit = $_[2]."/gene-information";
 	$dbh = $_[0]; $ibis = $_[4];
-	my (%FPKM, %POSITION, %ORGANISM, %SAMPLE, %REALPOST, %CHROM, $species, $sample, $finalsample, $genes, $syntax, @row, $indent);
+	my (%TPM, %FPKM, %POSITION, %ORGANISM, %SAMPLE, %REALPOST, %CHROM, $species, $sample, $finalsample, $genes, $syntax, @row, $indent);
 	$count = 0;
 	$sth = $dbh->prepare("select distinct organism from vw_sampleinfo where genes is not null"); #get organisms
 	$sth->execute or die "SQL Error: $DBI::errstr\n";
@@ -455,19 +479,41 @@ sub GENEXP { #tad-interact option E
 		} else { @newsample = @sample;}
 		my @array = ("GENE", "CHROM", @newsample);
 		$t = Text::TabularDisplay->new(@array);
+		
+		
+		print color ('bold');
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "  1 :  FPKM\n  2 :  TPM\n";
+		print color('bold');
+		print "--------------------------------------------------------------------------\n";
+		print color('reset');
+		print "\nSelect either expression value format (default is \"FPKM\") ? "; #ask for expression format 
+		chomp ($verdict = int(<>)); print "\n";
+		unless ($verdict) { $verdict = 1; }
+		if ($verdict == 2) {
+			printerr "\nViewing \"TPM\" expression values\n";
+			$t = "tpm";
+			$exinst = "tad-export.pl --db2data --genexp --tpm";
+		} else {
+			printerr "\nViewing \"FPKM\" expression values\n";
+			$t = "fpkm";
+			$exinst = "tad-export.pl --db2data --genexp --fpkm";
+		}
+
 		print "\nSelect genes (multiple genes can be separated by comma or 0 for all) ? "; #type in genes 
 	  chomp ($verdict = uc(<>)); print "\n";
 		$verdict =~ s/\s+//g;
 		unless ($verdict) { $verdict = 0; }
 		if ($verdict =~ /^0/) { 
 			printerr "GENE(S) selected : 'all genes'\n";
-			$syntax = "select genename, fpkm, sampleid, chrom, start, stop where sampleid in ("; #syntax
+			$syntax = "select genename, $t, sampleid, chrom, start, stop where sampleid in ("; #syntax
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") order by geneid desc";
 		}else {
 			my @genes = split(",", $verdict);
 			$genes = $verdict;
 			printerr "GENE(S) selected : $verdict\n";
-			$syntax = "select genename, fpkm, sampleid, chrom, start, stop where sampleid in (";
+			$syntax = "select genename, $t, sampleid, chrom, start, stop where sampleid in (";
 			foreach (@newsample) { $syntax .= "'$_',";} chop $syntax; $syntax .= ") and (";
 			foreach (@genes) { $syntax .= " genename like '%$_%' or"; } $syntax = substr($syntax, 0, -2); $syntax .= ") order by geneid desc";
 		}
@@ -519,6 +565,7 @@ sub GENEXP { #tad-interact option E
 		}
 		$precount = 0;
 		$indent = '';
+		$t = Text::TabularDisplay->new(@array);
 		foreach my $genename (sort keys %FPKM){  
 			if ($genename =~ /^[0-9a-zA-Z]/){
 				if ($precount < 10) {
@@ -557,8 +604,8 @@ sub GENEXP { #tad-interact option E
 	print "--------------------------------------------------------------------------\n";
 	print "NOTICE:\t $indent $precount sample(s) displayed.\n";
 	print "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	print "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
-	print "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
+	print "\t$exinst --species '$species' $dgenes$dsamples\n";
+	print "\t$exinst --species '$species' $dgenes$dsamples --output output.txt\n";
 	print "--------------------------------------------------------------------------\n";
 	print "--------------------------------------------------------------------------\n";
 	print color('reset');
@@ -566,8 +613,8 @@ sub GENEXP { #tad-interact option E
 	print LOG "--------------------------------------------------------------------------\n";
 	print LOG "NOTICE:\t $indent $precount sample(s) displayed.\n";
 	print LOG "PLEASE RUN EITHER THE FOLLOWING COMMANDS TO VIEW OR EXPORT THE COMPLETE RESULT.\n";
-	print LOG "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples\n";
-	print LOG "\ttad-export.pl --db2data --genexp --species '$species' $dgenes$dsamples --output output.txt\n";
+	print LOG "\t$exinst --species '$species' $dgenes$dsamples\n";
+	print LOG "\t$exinst --species '$species' $dgenes$dsamples --output output.txt\n";
 	print LOG "--------------------------------------------------------------------------\n";
 	print LOG "--------------------------------------------------------------------------\n";
 	printerr "\n\n";

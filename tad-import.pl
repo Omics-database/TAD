@@ -1153,7 +1153,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 						}unless (exists $DFPKM{$dstax}{$Drest{'FPKM'}}){ #FPKM
 							$DFPKM{$dstax}{$Drest{'FPKM'}}= $Drest{'FPKM'};
 						}
-						unless (exists $TPM{$dstax}{$Drest{'TPM'}}){ #FPKM_hi
+						unless (exists $TPM{$dstax}{$Drest{'TPM'}}){ #TPM
 							$TPM{$dstax}{$Drest{'TPM'}}= $Drest{'TPM'};
 						}
 						unless ($Drest{'ref_gene_name'}){
