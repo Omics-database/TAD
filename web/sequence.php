@@ -135,7 +135,7 @@
     <select name="column">
         <?php
 			$i = 0;
-			$all_rows = $db_conn->query("select sampleid, mappingtool, annotationfile, diffexpresstool, varianttool, variantannotationtool from $table");
+			$all_rows = $db_conn->query("select sampleid, mappingtool, annotationfile, diffexpresstool, countstool, varianttool, variantannotationtool from $table");
 			while ($i < $all_rows->field_count) {
 			    $meta = $all_rows->fetch_field_direct($i);
 			    echo '<option value="'.$meta->name.'">'. $meta->name.'</option>';

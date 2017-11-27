@@ -294,7 +294,7 @@ function meta_display($result) {
 function metavw_display($result) {
     $num_rows = $result->num_rows;
     echo '<br><table class="metadata"><tr style="font-size:1.8vh;">';
-    echo '<th align="left" width=40pt bgcolor="white"></th><th class="metadata" colspan=5>Analysis Summary</th><th class="metadata" colspan=3 style="color:#306269;">Mapping Metadata</th><th class="metadata" colspan=2 style="color:#306937;">Expression Metadata</th><th class="metadata" colspan=3 style="color:#693062;">Variant Metadata</th></tr><tr>';
+    echo '<th align="left" width=40pt bgcolor="white"></th><th class="metadata" colspan=5>Analysis Summary</th><th class="metadata" colspan=3 style="color:#306269;">Mapping Metadata</th><th class="metadata" colspan=2 style="color:#306937;">Expression Metadata</th><th class="metadata" colspan=4 style="color:#693062;">Variant Metadata</th></tr><tr>';
     echo '<th align="left" width=40pt bgcolor="white"><font size="2" color="red">Select All</font><input type="checkbox" id="selectall" onClick="selectAll(this)" /></th>';
     $meta = $result->fetch_field_direct(0); echo '<th class="metadata" id="' . $meta->name . '">Sample Id</th>';
     $meta = $result->fetch_field_direct(1); echo '<th class="metadata" id="' . $meta->name . '">Total Fastq reads</th>';
