@@ -1,7 +1,7 @@
 -- MySQL Script
 -- 
 -- Host: localhost    Database: transatlasdb
--- Model: TransAtlasDB		Version: 3.0
+-- Model: TransAtlasDB		Version: 1.0
 -- Function: TransAtlasDB Schema Script
 -- 
 -- ---------------------------------------------------
@@ -38,8 +38,8 @@ DROP TABLE IF EXISTS `MapStats`;
 DROP TABLE IF EXISTS `ReadCounts`;
 DROP TABLE IF EXISTS `GeneStats`;
 DROP TABLE IF EXISTS `Metadata`;
-DROP TABLE IF EXISTS `GenesFpkm`;
 DROP TABLE IF EXISTS `VarSummary`;
+DROP TABLE IF EXISTS `CommandSyntax`;
 DROP TABLE IF EXISTS `VarResult`;
 DROP TABLE IF EXISTS `VarAnnotation`;
 -- -----------------------------------------------------
@@ -136,12 +136,17 @@ CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `genes` INT(11) NULL
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `Metadata`;
-CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, `parameters` TEXT NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `Metadata` ( `sampleid` VARCHAR(150) NOT NULL, `refgenome` VARCHAR(100) NULL DEFAULT NULL, `annfile` VARCHAR(50) NULL DEFAULT NULL, `stranded` VARCHAR(100) NULL DEFAULT NULL, `sequencename` TEXT NULL DEFAULT NULL, `mappingtool` VARCHAR(100) NULL DEFAULT NULL, CONSTRAINT `metadata_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarSummary`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `VarSummary`;
 CREATE TABLE `VarSummary` (`sampleid` VARCHAR(150) NOT NULL, `totalvariants` INT(11) NULL DEFAULT NULL, `totalsnps` INT(11) NULL DEFAULT NULL, `totalindels` INT(11) NULL DEFAULT NULL, `annversion` VARCHAR(100) NULL DEFAULT NULL, `varianttool` VARCHAR(100) NULL DEFAULT NULL, `date` DATE NOT NULL, `status` CHAR(10) NULL DEFAULT NULL, `nosql` CHAR(10) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `varsummary_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+-- -----------------------------------------------------
+-- Table structure for table `CommandSyntax`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `CommandSyntax`;
+CREATE TABLE `CommandSyntax` ( `sampleid` VARCHAR(150) NOT NULL, `mappingsyntax` TEXT NULL DEFAULT NULL, `expressionsyntax` TEXT NULL DEFAULT NULL, `countsyntax` TEXT NULL DEFAULT NULL, `variantsyntax` TEXT NULL DEFAULT NULL, CONSTRAINT `commandsyntax_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `VarResult`
 -- -----------------------------------------------------
