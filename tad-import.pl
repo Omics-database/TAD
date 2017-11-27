@@ -11,7 +11,7 @@ use lib dirname(abs_path $0) . '/lib';
 use CC::Create;
 use CC::Parse;
 
-our $VERSION = '$ Version: 3 $';
+our $VERSION = '$ Version: 1 $';
 our $DATE = '$ Date: 2017-05-05 05:14:00 (Fri, 05 May 2017) $';
 our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
@@ -32,7 +32,7 @@ my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile, $paramet
 my $additional;
 #genes import
 our ($bamfile, $alignfile, $version, $readcountfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $variantfile, $vepfile, $annofile);
-our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress);
+our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress, $counttool);
 my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm, %ALL);
 #variant import
 our ( %VCFhash, %DBSNP, %extra, %VEPhash, %ANNOhash );
@@ -451,9 +451,14 @@ if ($datadb) {
       			printerr " Done\n";
       			#metadata table
       			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
-      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool, parameters ) values (?,?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool, $parameters) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
-      			printerr " Done\n";
+      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
+      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+      			
+						#Insert DataSyntaxes
+						$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
+      			$parameters =~ s/\"//g;
+						$sth ->execute($dataid, $parameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+						printerr " Done\n";
       
 		     	#toggle options
       			unless ($variant) {
@@ -500,9 +505,15 @@ if ($datadb) {
       			$sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
 						unless ($found) {
         			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
- 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool, parameters ) values (?,?,?,?,?,?,?)");
-							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool, $parameters) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+ 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool) values (?,?,?,?,?,?)");
+							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+							
+							#Insert DataSyntaxes
+							$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
+							$parameters =~ s/\"//g;
+							$sth ->execute($dataid, $parameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
 							printerr " Done\n";
+							
 						} #end else found in MapStats table
       			#toggle options
 	      		unless ($variant) {
@@ -693,8 +704,9 @@ if ($delete){ #delete section
 								my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 								
 								printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
+								$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
-								
+							
 								my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
 								`$execute 2>> $efile`; printerr ".";
 								`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
@@ -706,6 +718,7 @@ if ($delete){ #delete section
 							my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 							
 							printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
+							$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							
 							my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
@@ -724,6 +737,7 @@ if ($delete){ #delete section
 									unless ($found) {
 										printerr "NOTICE:\t Deleting records for $delete in Mapping tables .";
 										$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
+										$sth = $dbh->prepare("delete from CommandSyntax where sampleid = '$delete'"); $sth->execute(); printerr ".";
 										$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
 										printerr " Done\n";
 									} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
@@ -736,6 +750,7 @@ if ($delete){ #delete section
 								unless ($found) {
 									printerr "NOTICE:\t Deleting records for $delete in Mapping tables .";
 									$sth = $dbh->prepare("delete from Metadata where sampleid = '$delete'"); $sth->execute(); printerr ".";
+									$sth = $dbh->prepare("delete from CommandSyntax where sampleid = '$delete'"); $sth->execute(); printerr ".";
 									$sth = $dbh->prepare("delete from MapStats where sampleid = '$delete'"); $sth->execute();  printerr ".";
 									printerr " Done\n";
 								} else { printerr "ERROR:\t Variant Information relating to '$delete' is in the database. Delete Variant Information first\n";}
@@ -820,7 +835,7 @@ sub processArguments {
 	if ($vep || $annovar) {
 		pod2usage(-msg=>"ERROR:\t Invalid syntax specified for @commandline, specify -variant.") unless (($variant && $annovar)||($variant && $vep) || ($all && $annovar) || ($all && $vep));
 	}
-  	@ARGV==1 or pod2usage("Syntax error");
+  	@ARGV<=1 or pod2usage("Syntax error");
   	$file2consider = $ARGV[0];
   	
 	$verbose ||=0;
@@ -926,14 +941,34 @@ sub READ_COUNT { #subroutine for read counts
 		
 		if ($readcountstatus eq "yes") { #importing into Realational Database.
 			printerr "NOTICE:\t Importing $_[0] to ReadCounts table ...";
+			my ($countpreamble, $checkforpreamble) = (0,0);
 			while (<READ>) {
 				chomp;
-				my ($idgene, $idcount) = split("\t");
+				my @allidgene = split("\t");
+				my ($idgene, $idcount) = ($allidgene[0], $allidgene[-1]);
 				if ($idgene =~ /^[a-zA-Z0-9]/) {
-					$sth = $dbh->prepare("insert into ReadCounts (sampleid, genename, readcounts) values (?,?,?)");
-					$sth ->execute($_[0], $idgene, $idcount) or die "\nERROR:\t $idgene $idcount Complication in ReadCounts table, consult documentation\n";
+					if ($countpreamble == 0 || $countpreamble == 2) {
+						$checkforpreamble = 1;
+					}
+					if ($checkforpreamble == 1) {
+						$sth = $dbh->prepare("insert into ReadCounts (sampleid, genename, readcounts) values (?,?,?)");
+						$sth ->execute($_[0], $idgene, $idcount) or die "\nERROR:\t $idgene $idcount Complication in ReadCounts table, consult documentation\n";
+					} 
+				} else {
+					if ($_ =~ /featurecounts/i) {
+						my ($program, $command) = split(';');
+						$counttool = (split(':', $program))[1];
+						$parameters = (split(':', $command))[1];
+						$parameters =~ s/\"//g;
+					} elsif ($_ =~ /^_/) {
+						$counttool = "htseqcount";
+						$parameters = NULL;
+					}
 				}
+				$countpreamble++;
 			} close (READ);
+			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+			$sth = $dbh->prepare("update CommandSyntax set countsyntax = '$parameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
 			printerr " Done \n";
 		}
 	}
@@ -1121,7 +1156,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 				}	
 			}
 			elsif (`head -n 1 $transcriptsgtf` =~ /stringtie/i) { #working with stringtie output
-				$diffexpress = substr( `head -n 2 $transcriptsgtf | tail -1`,2,-1);
+				$parameters = substr( `head -n 1 $transcriptsgtf`,2,-1 );
+				$diffexpress = substr( `head -n 2 $transcriptsgtf | tail -1`,2,-1 );
 				open(FPKM, "<", $transcriptsgtf) or die "\nERROR:\t Can not open file $transcriptsgtf\n";
 				(%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm)= ();
 				my $i=1;
@@ -1183,6 +1219,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 				#insert into database.
 				$genes = scalar (keys %ARFPKM);
 				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+				$parameters =~ s/\"//g;
+				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$parameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
 			
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
@@ -1232,19 +1270,31 @@ sub GENES_FPKM { #subroutine for getting gene information
 }
 
 sub DBVARIANT {
-	my $toolvariant;
+	my $toolvariant; undef $parameters;
 	if($_[0]){ open(VARVCF,$_[0]) or die ("\nERROR:\t Can not open variant file $_[0]\n"); } else { die ("\nERROR:\t Can not find variant file. make sure variant file with suffix '.vcf' is present\n"); }
 	while (<VARVCF>) {
 		chomp;
 		if (/^\#/) {
-			if (/^\#\#GATK/) {
-				$_ =~ /ID\=(.*)\,.*Version\=(.*)\,Date/;
-				$toolvariant = "GATK v.$2,$1";
-				$varianttool = "GATK";
-			} elsif (/^\#\#samtoolsVersion/){
-				$_ =~ /Version\=(.*)\+./;
-				$toolvariant = "samtools v.$1";
-				$varianttool = "samtools";
+			unless (/\#INFO/ || /\#FORMAT/ || /\#contig/ || /#FORMAT/) {
+				if (/Version/) {
+					if ($_ =~ /GATK/) {
+						$_ =~ /ID\=(.*)\,.*Version\=(.*)\,Date.*CommandLineOptions="(.*)">$/;
+						$toolvariant = "GATK v.$2,$1";
+						$varianttool = "GATK";
+						$parameters = $3;
+					} elsif ($_ =~ /samtools/) {
+						$_ =~ /Version\=(.*)\+./;
+						$toolvariant = "samtools v.$1";
+						$varianttool = "samtools";
+					}
+				} elsif (/Command/) {
+					$_ =~ /Command=(.*)$/;
+					unless ($parameters) {
+						$parameters = $1;
+					} else {
+						$parameters .= " | $1";
+					}
+				} #end assigning toolvariant
 			}
 		} else {
 			my @chrdetails = split "\t";
@@ -1257,6 +1307,9 @@ sub DBVARIANT {
 	} close VARVCF;
 	$sth = $dbh->prepare("insert into VarSummary ( sampleid, varianttool, date) values (?,?,?)");
 	$sth ->execute($_[1], $toolvariant, $date) or die "\nERROR:\t Complication in VarSummary table, consult documentation\n";;
+	$parameters =~ s/\"//g;
+	$sth = $dbh->prepare("update CommandSyntax set variantsyntax = '$parameters' where sampleid = '$_[1]'");
+	$sth ->execute();
 
 	#VARIANT_RESULTS
 	printerr "NOTICE:\t Importing $varianttool variant information for $_[1] to VarResult table ...";
