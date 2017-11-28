@@ -524,8 +524,8 @@ CREATE VIEW `vw_seqstats` AS
 	select `a`.`sampleid` AS `sampleid`,`a`.`totalreads` AS `totalreads`,`a`.`alignmentrate` AS `alignmentrate`,
 		`a`.`genes` AS `genes`,`a`.`totalvariants` AS `totalvariants`,`b`.`mappingtool` AS `mappingtool`,
 		`b`.`annfile` AS `annotationfile`,`c`.`date` AS `mapdate`,`d`.`diffexpresstool` AS `diffexpresstool`,
-		`d`.`date` AS `genedate`,`e`.`varianttool` AS `varianttool`,`e`.`annversion` AS `variantannotationtool`,
-		`e`.`date` AS `variantdate`
+		`d`.`countstool` AS `countstool`,`d`.`date` AS `genedate`,`e`.`varianttool` AS `varianttool`,
+		`e`.`annversion` AS `variantannotationtool`,`e`.`date` AS `variantdate`
 	from ((((`vw_sampleinfo` `a` join `Metadata` `b` on((`a`.`sampleid` = `b`.`sampleid`)))
 		join `MapStats` `c` on((`a`.`sampleid` = `c`.`sampleid`)))
 		left outer join `GeneStats` `d` on((`a`.`sampleid` = `d`.`sampleid`)))
