@@ -305,10 +305,11 @@ function metavw_display($result) {
     $meta = $result->fetch_field_direct(6); echo '<th class="metadata" style="color:#306269;" id="' . $meta->name . '">Annotation file format</th>';
     $meta = $result->fetch_field_direct(7); echo '<th class="metadata" style="color:#306269;" id="' . $meta->name . '">Date</th>';
     $meta = $result->fetch_field_direct(8); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Differential Expression Tool</th>';
-    $meta = $result->fetch_field_direct(9); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Date</th>';
-    $meta = $result->fetch_field_direct(10); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Tool</th>';
-    $meta = $result->fetch_field_direct(11); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Annotation Tool</th>';
-    $meta = $result->fetch_field_direct(12); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Date</th>';
+	$meta = $result->fetch_field_direct(9); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Read Counts Tool</th>';
+    $meta = $result->fetch_field_direct(10); echo '<th class="metadata" style="color:#306937;" id="' . $meta->name . '">Date</th>';
+    $meta = $result->fetch_field_direct(11); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Tool</th>';
+    $meta = $result->fetch_field_direct(12); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Variant Annotation Tool</th>';
+    $meta = $result->fetch_field_direct(13); echo '<th class="metadata" style="color:#693062;" id="' . $meta->name . '">Date</th>';
     
 
     for ($i = 0; $i < $num_rows; $i++) {
