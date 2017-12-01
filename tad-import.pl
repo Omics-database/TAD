@@ -28,10 +28,11 @@ our ($sheetid, %NAME, %ORGANIZATION);
 our ($found);
 our (@allgeninfo);
 my ($str, $ann, $ref, $seq,$allstart, $allend) = (0,0,0,0,0,0); #for log file
-my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile, $parameters); #for annotation file
+my ($refgenome, $refgenomename, $stranded, $sequences, $annotationfile, $mparameters, $gparameters, $cparameters, $vparameters); #for annotation file
 my $additional;
 #genes import
 our ($bamfile, $alignfile, $version, $readcountfile, $genesfile, $deletionsfile, $insertionsfile, $transcriptsgtf, $junctionsfile, $variantfile, $vepfile, $annofile);
+our ($kallistofile, $kallistologfile, $salmonfile, $salmonlogfile);
 our ($total, $mapped, $alignrate, $deletions, $insertions, $junctions, $genes, $mappingtool, $annversion, $diffexpress, $counttool);
 my (%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm, %DHFPKM, %DLFPKM, %dhfpkm, %dlfpkm, %ALL);
 #variant import
@@ -407,7 +408,11 @@ if ($datadb) {
   	$vepfile = (grep /.vep.txt$/, @foldercontent)[0];
   	$annofile = (grep /anno.txt$/, @foldercontent)[0];
 		$readcountfile = (grep /.counts$/, @foldercontent)[0];
- 
+		$kallistofile = (grep /.tsv$/, @foldercontent)[0];
+		$kallistologfile = (grep /run_info.json/, @foldercontent)[0];
+		$salmonfile = (grep /.sf$/, @foldercontent)[0];
+		$salmonlogfile = (grep /cmd_info.json$/, @foldercontent)[0];
+
   	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
   	if ($found) { # if sample is not in the database    
     		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
@@ -456,8 +461,8 @@ if ($datadb) {
       			
 						#Insert DataSyntaxes
 						$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
-      			$parameters =~ s/\"//g;
-						$sth ->execute($dataid, $parameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+      			$mparameters =~ s/\"//g;
+						$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
 						printerr " Done\n";
       
 		     	#toggle options
@@ -510,8 +515,8 @@ if ($datadb) {
 							
 							#Insert DataSyntaxes
 							$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
-							$parameters =~ s/\"//g;
-							$sth ->execute($dataid, $parameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+							$mparameters =~ s/\"//g;
+							$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
 							printerr " Done\n";
 							
 						} #end else found in MapStats table
@@ -859,20 +864,20 @@ sub LOGFILE { #subroutine for getting metadata
 	if ($bamfile){
 		my $headerdetails = `samtools view -H $bamfile | grep -m 1 "\@PG" | head -1`;
 		$headerdetails =~ /\@PG\s*ID\:(\S*).*VN\:(\S*)\s*CL\:(.*)/;
-		$mappingtool = $1." v".$2; $parameters = $3;
+		$mappingtool = $1." v".$2; $mparameters = $3;
 		if ($mappingtool =~ /hisat/i) {
-			$parameters =~ /\-x\s(\w+)\s/;
+			$mparameters =~ /\-x\s(\w+)\s/;
 			$refgenome = $1; #reference genome name
 			$refgenomename = (split('\/', $refgenome))[-1];
-			if ($parameters =~ /-1/){ #paired-end reads
-				$parameters =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
+			if ($mparameters =~ /-1/){ #paired-end reads
+				$mparameters =~ /\-1\s(\S+)\s-2\s(\S+)"$/;
 				my @nseq = split(",",$1); my @pseq = split(",",$2);
 				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				foreach (@pseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				chop $sequences;
 			}
-			elsif ($parameters =~ /-U/){ #single-end reads
-				$parameters =~ /\-U\s(\S+)"$/;
+			elsif ($mparameters =~ /-U/){ #single-end reads
+				$mparameters =~ /\-U\s(\S+)"$/;
 				my @nseq = split(",",$1);
 				foreach (@nseq){ $sequences .= ( (split('\/', $_))[-1] ).",";}
 				chop $sequences;
@@ -882,7 +887,7 @@ sub LOGFILE { #subroutine for getting metadata
 		} # end if working with hisat.
 		elsif ($mappingtool =~ /tophat/i) {
 			my $annotation; undef %ALL; my $no = 0;
-			my @newgeninfo = split('\s', $parameters);
+			my @newgeninfo = split('\s', $mparameters);
 			foreach my $number (1..$#newgeninfo) {
 				unless ($newgeninfo[$number] =~ /-no-coverage-search/){
 					if ($newgeninfo[$number] =~ /^\-/){
@@ -917,6 +922,30 @@ sub LOGFILE { #subroutine for getting metadata
 			$stranded = undef; $sequences = undef;
 		}
 	} # end if bamfile
+	if ($kallistologfile){
+		my $versionnumber = `cat $kallistologfile | grep "kallisto_version" | awk -F'":' '{print \$2}'`; $versionnumber =~ s/\"//g; $versionnumber = substr($versionnumber,0,-2);
+		$diffexpress = "kallisto v$versionnumber";
+		$gparameters = `cat $kallistologfile | grep "call" | awk -F'":' '{print \$2}'`; $gparameters =~ s/\"//g;
+		$gparameters =~ /-i\s(\S+)/; $refgenome = $1; $refgenomename = (split('\/', $refgenome))[-1]; $annotationfile = $refgenomename;
+		my @newgeninfo = split(/\s/, $gparameters);
+		if ($gparameters =~ /--single/) {	
+			$sequences = ( ( split('\/', ($newgeninfo[-1])) ) [-1]);
+		} else { #paired end reads
+			$sequences = ( ( split('\/', $newgeninfo[-1]) ) [-2]).",". ( ( split('\/', $newgeninfo[-1]) ) [-1]);
+		}
+		$stranded = undef; $sequences = undef; $mappingtool = undef;
+	} # end if kallistologfile
+	if ($salmonlogfile){
+		my $versionnumber = `cat $salmonlogfile | grep "salmon_version" | awk -F'":' '{print \$2}'`; $versionnumber =~ s/\"//g; $versionnumber = substr($versionnumber,0,-2);
+		$diffexpress = "salmon v$versionnumber";
+		$gparameters = `cat $salmonlogfile`;
+		$refgenome = `cat $salmonlogfile | grep "index" | awk -F'":' '{print \$2}'`; $refgenome =~ s/\"//g; $refgenome = substr($refgenome,0,-2);
+		$refgenomename = (split('\/', $refgenome))[-1]; $annotationfile = $refgenomename;
+		$sequences = `cat $salmonlogfile | grep "mate" | awk -F'":' '{print \$2}'`; $sequences =~ s/\"//g; $sequences = substr($sequences,0,-2);
+		my @newgeninfo = split(/\n/, $sequences); $sequences = undef;
+		foreach (@newgeninfo) { $sequences .= (( split('\/', ($_)) ) [-1]); }
+		$stranded = undef; $sequences = undef; $mappingtool = undef;
+	} #end if salmonlogfile
 }
 
 sub READ_COUNT { #subroutine for read counts
@@ -958,17 +987,17 @@ sub READ_COUNT { #subroutine for read counts
 					if ($_ =~ /featurecounts/i) {
 						my ($program, $command) = split(';');
 						$counttool = (split(':', $program))[1];
-						$parameters = (split(':', $command))[1];
-						$parameters =~ s/\"//g;
+						$cparameters = (split(':', $command))[1];
+						$cparameters =~ s/\"//g;
 					} elsif ($_ =~ /^_/) {
 						$counttool = "htseqcount";
-						$parameters = NULL;
+						$cparameters = NULL;
 					}
 				}
 				$countpreamble++;
 			} close (READ);
 			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
-			$sth = $dbh->prepare("update CommandSyntax set countsyntax = '$parameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
+			$sth = $dbh->prepare("update CommandSyntax set countsyntax = '$cparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
 			printerr " Done \n";
 		}
 	}
@@ -1015,8 +1044,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 				printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 				#import into FPKM table;
 				open(FPKM, "<", $genesfile) or die "\nERROR:\t Can not open file $genesfile\n";
-				#my $syntax = "insert into GenesFpkm (sampleid, geneid, genename, chrom, start, stop, coverage, fpkm, fpkmconflow, fpkmconfhigh, fpkmstatus ) values (?,?,?,?,?,?,?,?,?,?,?)";
-				#my $sth = $dbh->prepare($syntax);
 				open (NOSQL, ">$gnosql");
 				while (<FPKM>){
 					chomp;
@@ -1026,8 +1053,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 						my ($chrom_no, $chrom_start, $chrom_stop) = $locus =~ /^(.+)\:(.+)\-(.+)$/; $chrom_start++;
 
 						print NOSQL "'$_[0]','$chrom_no','$gene','$gene_name','$species'.'$fpkm_stat','$tissue',$coverage,0,$fpkm,$fpkm_low,$fpkm_high,$chrom_start,$chrom_stop\n";
-						#$gene, $gene_name, $chrom_no, $chrom_start, $chrom_stop, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat
-						#$sth ->execute($_[0], $gene, $gene_name, $chrom_no, $chrom_start, $chrom_stop, $coverage, $fpkm, $fpkm_low, $fpkm_high, $fpkm_stat ) or die "\nERROR:\t Complication in GenesFpkm table, consult documentation\n";
 					}
 				} close FPKM;
 				close NOSQL; #end of nosql portion
@@ -1126,12 +1151,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
-					#my $syntax = "insert into GenesFpkm (sampleid, geneid, chrom, start, stop, coverage, fpkm, fpkmconflow, fpkmconfhigh ) values (?,?,?,?,?,?,?,?,?)";
-					#my $sth = $dbh->prepare($syntax);
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %ARFPKM){
-						#my @array = split(",",$ARFPKM{$a});
-						#$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $dlfpkm{$a}, $dhfpkm{$a}) or die "\nERROR:\t Complication in $_[0] table, consult documentation\n";
 						print NOSQL "$ARFPKM{$a},'$species','NULL','$tissue',$cfpkm{$a},0,$dfpkm{$a},$dlfpkm{$a},$dhfpkm{$a},$BEFPKM{$a},$CHFPKM{$a}\n";
 					}
 					close NOSQL; #end of nosql portion
@@ -1156,7 +1177,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 				}	
 			}
 			elsif (`head -n 1 $transcriptsgtf` =~ /stringtie/i) { #working with stringtie output
-				$parameters = substr( `head -n 1 $transcriptsgtf`,2,-1 );
+				$gparameters = substr( `head -n 1 $transcriptsgtf`,2,-1 );
 				$diffexpress = substr( `head -n 2 $transcriptsgtf | tail -1`,2,-1 );
 				open(FPKM, "<", $transcriptsgtf) or die "\nERROR:\t Can not open file $transcriptsgtf\n";
 				(%ARFPKM,%CHFPKM, %BEFPKM, %CFPKM, %DFPKM, %TPM, %cfpkm, %dfpkm, %tpm)= ();
@@ -1219,8 +1240,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 				#insert into database.
 				$genes = scalar (keys %ARFPKM);
 				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
-				$parameters =~ s/\"//g;
-				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$parameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
+				$gparameters =~ s/\"//g;
+				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$gparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
 			
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
@@ -1229,12 +1250,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					printerr "NOTICE:\t Importing StringTie expression information for $_[0] to GenesFpkm table ...";
 					#import into FPKM table;
-					#my $syntax = "insert into GenesFpkm (sampleid, geneid, genename, chrom, start, stop, coverage, fpkm, tpm ) values (?,?,?,?,?,?,?,?,?)";
-					#my $sth = $dbh->prepare($syntax);
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %ARFPKM){
-						#my @array = split(",",$ARFPKM{$a});
-						#$sth -> execute(@array, $BEFPKM{$a}, $CHFPKM{$a}, $cfpkm{$a}, $dfpkm{$a}, $dlfpkm{$a}, $dhfpkm{$a}) or die "\nERROR:\t Complication in $_[0] table, consult documentation\n";
 						print NOSQL "$ARFPKM{$a},'$species','NULL','$tissue',$cfpkm{$a},$tpm{$a},$dfpkm{$a},0,0,$BEFPKM{$a},$CHFPKM{$a}\n";
 					}
 					close NOSQL; #end of nosql portion
@@ -1257,7 +1274,116 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
-			} else {
+			}
+			elsif ($diffexpress =~ /kallisto/i) { #working with kallisto output
+				open(FPKM, "<", $kallistofile) or die "\nERROR:\t Can not open file $kallistofile\n";
+				(%TPM, %tpm) = ();
+				my $i=1;
+				while (<FPKM>){
+					chomp;
+					my ($targetid, $length, $eff, $est, $tpm ) = split /\t/;
+					$tpm{$targetid} = $tpm;
+				} close FPKM;
+				#sorting the fpkm values and coverage results.
+				foreach my $a (keys %TPM){
+					my $total = 0;
+					foreach my $b (keys %{$TPM{$a}}) { $total = $b+$total; }
+					$tpm{$a} = $total;
+				}
+				#end of sort.
+				#insert into database.
+				$genes = scalar (keys %TPM);
+				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+				$gparameters =~ s/\"//g;
+				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$gparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
+			
+				unless ($genes == $genecount) {
+					unless ($genecount == 0 ) {
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
+						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+					}
+					printerr "NOTICE:\t Importing Kallisto expression information for $_[0] to GenesFpkm table ...";
+					#import into FPKM table;
+					open (NOSQL, ">$gnosql");
+					foreach my $a (keys %TPM){
+						print NOSQL "'$_[0]','NULL','$a','$a','$species','NULL','$tissue',0,$tpm{$a},0,0,0,0,0\n";
+					}
+					close NOSQL; #end of nosql portion
+					
+					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
+					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
+					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
+					`rm -rf $gfastbit/*sp`; #removing old indexes
+					`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
+					`chmod 777 $gfastbit && rm -rf $gnosql`;
+				
+					printerr " Done\n";
+					#set GeneStats to Done
+					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
+				}	else {
+						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
+						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
+						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
+				}	
+			}			
+			elsif ($diffexpress =~ /salmon/i) { #working with salmon output
+				open(FPKM, "<", $salmonfile) or die "\nERROR:\t Can not open file $salmonfile\n";
+				(%TPM, %tpm) = ();
+				my $i=1;
+				while (<FPKM>){
+					chomp;
+					my ($targetid, $length, $eff, $tpm, $est ) = split /\t/;
+					$tpm{$targetid} = $tpm;
+				} close FPKM;
+				#sorting the fpkm values and coverage results.
+				foreach my $a (keys %TPM){
+					my $total = 0;
+					foreach my $b (keys %{$TPM{$a}}) { $total = $b+$total; }
+					$tpm{$a} = $total;
+				}
+				#end of sort.
+				#insert into database.
+				$genes = scalar (keys %TPM);
+				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+				$gparameters =~ s/\"//g;
+				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$gparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
+			
+				unless ($genes == $genecount) {
+					unless ($genecount == 0 ) {
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
+						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+					}
+					printerr "NOTICE:\t Importing Salmon expression information for $_[0] to GenesFpkm table ...";
+					#import into FPKM table;
+					open (NOSQL, ">$gnosql");
+					foreach my $a (keys %TPM){
+						print NOSQL "'$_[0]','NULL','$a','$a','$species','NULL','$tissue',0,$tpm{$a},0,0,0,0,0\n";
+					}
+					close NOSQL; #end of nosql portion
+					
+					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
+					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
+					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
+					`rm -rf $gfastbit/*sp`; #removing old indexes
+					`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
+					`chmod 777 $gfastbit && rm -rf $gnosql`;
+				
+					printerr " Done\n";
+					#set GeneStats to Done
+					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
+				}	else {
+						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
+						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
+						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
+				}	
+			}			
+			else {
 				die "\nFAILED:\tCan not identify source of Genes Expression File '$transcriptsgtf', consult documentation.\n";
 			}
 		} else {
@@ -1270,7 +1396,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 }
 
 sub DBVARIANT {
-	my $toolvariant; undef $parameters;
+	my $toolvariant; undef $vparameters;
 	if($_[0]){ open(VARVCF,$_[0]) or die ("\nERROR:\t Can not open variant file $_[0]\n"); } else { die ("\nERROR:\t Can not find variant file. make sure variant file with suffix '.vcf' is present\n"); }
 	while (<VARVCF>) {
 		chomp;
@@ -1281,7 +1407,7 @@ sub DBVARIANT {
 						$_ =~ /ID\=(.*)\,.*Version\=(.*)\,Date.*CommandLineOptions="(.*)">$/;
 						$toolvariant = "GATK v.$2,$1";
 						$varianttool = "GATK";
-						$parameters = $3;
+						$vparameters = $3;
 					} elsif ($_ =~ /samtools/) {
 						$_ =~ /Version\=(.*)\+./;
 						$toolvariant = "samtools v.$1";
@@ -1289,10 +1415,10 @@ sub DBVARIANT {
 					}
 				} elsif (/Command/) {
 					$_ =~ /Command=(.*)$/;
-					unless ($parameters) {
-						$parameters = $1;
+					unless ($vparameters) {
+						$vparameters = $1;
 					} else {
-						$parameters .= " | $1";
+						$vparameters .= " | $1";
 					}
 				} #end assigning toolvariant
 			}
@@ -1307,8 +1433,8 @@ sub DBVARIANT {
 	} close VARVCF;
 	$sth = $dbh->prepare("insert into VarSummary ( sampleid, varianttool, date) values (?,?,?)");
 	$sth ->execute($_[1], $toolvariant, $date) or die "\nERROR:\t Complication in VarSummary table, consult documentation\n";;
-	$parameters =~ s/\"//g;
-	$sth = $dbh->prepare("update CommandSyntax set variantsyntax = '$parameters' where sampleid = '$_[1]'");
+	$vparameters =~ s/\"//g;
+	$sth = $dbh->prepare("update CommandSyntax set variantsyntax = '$vparameters' where sampleid = '$_[1]'");
 	$sth ->execute();
 
 	#VARIANT_RESULTS
