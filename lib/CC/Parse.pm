@@ -549,16 +549,14 @@ sub GENEXP { #tad-interact option E
 					}
 					push @newstartarray, $newposition[0];
 					push @newstoparray, $newposition[1];
-					
-					if ($status =~ /forward/){
+
+					if ($status =~ /reverse/){
+						$realstart = (sort {$b <=> $a} @newstartarray)[0];
+						$realstop = (sort {$a <=> $b} @newstoparray)[0];
+					} else {
 						$realstart = (sort {$a <=> $b} @newstartarray)[0];
 						$realstop = (sort {$b <=> $a} @newstoparray)[0];
 					}
-					elsif ($status =~ /reverse/){
-						$realstart = (sort {$b <=> $a} @newstartarray)[0];
-						$realstop = (sort {$a <=> $b} @newstoparray)[0];
-					}
-					else { die "ERROR:\t Chromsomal position for $genest in sample $libest is unusual\n"; }
 				}
 				$REALPOST{$genest} = "$realstart|$realstop";
 			}
@@ -572,7 +570,9 @@ sub GENEXP { #tad-interact option E
 					my ($newrealstart,$newrealstop) = split('\|',$REALPOST{$genename},2);
 					@row = ();
 					my $realgenes = (split('\|',$genename))[0];
-					push @row, ($realgenes, $CHROM{$genename}."\:".$newrealstart."\-".$newrealstop);
+					push @row, $realgenes;
+					if ($CHROM{$genename} =~ /NULL$/) { push @row, ""; }
+					else { push @row, ($CHROM{$genename}."\:".$newrealstart."\-".$newrealstop); }
 					foreach (0..$#newsample) { 
 						if (exists $FPKM{$genename}{$newsample[$_]}){
 							push @row, $FPKM{$genename}{$newsample[$_]};

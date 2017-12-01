@@ -382,255 +382,259 @@ if ($metadata){
 } #end if metadata
 
 #PROCESSING DATA IMPORT
-if ($datadb) {
+if ($datadb){
 	printerr "JOB:\t Importing Transcriptome analysis Information => $file2consider\n"; #status
-  	if ($variant){
+  if ($variant){
 		printerr "TASK:\t Importing ONLY Variant Information => $file2consider\n"; #status
-  	} elsif ($all) {
-    		printerr "TASK:\t Importing BOTH Gene Expression profiling and Variant Information => $file2consider\n"; #status
-  	} else {
-    		printerr "TASK:\t Importing ONLY Gene Expression Profiling information => $file2consider\n"; #status
-  	}
-  	$dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
-  	my $dataid = (split("\/", $file2consider))[-1]; 
-  	`find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
-  	opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample directory location "); close (DIR);
-  	my @foldercontent = split("\n", `find $file2consider -type f -print0 | xargs -0 ls -tr `); #get details of the folder
+  } elsif ($all) {
+    printerr "TASK:\t Importing BOTH Gene Expression profiling and Variant Information => $file2consider\n"; #status
+  } else {
+    printerr "TASK:\t Importing ONLY Gene Expression Profiling information => $file2consider\n"; #status
+  }
+  $dbh = mysql($all_details{"MySQL-databasename"}, $all_details{'MySQL-username'}, $all_details{'MySQL-password'}); #connect to mysql
+  my $dataid = (split("\/", $file2consider))[-1]; 
+  `find $file2consider` or pod2usage ("ERROR: Can not locate \"$file2consider\"");
+  opendir (DIR, $file2consider) or pod2usage ("Error: $file2consider is not a folder, please specify your sample directory location "); close (DIR);
+  my @foldercontent = split("\n", `find $file2consider -type f -print0 | xargs -0 ls -tr `); #get details of the folder
 		
-  	foreach (grep /\.gtf/, @foldercontent) { unless (`head -n 3 $_ | wc -l` <= 0 && $_ =~ /skipped/) { $transcriptsgtf = $_; } }
-		$alignfile = (grep /summary.txt/, @foldercontent)[0];
-  	$genesfile = (grep /genes.fpkm/, @foldercontent)[0];
-  	$deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
-  	$insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
-  	$junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
-		$bamfile = (grep /.bam$/, @foldercontent)[0];
-  	$variantfile = (grep /.vcf$/, @foldercontent)[0]; 
-  	$vepfile = (grep /.vep.txt$/, @foldercontent)[0];
-  	$annofile = (grep /anno.txt$/, @foldercontent)[0];
-		$readcountfile = (grep /.counts$/, @foldercontent)[0];
-		$kallistofile = (grep /.tsv$/, @foldercontent)[0];
-		$kallistologfile = (grep /run_info.json/, @foldercontent)[0];
-		$salmonfile = (grep /.sf$/, @foldercontent)[0];
-		$salmonlogfile = (grep /cmd_info.json$/, @foldercontent)[0];
+  foreach (grep /\.gtf/, @foldercontent) { unless (`head -n 3 $_ | wc -l` <= 0 && $_ =~ /skipped/) { $transcriptsgtf = $_; } }
+	$alignfile = (grep /summary.txt/, @foldercontent)[0];
+  $genesfile = (grep /genes.fpkm/, @foldercontent)[0];
+  $deletionsfile = (grep /deletions.bed/, @foldercontent)[0];
+  $insertionsfile = (grep /insertions.bed/, @foldercontent)[0];
+  $junctionsfile = (grep /junctions.bed/, @foldercontent)[0];
+	$bamfile = (grep /.bam$/, @foldercontent)[0];
+  $variantfile = (grep /.vcf$/, @foldercontent)[0]; 
+  $vepfile = (grep /.vep.txt$/, @foldercontent)[0];
+  $annofile = (grep /anno.txt$/, @foldercontent)[0];
+	$readcountfile = (grep /.counts$/, @foldercontent)[0];
+	$kallistofile = (grep /.tsv$/, @foldercontent)[0];
+	$kallistologfile = (grep /run_info.json/, @foldercontent)[0];
+	$salmonfile = (grep /.sf$/, @foldercontent)[0];
+	$salmonlogfile = (grep /cmd_info.json$/, @foldercontent)[0];
 
-  	$sth = $dbh->prepare("select sampleid from Sample where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
-  	if ($found) { # if sample is not in the database    
-    		$sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
-    		LOGFILE();
-				unless ($found) { 
-						#open alignment summary file
-      			if ($alignfile) {
-							`head -n 1 $alignfile` =~ /^(\d+)\sreads/; $total = $1;
-							open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
-        			while (<ALIGN>){
-          				chomp;
-          				if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
-								 	if (/overall/) { my $line = $_; $line =~ /^(\d+.\d+)%\s/; $alignrate = $1;}
-									if (/overall read mapping rate/) {
-										if ($mappingtool){
-											unless ($mappingtool =~ /TopHat/i){
-												die "\nERROR:\t Inconsistent Directory Structure, $mappingtool SAM file with TopHat align_summary.txt file found\n";
-											}
-										} else { $mappingtool = "TopHat"; }
-									}
-									if (/overall alignment rate/) {
-										if ($mappingtool){
-											unless ($mappingtool =~ /hisat/i){
-												die "\nERROR:\t Inconsistent Directory Structure, $mappingtool LOG file with HISAT align_summary.txt file found\n";
-											}
-										} else { $mappingtool = "HISAT";}
-									}
-							} close ALIGN;
-							$mapped = ceil($total * $alignrate/100);
-      			} else {die "\nFAILED:\t Can not find Alignment summary file as 'align_summary.txt'\n";}
-     				$deletions = undef; $insertions = undef; $junctions = undef;
-						if ($deletionsfile){ $deletions = `cat $deletionsfile | wc -l`; $deletions--; } 
-						if ($insertionsfile){ $insertions = `cat $insertionsfile | wc -l`; $insertions--; }
-						if ($junctionsfile){ $junctions = `cat $junctionsfile | wc -l`; $junctions--; }
+  $sth = $dbh->prepare("select sampleid from Sample where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
+  if ($found) { # if sample is not in the database    
+    $sth = $dbh->prepare("select sampleid from MapStats where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
+    LOGFILE();
+		unless ($found) { 
+			#open alignment summary file
+      unless ($kallistologfile || $salmonlogfile) {
+				if ($alignfile) {
+					`head -n 1 $alignfile` =~ /^(\d+)\sreads/; $total = $1;
+					open(ALIGN,"<", $alignfile) or die "\nFAILED:\t Can not open Alignment summary file '$alignfile'\n";
+					while (<ALIGN>){
+						chomp;
+						if (/Input/){my $line = $_; $line =~ /Input.*:\s+(\d+)$/;$total = $1;}
+						if (/overall/) { my $line = $_; $line =~ /^(\d+.\d+)%\s/; $alignrate = $1;}
+						if (/overall read mapping rate/) {
+							if ($mappingtool){
+								unless ($mappingtool =~ /TopHat/i){
+									die "\nERROR:\t Inconsistent Directory Structure, $mappingtool SAM file with TopHat align_summary.txt file found\n";
+								}
+							} else { $mappingtool = "TopHat"; }
+						}
+						if (/overall alignment rate/) {
+							if ($mappingtool){
+								unless ($mappingtool =~ /hisat/i){
+									die "\nERROR:\t Inconsistent Directory Structure, $mappingtool LOG file with HISAT align_summary.txt file found\n";
+								}
+							} else { $mappingtool = "HISAT";}
+						}
+					} close ALIGN;
+					$mapped = ceil($total * $alignrate/100);
+				} else {die "\nFAILED:\t Can not find Alignment summary file as 'align_summary.txt'\n";}
+			}
+     				
+			$deletions = undef; $insertions = undef; $junctions = undef;
+			if ($deletionsfile){ $deletions = `cat $deletionsfile | wc -l`; $deletions--; } 
+			if ($insertionsfile){ $insertions = `cat $insertionsfile | wc -l`; $insertions--; }
+			if ($junctionsfile){ $junctions = `cat $junctionsfile | wc -l`; $junctions--; }
 						
-						#INSERT INTO DATABASE:
-      			#MapStats table
-      			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to MapStats table ..."; 
-      			$sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, alignmentrate, deletions, insertions, junctions, date ) values (?,?,?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $total, $mapped, $alignrate, $deletions, $insertions, $junctions, $date) or die "\nERROR:\t Complication in MapStats table, consult documentation\n";
-      			printerr " Done\n";
-      			#metadata table
-      			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
-      			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
-      			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
-      			
-						#Insert DataSyntaxes
-						$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
-      			$mparameters =~ s/\"//g;
-						$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
-						printerr " Done\n";
-      
-		     	#toggle options
-      			unless ($variant) {
-							READ_COUNT($dataid);
-        			GENES_FPKM($dataid);
-        			if ($all){
-          				DBVARIANT($variantfile, $dataid);
-          				printerr " Done\n";
-          				#variant annotation specifications
-          				if ($vep) {
-            					printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-  	    					printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-            					VEPVARIANT($vepfile, $dataid); printerr " Done\n";
-						NOSQL($dataid);
-          				}
-          				if ($annovar) {
-            					printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-  	    					printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-            					ANNOVARIANT($annofile, $dataid); printerr " Done\n";
-						NOSQL($dataid);
-          				}
-        			}
-      			}
-      			else { #variant option selected
-		        	DBVARIANT($variantfile, $dataid);
-			        printerr " Done\n";
-			        #variant annotation specifications
-		        	if ($vep) {
-					printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-				        printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-	          			VEPVARIANT($vepfile, $dataid); printerr " Done\n";
-					NOSQL($dataid);
-        			}
-        			if ($annovar) {
-          				printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-			  		printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-			          	ANNOVARIANT($annofile, $dataid); printerr " Done\n";
-					NOSQL($dataid);
-        			}
-      			}
-    		} else { #end unless found in MapStats table
-      			printerr "NOTICE:\t $dataid already in MapStats table... Moving on \n";
-						$additional .=  "Optional: To delete '$dataid' Alignment information ; Execute: tad-import.pl -delete $dataid \n";
-      			$sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
-						unless ($found) {
-        			printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
- 			        $sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool) values (?,?,?,?,?,?)");
-							$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
-							
-							#Insert DataSyntaxes
-							$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
-							$mparameters =~ s/\"//g;
-							$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
-							printerr " Done\n";
-							
-						} #end else found in MapStats table
-      			#toggle options
-	      		unless ($variant) {
-			        $sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid' and status ='done'"); $sth->execute(); $found = $sth->fetch();
-							READ_COUNT($dataid); #READCOUNTS
-							GENES_FPKM($dataid); #GENES
-							if ($all){
-          				my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
-          				unless ($variantstatus){ #checking if completed in VarSummary table
-            					$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
-					        $sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
-	            				$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
-            					$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
-											DBVARIANT($variantfile, $dataid);
-            					printerr " Done\n";
-        	    				#variant annotation specifications
-	            				if ($vep) {
-	      						printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-              						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-             		 				VEPVARIANT($vepfile, $dataid); printerr " Done\n";
-							NOSQL($dataid);
-            					}
-        	    				if ($annovar) {
-		      					printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-              						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-              						ANNOVARIANT($annofile, $dataid); printerr " Done\n";
-							NOSQL($dataid);
-            					}
-          				} else {
-        	    				printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
+			#INSERT INTO DATABASE:
+			#MapStats table
+			if ($mappingtool) { printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to MapStats table ..."; }
+			$sth = $dbh->prepare("insert into MapStats (sampleid, totalreads, mappedreads, alignmentrate, deletions, insertions, junctions, date ) values (?,?,?,?,?,?,?,?)");
+			$sth ->execute($dataid, $total, $mapped, $alignrate, $deletions, $insertions, $junctions, $date) or die "\nERROR:\t Complication in MapStats table, consult documentation\n";
+			if ($mappingtool) { printerr " Done\n"; }
+			#metadata table
+			if ($mappingtool) { printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ..."; }
+			$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool ) values (?,?,?,?,?,?)");
+			$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+			
+			#Insert DataSyntaxes
+			if ($mparameters) {
+				$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
+				$mparameters =~ s/\"//g;
+				$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+			}
+			if ($mappingtool) { printerr " Done\n"; }
 
+			#toggle options
+			unless ($variant) {
+				READ_COUNT($dataid);
+				GENES_FPKM($dataid);
+				if ($all){
+					DBVARIANT($variantfile, $dataid);
+					printerr " Done\n";
+					#variant annotation specifications
+					if ($vep) {
+						printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+						VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
+					}
+					if ($annovar) {
+						printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+						ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+						NOSQL($dataid);
+					}
+				}
+			}
+			else { #variant option selected
+				DBVARIANT($variantfile, $dataid);
+				printerr " Done\n";
+				#variant annotation specifications
+				if ($vep) {
+					printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+					printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+					VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+					NOSQL($dataid);
+				}
+				if ($annovar) {
+					printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+					printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+					ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+					NOSQL($dataid);
+				}
+			}
+		} else { #end unless found in MapStats table
+			printerr "NOTICE:\t $dataid already in MapStats table... Moving on \n";
+			$additional .=  "Optional: To delete '$dataid' Alignment information ; Execute: tad-import.pl -delete $dataid \n";
+			$sth = $dbh->prepare("select sampleid from Metadata where sampleid = '$dataid'"); $sth->execute(); $found = $sth->fetch();
+			unless ($found) {
+				printerr "NOTICE:\t Importing $mappingtool alignment information for $dataid to Metadata table ...";
+				$sth = $dbh->prepare("insert into Metadata (sampleid, refgenome, annfile, stranded, sequencename, mappingtool) values (?,?,?,?,?,?)");
+				$sth ->execute($dataid, $refgenomename, $annotationfile, $stranded,$sequences, $mappingtool) or die "\nERROR:\t Complication in Metadata table, consult documentation\n";
+				
+				#Insert DataSyntaxes
+				$sth = $dbh->prepare("insert into CommandSyntax (sampleid, mappingsyntax ) values (?,?)");
+				$mparameters =~ s/\"//g;
+				$sth ->execute($dataid, $mparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+				printerr " Done\n";
+				
+			} #end else found in MapStats table
+			#toggle options
+			unless ($variant) {
+				$sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid' and status ='done'"); $sth->execute(); $found = $sth->fetch();
+				READ_COUNT($dataid); #READCOUNTS
+				GENES_FPKM($dataid); #GENES
+				if ($all){
+					my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
+					unless ($variantstatus){ #checking if completed in VarSummary table
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
+						$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
+						$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
+						$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
+						DBVARIANT($variantfile, $dataid);
+						printerr " Done\n";
+						#variant annotation specifications
+						if ($vep) {
+								printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+								printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+								VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+								NOSQL($dataid);
+						}
+						if ($annovar) {
+								printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+								printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+								ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+								NOSQL($dataid);
+						}
+					} else {
+						printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
 						if ($vep || $annovar) {
-              						my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
+							my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
 							my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
 							unless ($variantstatus && $nosqlstatus){ #if annversion or nosqlstatus is not specified
-                						$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in VarAnnotation table\n";
-                						$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
-        	        					if ($vep) {
+								$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in VarAnnotation table\n";
+								$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
+								if ($vep) {
 									printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-                                                			printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-                                                			VEPVARIANT($vepfile, $dataid); printerr " Done\n";
-                                                			NOSQL($dataid);
-                                        			}
-		                	                        if ($annovar) {
-	                	                        	        printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-        	                	                        	printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-	        	                        	                ANNOVARIANT($annofile, $dataid); printerr " Done\n";
-        	        	                        	        NOSQL($dataid);
-                	        	                	}
-				        		} else { #end unless annversion is previously specified
-                						printerr "NOTICE:\t $dataid already in VarAnnotation table... Moving on\n";
-	              					}
-        	    				} #end if annversion is previously specified
-																	$additional .=  "Optional: To delete '$dataid' Variant information ; Execute: tad-import.pl -delete $dataid \n";
-      			
-				      	} #end unless it's already in variants table
-        			} #end if "all" option
-	      		} #end unless default option is specified 
-      			else { #variant option selected
-        			my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
-        			unless ($variantstatus){ #checking if completed in VarSummary table
+									printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+									VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+									NOSQL($dataid);
+								}
+								if ($annovar) {
+									printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+									printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+									ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+									NOSQL($dataid);
+								}
+							} else { #end unless annversion is previously specified
+								printerr "NOTICE:\t $dataid already in VarAnnotation table... Moving on\n";
+							}
+						} #end if annversion is previously specified
+							$additional .=  "Optional: To delete '$dataid' Variant information ; Execute: tad-import.pl -delete $dataid \n";
+					} #end unless it's already in variants table
+        } #end if "all" option
+	    } #end unless default option is specified 
+      else { #variant option selected
+        my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
+        unless ($variantstatus){ #checking if completed in VarSummary table
 					$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variants tables\n";
-			          	$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
-		          		$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
-		        	  	$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
-			          	DBVARIANT($variantfile, $dataid);
-			          	printerr " Done\n";
-		          		#variant annotation specifications
-		        	  	if ($vep) {
-			            		printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-			            		printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-			            		VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+					$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
+					$sth = $dbh->prepare("delete from VarResult where sampleid = '$dataid'"); $sth->execute();
+					$sth = $dbh->prepare("delete from VarSummary where sampleid = '$dataid'"); $sth->execute();
+					DBVARIANT($variantfile, $dataid);
+					printerr " Done\n";
+					#variant annotation specifications
+					if ($vep) {
+						printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+						VEPVARIANT($vepfile, $dataid); printerr " Done\n";
 						NOSQL($dataid);
-          				}
+					}
 					if ($annovar) {
-            					printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-            					printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-           			 		ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+						printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+						printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+						ANNOVARIANT($annofile, $dataid); printerr " Done\n";
 						NOSQL($dataid);
-          				}
-        			} else { #if completed in VarSummary table
-									printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
+					}
+				} else { #if completed in VarSummary table
+					printerr "NOTICE:\t $dataid already in VarResult table... Moving on \n";
 					if ($vep || $annovar) { #checking if vep or annovar was specified
-            					my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
+						my $variantstatus = $dbh->selectrow_array("select annversion from VarSummary where sampleid = '$dataid'");
 						my $nosqlstatus = $dbh->selectrow_array("select nosql from VarSummary where sampleid = '$dataid'");
-            					unless ($variantstatus && $nosqlstatus){ #if annversion or nosqlstatus is not specified
-					              	$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
-					              	$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
-					              	if ($vep) {
-						                printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
-						                printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-						                VEPVARIANT($vepfile, $dataid); printerr " Done\n";
+						unless ($variantstatus && $nosqlstatus){ #if annversion or nosqlstatus is not specified
+							$verbose and printerr "NOTICE:\t Removed incomplete records for $dataid in all Variant Annotation tables\n";
+							$sth = $dbh->prepare("delete from VarAnnotation where sampleid = '$dataid'"); $sth->execute();
+							if ($vep) {
+								printerr "TASK:\t Importing Variant annotation from VEP => $file2consider\n"; #status
+								printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+								VEPVARIANT($vepfile, $dataid); printerr " Done\n";
 								NOSQL($dataid);
-              						}
-					              	if ($annovar) {
-						                printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
-						                printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
-						                ANNOVARIANT($annofile, $dataid); printerr " Done\n";
+							}
+							if ($annovar) {
+								printerr "TASK:\t Importing Variant annotation from ANNOVAR => $file2consider\n"; #status
+								printerr "NOTICE:\t Importing $dataid - Variant Annotation to VarAnnotation table ...";
+								ANNOVARIANT($annofile, $dataid); printerr " Done\n";
 								NOSQL($dataid);
-              						}
-            					} else { #end unless annversion is previously specified
-              						printerr "NOTICE:\t $dataid already in VarAnnotation table... Moving on \n";
-            					}
-          				} #end if annversion is previously specified
-								$additional .=  "Optional: To delete '$dataid' Variant information ; Execute: tad-import.pl -delete $dataid \n";
-        			} # end else already in VarSummary table;
-      			} #end if "variant" option
-    		} #unless & else exists in Mapstats
-  	} else {
-      		pod2usage("FAILED: \"$dataid\" sample information is not in the database. Make sure the metadata has be previously imported using '-metadata'");
-  	} #end if data in sample table
+							}
+						} else { #end unless annversion is previously specified
+							printerr "NOTICE:\t $dataid already in VarAnnotation table... Moving on \n";
+						}
+					} #end if annversion is previously specified
+					$additional .=  "Optional: To delete '$dataid' Variant information ; Execute: tad-import.pl -delete $dataid \n";
+				} # end else already in VarSummary table;
+			} #end if "variant" option
+		} #unless & else exists in Mapstats
+	} else {
+		pod2usage("FAILED: \"$dataid\" sample information is not in the database. Make sure the metadata has be previously imported using '-metadata'");
+	} #end if data in sample table
 }
+
 if ($delete){ #delete section
 	my (%KEYDELETE, $decision);
 	my ($i,$alldelete) = (0,0);
@@ -1075,7 +1079,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 					$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 			}
-		} elsif ($transcriptsgtf){
+		} elsif ($transcriptsgtf){ #using gtf files
 			#differential expression tool names
 			if (`head -n 1 $transcriptsgtf` =~ /cufflinks/i) { #working with cufflinks transcripts.gtf file
 				$diffexpress = "Cufflinks";
@@ -1274,15 +1278,17 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
+			}	else {
+				die "\nFAILED:\tCan not identify source of Genes Expression File '$transcriptsgtf', consult documentation.\n";
 			}
-			elsif ($diffexpress =~ /kallisto/i) { #working with kallisto output
+		} elsif ($diffexpress =~ /kallisto/i) { #working with kallisto output
 				open(FPKM, "<", $kallistofile) or die "\nERROR:\t Can not open file $kallistofile\n";
 				(%TPM, %tpm) = ();
 				my $i=1;
 				while (<FPKM>){
 					chomp;
 					my ($targetid, $length, $eff, $est, $tpm ) = split /\t/;
-					$tpm{$targetid} = $tpm;
+					$TPM{$targetid}{$tpm} = $tpm;
 				} close FPKM;
 				#sorting the fpkm values and coverage results.
 				foreach my $a (keys %TPM){
@@ -1294,9 +1300,9 @@ sub GENES_FPKM { #subroutine for getting gene information
 				#insert into database.
 				$genes = scalar (keys %TPM);
 				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
-				$gparameters =~ s/\"//g;
-				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$gparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
-			
+				$gparameters =~ s/\"//g; 
+				$sth = $dbh->prepare("insert into CommandSyntax (sampleid, expressionsyntax ) values (?,?)");
+				$sth ->execute($_[0], $gparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
 						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
@@ -1328,15 +1334,15 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
-			}			
-			elsif ($diffexpress =~ /salmon/i) { #working with salmon output
+		}			
+		elsif ($diffexpress =~ /salmon/i) { #working with salmon output
 				open(FPKM, "<", $salmonfile) or die "\nERROR:\t Can not open file $salmonfile\n";
 				(%TPM, %tpm) = ();
 				my $i=1;
 				while (<FPKM>){
 					chomp;
 					my ($targetid, $length, $eff, $tpm, $est ) = split /\t/;
-					$tpm{$targetid} = $tpm;
+					$TPM{$targetid}{$tpm} = $tpm;
 				} close FPKM;
 				#sorting the fpkm values and coverage results.
 				foreach my $a (keys %TPM){
@@ -1349,8 +1355,9 @@ sub GENES_FPKM { #subroutine for getting gene information
 				$genes = scalar (keys %TPM);
 				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
 				$gparameters =~ s/\"//g;
-				$sth = $dbh->prepare("update CommandSyntax set expressionsyntax = '$gparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
-			
+				$sth = $dbh->prepare("insert into CommandSyntax (sampleid, expressionsyntax ) values (?,?)");
+				$sth ->execute($_[0], $gparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
+				
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
 						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
@@ -1382,12 +1389,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
-			}			
-			else {
-				die "\nFAILED:\tCan not identify source of Genes Expression File '$transcriptsgtf', consult documentation.\n";
-			}
-		} else {
-			die "\nERROR:\t Can not find gene expression file, making sure transcript files are present or StringTie file ends with .gtf, 'e.g. <xxx>.gtf'.\n";
+		}	else {
+			die "\nERROR:\t Can not find gene expression file, making sure transcript / abundance files are present'.\n";
 		}
 	} else {
 		$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";

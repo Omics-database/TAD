@@ -779,7 +779,9 @@ sub collectsort{
         if ($genename =~ /^\S/){
             my ($realstart,$realstop) = split('\|',$REALPOST{$genename},2);
             my $realgenes = (split('\|',$genename))[0];
-            print OUT2 $realgenes."\t".$CHROM{$genename}."\:".$realstart."\-".$realstop."\t";
+            print OUT2 $realgenes,"\t";
+			if ($CHROM{$genename} =~ /NULL$/) { print OUT2 "\t"; }
+			else { print OUT2 $CHROM{$genename}."\:".$realstart."\-".$realstop."\t"; }
             foreach my $lib (0..$#headers-1){
                 if (exists $FPKM{$genename}{$headers[$lib]}){
                     print OUT2 "$FPKM{$genename}{$headers[$lib]}\t";
@@ -806,15 +808,13 @@ sub sortposition {
         my ($astart, $astop, $status) = VERDICT(split('\|',$POSITION{$genename}{$libest},2));
     push @newstartarray, $astart;
         push @newstoparray, $astop;
-        if ($status eq "forward"){
+        if ($status eq "reverse"){
+            $realstart = (sort {$b <=> $a} @newstartarray)[0];
+            $realstop = (sort {$a <=> $b} @newstoparray)[0];
+        } else {
             $realstart = (sort {$a <=> $b} @newstartarray)[0];
             $realstop = (sort {$b <=> $a} @newstoparray)[0];    
         }
-        elsif ($status eq "reverse"){
-            $realstart = (sort {$b <=> $a} @newstartarray)[0];
-            $realstop = (sort {$a <=> $b} @newstoparray)[0];
-        }
-        else { die "Something is wrong\n"; }
         $REALPOST{$genename} = "$realstart|$realstop";
     }
 }

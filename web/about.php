@@ -10,7 +10,7 @@
 	if ($_GET['quest'] == 'samples') { //if samples
 ?>
 	<div class="metamenu"><a href="about.php">Organisms</a></div>
-	<div class="metamenu"><a href="about.php">Animals</a></div>
+	<div class="metamenu"><a href="about.php?quest=animal">Animals</a></div>
 	<div class="metactive"><a href="about.php?quest=samples">Samples</a></div>
 	<div class="metamenu"><a href="about.php?quest=samplesprocessed">Samples Processed</a></div>
 	<div class="metamenu"><a href="about.php?quest=database">Database content</a></div>
@@ -23,7 +23,7 @@
 	} elseif ($_GET['quest'] == 'samplesprocessed') { // if samplesprocessed
 ?>
 	<div class="metamenu"><a href="about.php">Organisms</a></div>
-	<div class="metamenu"><a href="about.php">Animals</a></div>
+	<div class="metamenu"><a href="about.php?quest=animal">Animals</a></div>
 	<div class="metamenu"><a href="about.php?quest=samples">Samples</a></div>
 	<div class="metactive"><a href="about.php?quest=samplesprocessed">Samples Processed</a></div>
 	<div class="metamenu"><a href="about.php?quest=database">Database content</a></div>
@@ -36,7 +36,7 @@
 	} elseif ($_GET['quest'] == 'database') { //if database
 ?>
 	<div class="metamenu"><a href="about.php">Organisms</a></div>
-	<div class="metamenu"><a href="about.php">Animals</a></div>
+	<div class="metamenu"><a href="about.php?quest=animal">Animals</a></div>
 	<div class="metamenu"><a href="about.php?quest=samples">Samples</a></div>
 	<div class="metamenu"><a href="about.php?quest=samplesprocessed">Samples Processed</a></div>
 	<div class="metactive"><a href="about.php?quest=database">Database content</a></div>
@@ -49,7 +49,7 @@
 	} elseif ($_GET['quest'] == 'animal') { //if animal
 ?>
 	<div class="metamenu"><a href="about.php">Organisms</a></div>
-	<div class="metactive"><a href="about.php">Animals</a></div>
+	<div class="metactive"><a href="about.php?quest=animal">Animals</a></div>
 	<div class="metamenu"><a href="about.php?quest=samples">Samples</a></div>
 	<div class="metamenu"><a href="about.php?quest=samplesprocessed">Samples Processed</a></div>
 	<div class="metamenu"><a href="about.php?quest=database">Database content</a></div>
@@ -62,7 +62,7 @@
 	} else { //if organisms
 ?>
 	<div class="metactive"><a href="about.php">Organisms</a></div>
-	<div class="metamenu"><a href="about.php">Animals</a></div>
+	<div class="metamenu"><a href="about.php?quest=animal">Animals</a></div>
 	<div class="metamenu"><a href="about.php?quest=samples">Samples</a></div>
 	<div class="metamenu"><a href="about.php?quest=samplesprocessed">Samples Processed</a></div>
 	<div class="metamenu"><a href="about.php?quest=database">Database content</a></div>
