@@ -14,7 +14,7 @@ echo '
         <link href="https://fonts.googleapis.com/css?family=Raleway:100,600" rel="stylesheet" type="text/css">
         
         <!-- Styles -->
-        <link rel="STYLESHEET" type="text/css" href="stylesheet.css">
+        <link rel="STYLESHEET" type="text/css" href=".private/stylesheet.css">
         
         <div class="title sub-md">
             <a href="index.php">TransAtlasDB</a>
@@ -23,6 +23,7 @@ echo '
             <div class="links">
                 <a href="about.php">About</a>
                 <a href="import.php">Data Import</a>
+				<a href="sqlquery.php">SQL Query</a>
                 <a href="metadata.php">MetaData</a>
                 <a href="expression.php">Genes Expression</a>
                 <a href="variants.php">Variants</a>
@@ -40,6 +41,24 @@ function tmetadata() {
 ?>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
     <title>Metadata</title>
+    <script type="text/javascript" src="/code.jquery.com/jquery-1.8.3.js"></script>
+    <script type="text/javascript">
+        function selectAll(source) {
+            checkboxes = document.getElementsByName('meta_data[]');
+            for(var i in checkboxes)
+            checkboxes[i].checked = source.checked;
+        }
+    </script>
+<?php
+}
+?>
+
+<?php //Database pages
+function tsqlquery() {
+    theader();
+?>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <title>SQL Query</title>
     <script type="text/javascript" src="/code.jquery.com/jquery-1.8.3.js"></script>
     <script type="text/javascript">
         function selectAll(source) {

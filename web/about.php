@@ -1,6 +1,6 @@
 <?php				
 	session_start();
-	require_once('all_fns.php');
+	require_once('.private/all_fns.php');
 	tmetadata(); 
 ?>
 	<div class="menu">TransAtlasDB Summary</div>

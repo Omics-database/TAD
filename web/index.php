@@ -12,7 +12,7 @@
         <link href="https://fonts.googleapis.com/css?family=Raleway:100,600" rel="stylesheet" type="text/css">
         
         <!-- Styles -->
-        <link rel="STYLESHEET" type="text/css" href="stylesheet.css">
+        <link rel="STYLESHEET" type="text/css" href=".private/stylesheet.css">
         
     </head>
     <body>
@@ -25,6 +25,7 @@
                 <div class="linksheader">
                     <a href="about.php">About</a>
                     <a href="import.php">Data Import</a>
+		    <a href="sqlquery.php">SQL Query</a>
                     <a href="metadata.php">MetaData</a>
                     <a href="expression.php">Genes Expression</a>
                     <a href="variants.php">Variants</a>

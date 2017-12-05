@@ -1,6 +1,6 @@
 <?php				
 	session_start();
-	require_once('all_fns.php');
+	require_once('.private/all_fns.php');
 	theader();
 	$newdate = shell_exec("date +%Y-%m-%d");
 	$table = "vw_metadata";

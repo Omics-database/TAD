@@ -263,7 +263,8 @@ function meta_display($result) {
     $meta = $result->fetch_field_direct(4); echo '<th class="metadata" id="' . $meta->name . '">Sample Description</th>';
     $meta = $result->fetch_field_direct(5); echo '<th class="metadata" id="' . $meta->name . '">Date</th>';
     $meta = $result->fetch_field_direct(6); echo '<th class="metadata" id="' . $meta->name . '">Gene Status</th>';
-    $meta = $result->fetch_field_direct(7); echo '<th class="metadata" id="' . $meta->name . '">Variant Status</th></tr>';
+	$meta = $result->fetch_field_direct(7); echo '<th class="metadata" id="' . $meta->name . '">RawCount Status</th>';
+    $meta = $result->fetch_field_direct(8); echo '<th class="metadata" id="' . $meta->name . '">Variant Status</th></tr>';
 
     for ($i = 0; $i < $num_rows; $i++) {
         if ($i % 2 == 0) {
