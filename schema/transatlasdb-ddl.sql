@@ -17,7 +17,7 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 -- -----------------------------------------------------
--- Drop all tables if exists (23 tables)
+-- Drop all tables if exists (22 tables)
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `Person`;
 DROP TABLE IF EXISTS `SamplePerson`;
@@ -35,7 +35,6 @@ DROP TABLE IF EXISTS `AnimalStats`;
 DROP TABLE IF EXISTS `Sample`;
 DROP TABLE IF EXISTS `SampleStats`;
 DROP TABLE IF EXISTS `MapStats`;
-DROP TABLE IF EXISTS `ReadCounts`;
 DROP TABLE IF EXISTS `GeneStats`;
 DROP TABLE IF EXISTS `Metadata`;
 DROP TABLE IF EXISTS `VarSummary`;
@@ -256,18 +255,6 @@ CREATE TABLE `MapStats` (
 	CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
--- Table structure for table `ReadCounts`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `ReadCounts`;
-CREATE TABLE `ReadCounts` (
-	`sampleid` VARCHAR(150) NOT NULL,
-	`genename` VARCHAR(100) NOT NULL,
-	`readcounts`  INT(11) NULL DEFAULT NULL,
-	PRIMARY KEY (`sampleid`, `genename`),
-	CONSTRAINT `ReadCounts_ibfk_1` FOREIGN KEY (`sampleid`)
-	REFERENCES `MapStats` (`sampleid`)
-) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
--- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `GeneStats`;
@@ -277,7 +264,8 @@ CREATE TABLE `GeneStats` (
 	`diffexpresstool` VARCHAR(100) NULL DEFAULT NULL,
 	`countstool` VARCHAR(100) NULL DEFAULT NULL,
 	`date` DATE NULL DEFAULT NULL,
-	`status` CHAR(10) NULL,
+	`countstatus` CHAR(10) NULL,
+	`genestatus` CHAR(10) NULL,
 	PRIMARY KEY (`sampleid`),
 	CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;

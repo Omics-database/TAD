@@ -17,7 +17,7 @@ our $AUTHOR= '$ Author:Modupe Adetunji <amodupe@udel.edu> $';
 
 #--------------------------------------------------------------------------------
 
-our ($verbose, $efile, $help, $man, $nosql, $vnosql, $gnosql, $log, $transaction);
+our ($verbose, $efile, $help, $man, $nosql, $vnosql, $gnosql, $cnosql, $log, $transaction);
 our ($metadata, $tab, $excel, $datadb, $gene, $variant, $all, $vep, $annovar, $delete); #command options
 our ($file2consider,$connect); #connection and file details
 my ($sth,$dbh,$schema); #connect to database;
@@ -472,8 +472,8 @@ if ($datadb){
 
 			#toggle options
 			unless ($variant) {
-				READ_COUNT($dataid);
 				GENES_FPKM($dataid);
+				READ_COUNT($dataid);
 				if ($all){
 					DBVARIANT($variantfile, $dataid);
 					printerr " Done\n";
@@ -527,9 +527,8 @@ if ($datadb){
 			} #end else found in MapStats table
 			#toggle options
 			unless ($variant) {
-				$sth = $dbh->prepare("select status from GeneStats where sampleid = '$dataid' and status ='done'"); $sth->execute(); $found = $sth->fetch();
-				READ_COUNT($dataid); #READCOUNTS
 				GENES_FPKM($dataid); #GENES
+				READ_COUNT($dataid); #READCOUNTS
 				if ($all){
 					my $variantstatus = $dbh->selectrow_array("select status from VarSummary where sampleid = '$dataid' and status = 'done'");
 					unless ($variantstatus){ #checking if completed in VarSummary table
@@ -711,29 +710,45 @@ if ($delete){ #delete section
 							if ($KEYDELETE{$i} =~ /^Expression/) { $i--;
 								my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 								my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
+								my $cfastbit = $ffastbit."/gene_count-information"; #specifying the gene count section
 								
 								printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
-								$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$delete'"); $sth->execute(); printerr ".";
 								$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							
+								#deleting gene-information from fastbit
 								my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
 								`$execute 2>> $efile`; printerr ".";
 								`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 								`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
+								
+								#deleting gene_counts information from fastbit
+								$execute = "$ibis -d -v $cfastbit -y \"sampleid = '$delete'\" -z";
+								`$execute 2>> $efile`; printerr ".";
+								`rm -rf $cfastbit/*sp $cfastbit/*old $cfastbit/*idx $cfastbit/*dic $cfastbit/*int `; #removing old indexes
+								`ibis -d $cfastbit -query "select genename, sampleid, tissue, organism" 2>> $efile`; #create a new index based on genename
+								
 								printerr " Done\n";
 							}
 						} else {
 							my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
 							my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
-							
+							my $cfastbit = $ffastbit."/gene_count-information"; #specifying the gene count section
+								
 							printerr "NOTICE:\t Deleting records for $delete in Gene tables ";
-							$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							$sth = $dbh->prepare("delete from GeneStats where sampleid = '$delete'"); $sth->execute(); printerr ".";
 							
+							#deleting gene-information from fastbit
 							my $execute = "$ibis -d -v $gfastbit -y \"sampleid = '$delete'\" -z";
 							`$execute 2>> $efile`; printerr ".";
 							`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 							`ibis -d $gfastbit -query "select genename, sampleid, chrom, tissue, organism" 2>> $efile`; #create a new index based on genename
+								
+							#deleting gene_counts information from fastbit
+							$execute = "$ibis -d -v $cfastbit -y \"sampleid = '$delete'\" -z";
+							`$execute 2>> $efile`; printerr ".";
+							`rm -rf $cfastbit/*sp $cfastbit/*old $cfastbit/*idx $cfastbit/*dic $cfastbit/*int `; #removing old indexes
+							`ibis -d $cfastbit -query "select genename, sampleid, tissue, organism" 2>> $efile`; #create a new index based on genename
+								
 							printerr " Done\n";
 						}
 					}
@@ -855,6 +870,7 @@ sub processArguments {
 	$nosql = @{ open_unique(".nosqlimport.txt") }[1]; `rm -rf $nosql`;
 	$vnosql = @{ open_unique(".nosqlvimport.txt") }[1]; `rm -rf $vnosql`;
 	$gnosql = @{ open_unique(".nosqlgimport.txt") }[1]; `rm -rf $gnosql`;
+	$cnosql = @{ open_unique(".nosqlcimport.txt") }[1]; `rm -rf $cnosql`;
 	unless ($log) {
 		open(LOG, ">>", $efile) or die "\nERROR:\t cannot write LOG information to log file $efile $!\n";
 		print LOG "TransAtlasDB Version:\t",$VERSION,"\n";
@@ -955,26 +971,25 @@ sub LOGFILE { #subroutine for getting metadata
 sub READ_COUNT { #subroutine for read counts
 	#INSERT INTO DATABASE: #ReadCounts table
 	if ($readcountfile) {
-		my $readcountstatus = "no";
-		open(READ, "<", $readcountfile) or die "\nERROR:\t Can not open file $readcountfile\n";
-		$sth = $dbh->prepare("select sampleid from ReadCounts where sampleid = '$_[0]' limit 1"); $sth->execute(); $found = $sth->fetch();
+		my $readcount = 0;
+		$sth = $dbh->prepare("select countstatus from GeneStats where sampleid = '$_[0]' and countstatus ='done'"); $sth->execute(); $found = $sth->fetch();
 		unless ($found) {
-			$readcountstatus = "yes";
-		} else {
-			$sth = $dbh->prepare("select count(*) from ReadCounts where sampleid = '$_[0]'"); $sth->execute(); my $readcount = $sth->fetchrow_array();
-			my $readunix = `cat $readcountfile | wc -l `; chomp $readunix; $readcount += 5; #assuming there are atleast 5 miscellaneous lines #version 1
-			if ($readcount < $readunix) {
-				$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in ReadCounts table\n";
-				$sth = $dbh->prepare("delete from ReadCounts where sampleid = '$_[0]'"); $sth->execute();
-				$readcountstatus = "yes";
-			} else {
-				printerr "NOTICE:\t $_[0] already in ReadCounts table... Moving on \n";
-			}
-		}
-		
-		if ($readcountstatus eq "yes") { #importing into Realational Database.
-			printerr "NOTICE:\t Importing $_[0] to ReadCounts table ...";
+			my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+			my $cfastbit = $ffastbit."/gene_count-information"; # specifying the gene section.
+			`$ibis -d $cfastbit -q 'select count(sampleid) where sampleid = "$_[0]"' -o $nosql 2>>$efile`;
+			open(IN,"<",$nosql);
+			no warnings;
+			chomp($readcount = <IN>);
+			close (IN); `rm -rf $nosql`;
+			
+			#get the organism name and the tissue from the database
+			my $species = $dbh->selectrow_array("select a.organism from Animal a join Sample b on a.animalid = b.derivedfrom where b.sampleid = '$_[0]'");
+			my $tissue = $dbh->selectrow_array("select tissue from Sample where sampleid = '$_[0]'");			
+				
+			#get type of input
+			open(READ, "<", $readcountfile) or die "\nERROR:\t Can not open file $readcountfile\n";
 			my ($countpreamble, $checkforpreamble) = (0,0);
+			open (NOSQL, ">$cnosql");
 			while (<READ>) {
 				chomp;
 				my @allidgene = split("\t");
@@ -984,8 +999,7 @@ sub READ_COUNT { #subroutine for read counts
 						$checkforpreamble = 1;
 					}
 					if ($checkforpreamble == 1) {
-						$sth = $dbh->prepare("insert into ReadCounts (sampleid, genename, readcounts) values (?,?,?)");
-						$sth ->execute($_[0], $idgene, $idcount) or die "\nERROR:\t $idgene $idcount Complication in ReadCounts table, consult documentation\n";
+						print NOSQL "'$_[0]','$idgene','$species','$tissue',$idcount\n"; #to fastbit
 					} 
 				} else {
 					if ($_ =~ /featurecounts/i) {
@@ -1000,15 +1014,40 @@ sub READ_COUNT { #subroutine for read counts
 				}
 				$countpreamble++;
 			} close (READ);
-			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+			close NOSQL; #end of nosql portion
+			
+			if ($readcount < $countpreamble && $readcount != 0) {
+				$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in ReadCounts table\n";
+				`$ibis -d $cfastbit -y \"sampleid = '$_[0]'\" -z 2>> $efile`;
+				`rm -rf $cfastbit/*sp $cfastbit/*old $cfastbit/*idx $cfastbit/*dic $cfastbit/*int `; #removing old indexes
+			}	
+			
+			printerr "NOTICE:\t Importing $counttool raw counts information for $_[0] to ReadCounts table ...";
+			#import into ReadCounts table;
+			my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+			my $cfastbit = $ffastbit."/gene_count-information"; # specifying the gene section.
+			my $execute = "$ardea -d $cfastbit -m 'sampleid:text,genename:text,organism:text,tissue:text,readcount:double' -t $cnosql";
+			`$execute 2>> $efile` or die "\nERROR\t: Complication importing RawCounts information to FastBit, contact $AUTHOR\n";
+			`rm -rf $cfastbit/*sp`; #removeing old indexes
+			`ibis -d $cfastbit -query "select genename, sampleid, tissue, organism" 2>> $efile`; #create a new index based on genename
+			`chmod 777 $cfastbit && rm -rf $cnosql`;
+			
+			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool' and countstatus = 'done' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
 			$sth = $dbh->prepare("update CommandSyntax set countsyntax = '$cparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
-			printerr " Done \n";
+			printerr " Done \n";	
+				
+		} else { #found and completed
+				printerr "NOTICE:\t $_[0] already in ReadCounts table... Moving on \n";
+				$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 		}
 	}
 }		
 		
 sub GENES_FPKM { #subroutine for getting gene information
 	#INSERT INTO DATABASE: #GeneStats table
+	my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
+	my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
+	
 	$sth = $dbh->prepare("select sampleid from GeneStats where sampleid = '$_[0]'"); $sth->execute(); $found = $sth->fetch();
 	unless ($found) { 
 		printerr "NOTICE:\t Importing $_[0] to GeneStats table\n";
@@ -1018,10 +1057,8 @@ sub GENES_FPKM { #subroutine for getting gene information
 		printerr "NOTICE:\t $_[0] already in GeneStats table... Moving on \n";
 	}
 	my $genecount = 0;
-	$sth = $dbh->prepare("select status from GeneStats where sampleid = '$_[0]' and status ='done'"); $sth->execute(); $found = $sth->fetch();
+	$sth = $dbh->prepare("select genestatus from GeneStats where sampleid = '$_[0]' and genestatus ='done'"); $sth->execute(); $found = $sth->fetch();
 	unless ($found) {
-		my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-		my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 		`$ibis -d $gfastbit -q 'select count(sampleid) where sampleid = "$_[0]"' -o $nosql 2>>$efile`;
 		open(IN,"<",$nosql);
 		no warnings;
@@ -1040,12 +1077,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 			$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
 			unless ($genes == $genecount) {
 				unless ($genecount == 0 ) {
-					$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
-		      # $sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
-					`$ibis -d $gfastbit -y \"sampleid = '$delete'\" -z 2>> $efile`;
+					$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in Genes-NoSQL\n";
+		      `$ibis -d $gfastbit -y \"sampleid = '$delete'\" -z 2>> $efile`;
 					`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 				}
-				printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
+				printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to Genes-NoSQL ...";
 				#import into FPKM table;
 				open(FPKM, "<", $genesfile) or die "\nERROR:\t Can not open file $genesfile\n";
 				open (NOSQL, ">$gnosql");
@@ -1061,8 +1097,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 				} close FPKM;
 				close NOSQL; #end of nosql portion
 		
-				my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-				my $gfastbit = $ffastbit."/gene-information"; # specifying the gene section.
 				my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 				`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
 				`rm -rf $gfastbit/*sp`; #removeing old indexes
@@ -1071,11 +1105,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 				printerr " Done\n";
 				#set GeneStats to Done
-				$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+				$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 				$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 			} else {
-					$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
-					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL ... Moving on \n";
+					$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 					$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 			}
@@ -1150,10 +1184,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				$sth = $dbh->prepare("update GeneStats set genes = $genes, diffexpresstool = '$diffexpress' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
-						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
-						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in Genes-NoSQL \n";
+						`$ibis -d $gfastbit -y \"sampleid = '$_[0]'\" -z 2>> $efile`;
+						`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 					}
-					printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing $diffexpress expression information for $_[0] to Genes-NoSQL ...";
 					#import into FPKM table;
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %ARFPKM){
@@ -1161,8 +1196,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					close NOSQL; #end of nosql portion
 					
-					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
 					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
 					`rm -rf $gfastbit/*sp`; #removeing old indexes
@@ -1171,11 +1204,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 					printerr " Done\n";
 					#set GeneStats to Done
-					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
-						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";	
-						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL... Moving on \n";	
+						$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
@@ -1249,10 +1282,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 			
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
-						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
-						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in Genes-NoSQL\n";
+						`$ibis -d $gfastbit -y \"sampleid = '$_[0]'\" -z 2>> $efile`;
+						`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 					}
-					printerr "NOTICE:\t Importing StringTie expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing StringTie expression information for $_[0] to Genes-NoSQL ...";
 					#import into FPKM table;
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %ARFPKM){
@@ -1260,8 +1294,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					close NOSQL; #end of nosql portion
 					
-					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
 					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
 					`rm -rf $gfastbit/*sp`; #removing old indexes
@@ -1270,11 +1302,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 					printerr " Done\n";
 					#set GeneStats to Done
-					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
-						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
-						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL ... Moving on \n";
+						$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
@@ -1305,10 +1337,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				$sth ->execute($_[0], $gparameters) or die "\nERROR:\t Complication in CommandSyntax table, consult documentation\n";
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
-						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
-						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in Genes-NoSQL\n";
+						`$ibis -d $gfastbit -y \"sampleid = '$_[0]'\" -z 2>> $efile`;
+						`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 					}
-					printerr "NOTICE:\t Importing Kallisto expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing Kallisto expression information for $_[0] to Genes-NoSQL ...";
 					#import into FPKM table;
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %TPM){
@@ -1316,8 +1349,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					close NOSQL; #end of nosql portion
 					
-					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
 					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
 					`rm -rf $gfastbit/*sp`; #removing old indexes
@@ -1326,16 +1357,15 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 					printerr " Done\n";
 					#set GeneStats to Done
-					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
-						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
-						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL ... Moving on \n";
+						$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
-		}			
-		elsif ($diffexpress =~ /salmon/i) { #working with salmon output
+		}	elsif ($diffexpress =~ /salmon/i) { #working with salmon output
 				open(FPKM, "<", $salmonfile) or die "\nERROR:\t Can not open file $salmonfile\n";
 				(%TPM, %tpm) = ();
 				my $i=1;
@@ -1360,10 +1390,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 				unless ($genes == $genecount) {
 					unless ($genecount == 0 ) {
-						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in GenesFpkm table\n";
-						$sth = $dbh->prepare("delete from GenesFpkm where sampleid = '$_[0]'"); $sth->execute();
+						$verbose and printerr "NOTICE:\t Removed incomplete records for $_[0] in Genes-NoSQL \n";
+						`$ibis -d $gfastbit -y \"sampleid = '$_[0]'\" -z 2>> $efile`;
+						`rm -rf $gfastbit/*sp $gfastbit/*old $gfastbit/*idx $gfastbit/*dic $gfastbit/*int `; #removing old indexes
 					}
-					printerr "NOTICE:\t Importing Salmon expression information for $_[0] to GenesFpkm table ...";
+					printerr "NOTICE:\t Importing Salmon expression information for $_[0] to Genes-NoSQL ...";
 					#import into FPKM table;
 					open (NOSQL, ">$gnosql");
 					foreach my $a (keys %TPM){
@@ -1371,8 +1402,6 @@ sub GENES_FPKM { #subroutine for getting gene information
 					}
 					close NOSQL; #end of nosql portion
 					
-					my $ffastbit = fastbit($all_details{'FastBit-path'}, $all_details{'FastBit-foldername'});  #connect to fastbit
-					my $gfastbit = $ffastbit."/gene-information"; # specifying the variant section.
 					my $execute = "$ardea -d $gfastbit -m 'sampleid:text,chrom:text,geneid:text,genename:text,organism:text,fpkmstatus:char,tissue:text,coverage:double,tpm:double,fpkm:double,fpkmconflow:double,fpkmconfhigh:double,start:int,stop:int' -t $gnosql";
 					`$execute 2>> $efile` or die "\nERROR\t: Complication importing Expression information to FastBit, contact $AUTHOR\n";
 					`rm -rf $gfastbit/*sp`; #removing old indexes
@@ -1381,11 +1410,11 @@ sub GENES_FPKM { #subroutine for getting gene information
 				
 					printerr " Done\n";
 					#set GeneStats to Done
-					$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+					$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 					$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 				}	else {
-						$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
-						$sth = $dbh->prepare("update GeneStats set status = 'done' where sampleid = '$_[0]'");
+						$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL ... Moving on \n";
+						$sth = $dbh->prepare("update GeneStats set genestatus = 'done' where sampleid = '$_[0]'");
 						$sth ->execute() or die "\nERROR:\t Complication in GeneStats table, consult documentation\n";
 						$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 				}	
@@ -1393,7 +1422,7 @@ sub GENES_FPKM { #subroutine for getting gene information
 			die "\nERROR:\t Can not find gene expression file, making sure transcript / abundance files are present'.\n";
 		}
 	} else {
-		$verbose and printerr "NOTICE:\t $_[0] already in GenesFpkm table... Moving on \n";
+		$verbose and printerr "NOTICE:\t $_[0] already in Genes-NoSQL ... Moving on \n";
 		$additional .=  "Optional: To delete '$_[0]' Expression information ; Execute: tad-import.pl -delete $_[0] \n";
 	}
 }

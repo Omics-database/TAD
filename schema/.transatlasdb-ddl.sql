@@ -35,7 +35,6 @@ DROP TABLE IF EXISTS `AnimalStats`;
 DROP TABLE IF EXISTS `Sample`;
 DROP TABLE IF EXISTS `SampleStats`;
 DROP TABLE IF EXISTS `MapStats`;
-DROP TABLE IF EXISTS `ReadCounts`;
 DROP TABLE IF EXISTS `GeneStats`;
 DROP TABLE IF EXISTS `Metadata`;
 DROP TABLE IF EXISTS `VarSummary`;
@@ -123,15 +122,10 @@ CREATE TABLE `SampleStats` (`sampleid` VARCHAR(150) NOT NULL, `collectionprotoco
 DROP TABLE IF EXISTS `MapStats`;
 CREATE TABLE `MapStats` (`sampleid` VARCHAR(150) NOT NULL, `totalreads` INT(11) NULL DEFAULT NULL, `mappedreads` INT(11) NULL DEFAULT NULL, `alignmentrate` DOUBLE(5,2) NULL DEFAULT NULL, `deletions` INT(11) NULL DEFAULT NULL, `insertions` INT(11) NULL DEFAULT NULL, `junctions` INT(11) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `MapStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `Sample` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
--- Table structure for table `ReadCounts`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `ReadCounts`;
-CREATE TABLE `ReadCounts` (`sampleid` VARCHAR(150) NOT NULL, `genename` VARCHAR(100) NOT NULL, `readcounts`  INT(11) NULL DEFAULT NULL, PRIMARY KEY (`sampleid`, `genename`), CONSTRAINT `ReadCounts_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
--- -----------------------------------------------------
 -- Table structure for table `GeneStats`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `GeneStats`;
-CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `genes` INT(11) NULL DEFAULT NULL, `diffexpresstool` VARCHAR(100) NULL DEFAULT NULL, `countstool` VARCHAR(100) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `status` CHAR(10) NULL,PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
+CREATE TABLE `GeneStats` (`sampleid` VARCHAR(150) NOT NULL, `genes` INT(11) NULL DEFAULT NULL, `diffexpresstool` VARCHAR(100) NULL DEFAULT NULL, `countstool` VARCHAR(100) NULL DEFAULT NULL, `date` DATE NULL DEFAULT NULL, `countstatus` CHAR(10) NULL, `genestatus` CHAR(10) NULL, PRIMARY KEY (`sampleid`), CONSTRAINT `GeneStats_ibfk_1` FOREIGN KEY (`sampleid`) REFERENCES `MapStats` (`sampleid`)) ENGINE = InnoDB DEFAULT CHARACTER SET = latin1;
 -- -----------------------------------------------------
 -- Table structure for table `Metadata`
 -- -----------------------------------------------------
