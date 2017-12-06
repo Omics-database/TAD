@@ -1032,7 +1032,7 @@ sub READ_COUNT { #subroutine for read counts
 			`ibis -d $cfastbit -query "select genename, sampleid, tissue, organism" 2>> $efile`; #create a new index based on genename
 			`chmod 777 $cfastbit && rm -rf $cnosql`;
 			
-			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool' and countstatus = 'done' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
+			$sth = $dbh->prepare("update GeneStats set countstool = '$counttool', countstatus = 'done' where sampleid= '$_[0]'"); $sth ->execute(); #updating GeneStats table.
 			$sth = $dbh->prepare("update CommandSyntax set countsyntax = '$cparameters' where sampleid= '$_[0]'"); $sth ->execute(); #updating CommandSyntax table.
 			printerr " Done \n";	
 				
